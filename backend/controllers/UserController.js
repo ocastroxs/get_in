@@ -19,22 +19,68 @@ class UserController {
         }
     }
 
+    static async readId(req, res) {
+        try {
+            const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
+            const user = await Read("usuarios", `id = ${id}`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo ID
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Usuário lido com sucesso",
+                dados: user
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o usuário",
+                erro: e.message
+            })
+        }
+    }
+    static async readName(req, res) {
+        try {
+            const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
+            const user = await Read("usuarios", `nome like '%${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo nome
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Usuário lido com sucesso",
+                dados: user
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o usuário",
+                erro: e.message
+            })
+        }
+    }
+    static async readCpf(req, res) {
+        try {
+            const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
+            const user = await Read("usuarios", `cpf like '${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo CPF
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Usuário lido com sucesso",
+                dados: user
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o usuário",
+                erro: e.message
+            })
+        }
+    }
 
     static async create(req, res) {
         try {
-            const { nome, dataNasci, cpf, cel, celE, email, tipo, imagem, senha} = req.body; // obtém os dados do usuário a partir do corpo da requisição    
+            const { nome, cpf, cel, email } = req.body; // obtém os dados do usuário a partir do corpo da requisição    
             const data = {
                 nome: nome,
-                dataDeNascimento: dataNasci,
                 cpf: cpf,
                 celular: cel,
-                celularEmergencia: celE,
-                email: email,
-                imagem: imagem,
-                tipo: tipo,
-                senha: senha
+                email: email
             }
-            
+
             console.log(data)
             const result = await Create("usuarios", data) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
             return res.status(201).json({
@@ -51,7 +97,48 @@ class UserController {
         }
     }
 
+    static async update(req, res) {// implementa mudanças em um usuário existente
+        const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
+        const { nome, cpf, cel, email } = req.body; // obtém os dados atualizados do usuário a partir do corpo da requisição
+        const data = {
+            nome: nome,
+            cpf: cpf,
+            celular: cel,
+            email: email
+        }
+        try {
+            const result = await Update("usuarios", data, `id = ${id}`) // atualiza o usuário na tabela "usuarios" usando a função update do database.js, filtrando pelo ID
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Usuário atualizado com sucesso",
+                dados: result
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao atualizar o usuário",
+                erro: e.message
+            })
+        }
+    }
+
+    static async delete(req, res) { // remove um usuário existente
+        const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
+        try {
+            const result = await Delete("usuarios", `id = ${id}`) // deleta o usuário da tabela "usuarios" usando a função delete do database.js, filtrando pelo ID
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Usuário deletado com sucesso",
+                dados: result
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao deletar o usuário",
+                erro: e.message
+            })
+        }
+    }
 
 }
-
 export default UserController;
