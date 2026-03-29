@@ -59,7 +59,7 @@ async function Create(table, data) { // função para criar um novo registro em 
     const connection = await getConnection()
 
     try {
-        const columns = Object.keys(data).json(', ')// separa as chaves dentro no JSON
+        const columns = Object.keys(data).join(', ')// separa as chaves dentro no JSON
         const placeholders = Array(Object.keys(data).length).fill('?').join(', ') // cria uma string de placeholders para os valores (ex: "?, ?, ?") auxilia na construção da query SQL
         const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders})` // comando SQL para inserir um novo registro na tabela
         const values = Object.values(data) // obtem os valores do objeto data para serem inseridos na tabela ex: {name, age} => ['João', 30]

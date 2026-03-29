@@ -25,10 +25,10 @@ class UserController {
             const { nome, dataNasci, cpf, cel, celE, email, tipo, imagem, senha} = req.body; // obtém os dados do usuário a partir do corpo da requisição    
             const data = {
                 nome: nome,
-                dataNasc: dataNasci,
+                dataDeNascimento: dataNasci,
                 cpf: cpf,
-                cel: cel,
-                celE: celE,
+                celular: cel,
+                celularEmergencia: celE,
                 email: email,
                 imagem: imagem,
                 tipo: tipo,
