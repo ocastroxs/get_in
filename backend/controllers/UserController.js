@@ -1,4 +1,4 @@
-import { getConnection, Read, Create } from "../config/database.js";
+import { getConnection, Read, Create, Update, Delete } from "../config/database.js";
 
 class UserController {
 
