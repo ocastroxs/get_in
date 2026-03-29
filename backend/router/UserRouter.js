@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Rota para criar um novo usuário (ADM, GERENTE, FUNCIONÁRIO)
 router.get('/read', UserController.read);
-router.get('/read/id/:id', UserController.readId);
+router.get('/read/:id', UserController.readId);
 router.get('/read/name/:id', UserController.readName);
 router.get('/read/cpf/:id', UserController.readCpf);
 router.post('/create', UserController.create);
