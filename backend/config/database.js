@@ -7,6 +7,7 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv/config';
 
+
 // Cria um "pool" de conexões.
 // Um pool reutiliza conexões abertas ao invés de abrir uma nova a cada query,
 // o que é mais eficiente e evita sobrecarregar o banco.
@@ -96,7 +97,7 @@ async function Delete(table, where) { // funcção para deletar um registro de u
     }
 }
 // HASH para senhas e comparação de senhas
-
+import bcrypt from 'bcrypt'; // biblioteca para hashing de senhas
 async function hashPassword(password) { // função para criar um hash de uma senha
     try {
         return await bcrypt.hash(password, 10)// o bcrypt é uma biblioteca de hashing de senhas que serve para proteger senhas armazenadas no banco de dados. O número 10 é o custo do hashing, que determina a complexidade do processo (quanto maior, mais seguro, mas também mais lento).

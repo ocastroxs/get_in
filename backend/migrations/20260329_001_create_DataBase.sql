@@ -10,25 +10,25 @@ CREATE TABLE usuarios (
     cpf VARCHAR(14) NOT NULL UNIQUE,
     celular VARCHAR(20),
     email VARCHAR(150) NOT NULL UNIQUE,
-    dataDeCriacao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE departamentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     idGestor INT ,
-    dataDeCriacao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE funcionarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     idUsuario INT NOT NULL,
     idDepartamento INT NOT NULL,
-    tipo ENUM('func','port','ger2','ger1','adm') DEFAULT 'func',
+    tipo ENUM('func','port','sup','ger','adm') DEFAULT 'func',
     dataDeNascimento DATE,
     imagem VARCHAR(255),
     senha VARCHAR(255) NOT NULL,
-    dataDeCriacao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE crachas (
@@ -43,7 +43,7 @@ CREATE TABLE tags (
     codigoTag VARCHAR(100) NOT NULL UNIQUE,
     temporario BOOLEAN DEFAULT FALSE,
     validade TIMESTAMP,
-    dataDeCriacao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE requisicoesDeAcessos (
@@ -51,15 +51,15 @@ CREATE TABLE requisicoesDeAcessos (
     idUsuario INT NOT NULL,
     idDepartamento INT NOT NULL,
     status ENUM('pendente','aprovado','recusado') DEFAULT 'pendente',
-    dataDaRequisicao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDaRequisicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE dispositivos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     idDepartamento INT NOT NULL,
     local VARCHAR(150),
-    dataManutencao DATETIME,
-    dataDeCriacao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataManutencao TIMESTAMP,
+    dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE requisicoesDeVisitas (
@@ -69,7 +69,7 @@ CREATE TABLE requisicoesDeVisitas (
     status ENUM('pendente','aprovado','recusado') DEFAULT 'pendente',
     motivo VARCHAR(255),
     validade TIMESTAMP,
-    dataDaRequisicao DATETIME DEFAULT CURRENT_TIMESTAMP
+    dataDaRequisicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE logs (
