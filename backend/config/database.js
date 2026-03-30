@@ -46,7 +46,7 @@ async function Read(table, where = null) { // lê dados de uma tabela, pode ser 
     try {
         let query = `SELECT * FROM ${table}`; // comando SQL para selecionar todos os dados da tableda
         if (where) { // se houver um filtro, adiciona a cláusula WHERE
-            query += `WHERE ${where}`;// aplica o filtro no comando do SQL
+            query += ` WHERE ${where}`;// aplica o filtro no comando do SQL
         }
         const [rows] = await connection.query(query); // executa a query e obtém os resultados
         return rows; // retorna os resultados
