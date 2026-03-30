@@ -9,11 +9,16 @@ app.use(express.json());
 
 import AuthRouter  from './router/AuthRouter.js';
 import UserRouter from './router/UserRouter.js';
+import FuncRouter from './router/FuncRouter.js';
+import CrachaRouter from './router/CrachaRouter.js';
 
 // -------REGISTRO DAS ROTAS------- //
 
 app.use("/user", UserRouter)
 app.use('/auth', AuthRouter);
+app.use('/func', FuncRouter);
+app.use('/cracha', CrachaRouter);
+
 
 
 
