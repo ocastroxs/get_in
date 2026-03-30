@@ -114,7 +114,8 @@ async function comparePassword(password, hash) {// função para comparar uma se
         console.error('Erro ao comparar senha:', error)
         return false
 
-    }}
+    }
+}
 
 
 export { // exporta as funções criadas a cima

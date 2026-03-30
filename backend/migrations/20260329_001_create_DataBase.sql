@@ -27,7 +27,7 @@ CREATE TABLE funcionarios (
     tipo ENUM('func','port','sup','ger','adm') DEFAULT 'func',
     dataDeNascimento DATE,
     imagem VARCHAR(255),
-    senha VARCHAR(255) NOT NULL,
+    senhaHash VARCHAR(255) NOT NULL,
     dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

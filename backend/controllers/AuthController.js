@@ -1,10 +1,13 @@
-import { getConnection, Create, Read, Update, Delete } from '../config/database.js';
+import { getConnection, hashPassword, Create, Read, Update, Delete } from '../config/database.js';
+
+
 class AuthController {
 
     static async login(req, res) {
         try {
             const { email, senha } = req.body
-            const user = await Read("usuarios", `email = '${email}' AND senha = '${senha}'`)// le o valor de email e senha do banco de dados
+            const senhaHash = await hashPassword(senha) // cria um hash da senha usando a função hashPassword do database.js
+            const user = await Read("usuarios", `email = '${email}' AND senhaHash = '${senhaHash}'`)// le o valor de email e senha do banco de dados
             if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
                 return res.status(200).json({
                     sucesso: true,
@@ -27,28 +30,64 @@ class AuthController {
     }
 
     static async register(req, res) {
+
         try {
-            const { nome, email, senha, cpf, tipo_usuario } = req.body
-            const newUser = {
+            const {
                 nome,
-                email,
-                senha,
                 cpf,
-                tipo_usuario
+                cel,
+                email,
+                idDepartamento,
+                tipo,
+                dataDeNascimento,
+                imagem,
+                senha
+            } = req.body;
+
+            // cria usuário
+            const datauser = { nome, cpf, cel, email };
+            const result = await Create("usuarios", datauser) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+
+            try {
+                const senhaHash = await hashPassword(senha);
+
+                const newFunc = {
+                    idUsuario: result.insertId,
+                    idDepartamento,
+                    tipo,
+                    dataDeNascimento,
+                    imagem,
+                    senha: senhaHash
+                };
+
+
+                const resultfunc = await Create("funcionarios", newFunc);
+
+                return res.status(201).json({
+                    sucesso: true,
+                    mensagem: "Usuário e funcionário criados com sucesso",
+                    dados: { id: result.insertId, ...datauser },
+                    dado2: { id: resultfunc.insertId, ...newFunc }
+                });
+
+            } catch (e) {
+                await Delete("usuarios", `id = ${result.insertId}`);
+
+                return res.status(500).json({
+                    sucesso: false,
+                    mensagem: "Erro ao registrar funcionário",
+                    erro: e.message
+                });
             }
-            const result = await Create("usuarios", newUser)// cria um novo usuario na tabela "usuarios" usando a função create do database.js
-            return res.status(201).json({
-                sucesso: true,
-                mensagem: "Usuário registrado com sucesso",
-                dados: { id: result.insertId, ...newUser } // retorna o ID do novo usuário junto com os dados fornecidos
-            })
+
         } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao registrar usuário",
                 erro: e.message
-            })
+            });
         }
+
     }
 
     static async logout(req, res) {
@@ -57,7 +96,7 @@ class AuthController {
                 sucesso: true,
                 mensagem: "Logout bem-sucedido"
             })
-        } catch (E) {
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao realizar Logout",

@@ -38,12 +38,12 @@ class FuncController {
 
     static async Create(req, res) {
         try {
-            const { idUser, idDepartamento, tipo, dataDeNascimento, imagem, senha } = req.body
+            const { idUsuario, idDepartamento, tipo, dataDeNascimento, imagem, senha } = req.body
 
             const senhaHash = await hashPassword(senha) // cria um hash da senha usando a função hashPassword do database.js
 
             const newFunc = {
-                idUser,
+                idUsuario,
                 idDepartamento,
                 tipo,
                 dataDeNascimento,
@@ -119,4 +119,5 @@ class FuncController {
 }
 
 export default FuncController;
+
 

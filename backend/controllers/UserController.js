@@ -2,7 +2,7 @@ import { getConnection, Read, Create, Update, Delete } from "../config/database.
 
 class UserController {
 
-    static async read(req, res) {
+    static async Read(req, res) {
         try {
             const user = await Read("usuarios"); // lê os usuários da tabela "usuarios" usando a função read do database.js
             return res.status(200).json({
@@ -19,7 +19,7 @@ class UserController {
         }
     }
 
-    static async readId(req, res) {
+    static async ReadId(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
             const user = await Read("usuarios", `id = ${id}`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo ID
@@ -36,7 +36,7 @@ class UserController {
             })
         }
     }
-    static async readName(req, res) {
+    static async ReadName(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
             const user = await Read("usuarios", `nome like '%${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo nome
@@ -53,7 +53,7 @@ class UserController {
             })
         }
     }
-    static async readCpf(req, res) {
+    static async ReadCpf(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
             const user = await Read("usuarios", `cpf like '${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo CPF
@@ -71,7 +71,7 @@ class UserController {
         }
     }
 
-    static async create(req, res) {
+    static async Create(req, res) {
         try {
             const { nome, cpf, cel, email } = req.body; // obtém os dados do usuário a partir do corpo da requisição    
             const data = {
@@ -80,12 +80,11 @@ class UserController {
                 celular: cel,
                 email: email
             }
-
-            console.log(data)
             const result = await Create("usuarios", data) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
             return res.status(201).json({
                 sucesso: true,
                 mensagem: "Usuário criado com sucesso",
+                dados: { id: result.insertId, ...data } // retorna o ID do novo usuário junto com os dados fornecidos
             })
 
         } catch (e) {
@@ -97,7 +96,7 @@ class UserController {
         }
     }
 
-    static async update(req, res) {// implementa mudanças em um usuário existente
+    static async Update(req, res) {// implementa mudanças em um usuário existente
         const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
         const { nome, cpf, cel, email } = req.body; // obtém os dados atualizados do usuário a partir do corpo da requisição
         const data = {
@@ -122,7 +121,7 @@ class UserController {
         }
     }
 
-    static async delete(req, res) { // remove um usuário existente
+    static async Delete(req, res) { // remove um usuário existente
         const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
         try {
             const result = await Delete("usuarios", `id = ${id}`) // deleta o usuário da tabela "usuarios" usando a função delete do database.js, filtrando pelo ID

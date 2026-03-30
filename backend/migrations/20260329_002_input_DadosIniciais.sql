@@ -17,9 +17,9 @@ VALUES
 -- =========================
 -- FUNCIONARIOS
 -- =========================
-INSERT INTO funcionarios (idUsuario, idDepartamento, tipo, dataDeNascimento, senha)
+INSERT INTO funcionarios (idUsuario, idDepartamento, tipo, dataDeNascimento, senhaHash)
 VALUES 
-(1, 1, 'ger1', '1990-05-10', '123456'),
+(1, 1, 'ger', '1990-05-10', '123456'),
 (2, 2, 'func', '1995-08-20', '123456');
 
 -- =========================
