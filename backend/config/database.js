@@ -117,6 +117,18 @@ async function comparePassword(password, hash) {// função para comparar uma se
     }
 }
 
+async function FindOne(table, where, values) {// função para pesquisar se um objeto já existe por parametros
+    const connection = await getConnection();
+
+    try {
+        const query = `SELECT * FROM ${table} WHERE ${where} LIMIT 1`;//cria o query para ser executado
+        const [rows] = await connection.query(query, values);
+        return rows[0];
+    } finally {
+        connection.release();
+    }
+}
+
 
 export { // exporta as funções criadas a cima
     getConnection,
@@ -125,5 +137,6 @@ export { // exporta as funções criadas a cima
     Update,
     Delete,
     hashPassword,
-    comparePassword
+    comparePassword,
+    FindOne
 }
