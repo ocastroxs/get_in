@@ -1,4 +1,4 @@
-import { getConnection, hashPassword, Create, Read, Update, Delete } from '../config/database.js';
+import { getConnection, hashPassword, Create, Read, Update, Delete, FindOne } from '../config/database.js';
 
 
 class AuthController {
@@ -35,7 +35,7 @@ class AuthController {
             const {
                 nome,
                 cpf,
-                cel,
+                celular,
                 email,
                 idDepartamento,
                 tipo,
@@ -44,35 +44,64 @@ class AuthController {
                 senha
             } = req.body;
 
-            // cria usuário
-            const datauser = { nome, cpf, cel, email };
-            const result = await Create("usuarios", datauser) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+            let datauser
+            let idUsuario
+
+            //verifica se o usuario já existe
+            const usuarioExistente = await FindOne("usuarios", "cpf = ? or email = ?", [cpf, email]);
+
+            if (usuarioExistente) {
+                idUsuario = usuarioExistente.id
+
+            } else {
+                // cria usuário
+                datauser = { nome, cpf, celular, email };
+                idUsuario = await Create("usuarios", datauser) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+
+            }
+            //verifica se a um registro na tabela funcionarios
+            const funcExistente = await FindOne(
+                "funcionarios",
+                "idUsuario = ?",
+                [idUsuario]
+            );
+
+            if (funcExistente) {
+                return res.status(400).json({
+                    sucesso: false,
+                    mensagem: "Usuário já é funcionário"
+                });
+            }
+            //segue apenas se não tiver um registro em ambas as tabelas
+
+
 
             try {
+
                 const senhaHash = await hashPassword(senha);
 
                 const newFunc = {
-                    idUsuario: result.insertId,
+                    idUsuario,
                     idDepartamento,
                     tipo,
                     dataDeNascimento,
                     imagem,
-                    senha: senhaHash
+                    senhaHash: senhaHash
                 };
-
 
                 const resultfunc = await Create("funcionarios", newFunc);
 
                 return res.status(201).json({
                     sucesso: true,
                     mensagem: "Usuário e funcionário criados com sucesso",
-                    dados: { id: result.insertId, ...datauser },
-                    dado2: { id: resultfunc.insertId, ...newFunc }
+                    dados: { id: idUsuario, ...datauser },
+                    dado2: { id: resultfunc, ...newFunc }
                 });
 
             } catch (e) {
-                await Delete("usuarios", `id = ${result.insertId}`);
-
+                if (!usuarioExistente) {//deleta o usuario soamente se ele foi criado agora 
+                    await Delete("usuarios", `id = ${result}`);
+                }
                 return res.status(500).json({
                     sucesso: false,
                     mensagem: "Erro ao registrar funcionário",
