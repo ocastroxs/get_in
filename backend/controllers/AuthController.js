@@ -10,6 +10,7 @@ class AuthController {
             const user = await Read("usuarios", `email = '${email}' AND senhaHash = '${senhaHash}'`)// le o valor de email e senha do banco de dados
             if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
                 return res.status(200).json({
+                    
                     sucesso: true,
                     mensagem: "login bem-sucedido",
                     dados: user[0] // retorna resultados do usuário encontrado
@@ -120,7 +121,7 @@ class AuthController {
     }
 
     static async logout(req, res) {
-        try {// aqui você pode implementar a lógica de logout, como invalidar tokens ou limpar sessões, dependendo de como você gerencia a autenticação
+        try {
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logout bem-sucedido"
