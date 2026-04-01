@@ -15,7 +15,7 @@ CREATE TABLE usuarios (
 
 CREATE TABLE departamentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
+    nome VARCHAR(100) NOT NULL UNIQUE,
     idGestor INT ,
     dataDeCriacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
