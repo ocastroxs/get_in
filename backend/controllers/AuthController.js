@@ -1,5 +1,7 @@
 import { getConnection, hashPassword, Create, Read, Update, Delete, FindOne } from '../config/database.js';
-
+import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
+dotenv.config()
 
 class AuthController {
 
@@ -9,7 +11,11 @@ class AuthController {
             const senhaHash = await hashPassword(senha) // cria um hash da senha usando a função hashPassword do database.js
             const user = await Read("usuarios", `email = '${email}' AND senhaHash = '${senhaHash}'`)// le o valor de email e senha do banco de dados
             if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
+                
+                const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })//cria um token JWT com o ID e email do usuário usando a chave secreta definida no .env e o tempo de expiração definido no .env
+
                 return res.status(200).json({
+                    token: token,
                     sucesso: true,
                     mensagem: "login bem-sucedido",
                     dados: user[0] // retorna resultados do usuário encontrado
@@ -120,7 +126,8 @@ class AuthController {
     }
 
     static async logout(req, res) {
-        try {// aqui você pode implementar a lógica de logout, como invalidar tokens ou limpar sessões, dependendo de como você gerencia a autenticação
+        try {
+            sessionStorage.removeItem("token")//remove o token do sessionStorage para efetuar o logout do usuário
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logout bem-sucedido"
