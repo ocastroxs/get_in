@@ -1,10 +1,18 @@
 import { getConnection, Read, Create, Update, Delete } from "../config/database.js";
+import { prisma } from "../config/prisma.js";
 
 class UserController {
 
     static async Read(req, res) {
         try {
-            const user = await Read("usuarios"); // lê os usuários da tabela "usuarios" usando a função read do database.js
+            const user = await prisma.usuario.findMany(); // lê os usuários da tabela "usuarios" usando a função read do database.js
+            if(user.length === 0) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum usuário encontrado"
+                })
+            }
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuários lidos com sucesso",
