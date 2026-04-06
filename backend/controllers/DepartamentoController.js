@@ -35,13 +35,6 @@ class DepartamentoController {
         try{
             const {nome, idGestor} = req.body;
 
-            // VERIFICA SE O ID DO GESTOR É UM NÚMERO VÁLIDO
-            if(idGestor !== Number(idGestor)) {
-                return res.status(400).json({
-                    sucesso: false,
-                    mensagem: "idGestor deve ser do tipo numérico"
-                })
-            }
 
             // VERIFICA SE O NOME DO DEPARTAMENTO FOI FORNECIDO
             if(!nome) {
