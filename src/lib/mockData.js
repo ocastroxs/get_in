@@ -54,6 +54,7 @@ export const STATS_TODAY = {
   entradas: { value: 38, pct: 100 },
   saidas: { value: 24, aindaDentro: 14 },
   ativos: { value: 14, alertas: 2 },
+  tempo: { value : "1h 24m"}
 };
 
 export const ENTRADAS_POR_HORA = [
