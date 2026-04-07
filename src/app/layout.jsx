@@ -15,8 +15,10 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "GetIN",
-  description: "Sistema de Controle de Visitantes e Acesso a Setores",
+  title: {
+    template: "GetIN - %s",
+    default: "GetIN"
+  }
 };
 
 export default function RootLayout({ children }) {
