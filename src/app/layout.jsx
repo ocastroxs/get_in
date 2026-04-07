@@ -27,7 +27,7 @@ export default function RootLayout({ children }) {
       lang="pt-br"
       className={cn("h-full antialiased", leagueSpartan.variable, inter.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
