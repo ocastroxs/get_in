@@ -10,17 +10,10 @@ import {
   Field,
   FieldLabel,
 } from "@/components/ui/field"
-import { Mail, Lock, Eye, EyeOff, LogIn, LockKeyhole, User, Radio, ShieldCheck } from "lucide-react"
-
-const roles = [
-  { id: "seguranca", label: "Segurança", icon: LockKeyhole },
-  { id: "supervisor", label: "Supervisor", icon: User },
-  { id: "administrador", label: "Administrador", icon: Radio },
-]
+import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck } from "lucide-react"
 
 export function LoginForm({ className, ...props }) {
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedRole, setSelectedRole] = useState("seguranca")
   const [remember, setRemember] = useState(true)
 
   return (
@@ -33,42 +26,6 @@ export function LoginForm({ className, ...props }) {
         <p className="text-sm text-muted-foreground">
           Acesse o painel com suas credenciais de segurança.
         </p>
-      </div>
-
-      {/* Role selector */}
-      <div>
-        <Label className="text-sm font-medium text-foreground mb-2 block">
-          Perfil de Acesso
-        </Label>
-        <div className="grid grid-cols-3 gap-3">
-          {roles.map((role) => (
-            <button
-              key={role.id}
-              type="button"
-              onClick={() => setSelectedRole(role.id)}
-              className={cn(
-                "group flex flex-col items-center gap-2 rounded-xl border p-3 transition-all text-center",
-                selectedRole === role.id
-                  ? "border-blue-500 bg-blue-50 text-blue-600"
-                  : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg",
-                  selectedRole === role.id
-                    ? "bg-blue-500/10 text-blue-500"
-                    : "bg-gray-200/60 text-gray-400"
-                )}
-              >
-                <role.icon className="h-4 w-4" />
-              </div>
-              <span className="text-[11px] font-medium leading-tight">
-                {role.label}
-              </span>
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* Email */}
