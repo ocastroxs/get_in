@@ -1,9 +1,9 @@
 import Image from "next/image";
 
-export default async function Login() {
+export default function Login() {
   return (
     <>
-      <p>Hello Whorld</p>
+      
     </>
   );
 }
