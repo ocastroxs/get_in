@@ -15,7 +15,7 @@ export const MENU_ITEMS = {
     operacao: [
       { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
-      { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/relatorios" },
+      { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
     admin: [
       { id: "usuarios", label: "Usuários", icon: "UserCog", href: "/usuarios" },
@@ -31,7 +31,7 @@ export const MENU_ITEMS = {
     operacao: [
       { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
-      { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/relatorios" },
+      { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
   },
   visitante: {
@@ -117,3 +117,32 @@ export const NA_EMPRESA_AGORA = [
   { nome: "Marina Souza", desde: "09:45", setor: "Lab", status: "ativo" },
   { nome: "Pedro Lima", desde: "10:20", setor: "Alm.", status: "ativo" },
 ];
+
+export const STATS_RELATORIOS = {
+  visitas: { value: 348, delta: 12, deltaDir: "up", sub: "vs mês anterior" },
+  checkouts: { value: 322, delta: 100, deltaDir: "up", sub: "registrados" },
+  permanencia: { value: "1h 42m", delta: 8, deltaDir: "down", sub: "vs mês anterior" },
+  alertas: { value: 7, delta: 3, deltaDir: "down", sub: "pendentes" },
+};
+
+export const HISTORICO_VISITAS = [
+  { visitante: "Marina Souza", empresa: "HabLab", tipo: "Técnico", setor: "Laboratório", entrada: "08:12", saida: "10:34", permanenciaStatus: 70, tempo: "2h 22m", status: "CONCLUÍDO" },
+  { visitante: "Carlos Mendes", empresa: "FiltraTec", tipo: "Manutenção", setor: "Almoxarifado", entrada: "09:00", saida: "11:15", permanenciaStatus: 50, tempo: "2h 15m", status: "CONCLUÍDO" },
+  { visitante: "Ana Ferreira", empresa: "ConsTech", tipo: "Fornecedor", setor: "Produção", entrada: "09:30", saida: "-", permanenciaStatus: 90, tempo: "4h 10m", status: "DENTRO" },
+  { visitante: "Roberto Silva", empresa: "LogiMax", tipo: "Geral", setor: "Administração", entrada: "11:20", saida: "-", permanenciaStatus: 20, tempo: "0h 45m", status: "DENTRO" },
+  { visitante: "Fernanda Costa", empresa: "Sigma Ltda", tipo: "Auditor", setor: "Qualidade", entrada: "13:00", saida: "16:45", permanenciaStatus: 100, tempo: "3h 45m", status: "CONCLUÍDO" },
+];
+
+export const SETORES_MAIS_VISITADOS = [
+  { nome: "Produção", visitas: 128 },
+  { nome: "Laboratório", visitas: 98 },
+  { nome: "Almoxarifado", visitas: 68 },
+  { nome: "Administração", visitas: 45 },
+];
+
+export const EMPRESAS_MAIS_VISITAS = [
+  { nome: "GupiTao", visitas: 88, alertas: 3 },
+  { nome: "HabLab", visitas: 82, alertas: 0 },
+  { nome: "Sigma Ltda", visitas: 76, alertas: 0 },
+  { nome: "FiltraTec", visitas: 54, alertas: 1 },
+];

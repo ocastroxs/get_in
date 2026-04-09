@@ -4,25 +4,33 @@ import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 
-export default function EntradasChart() {
+export default function EntradasChart({
+  title = "Entradas por Período",
+  subtitle = "Visitantes registrados",
+  data = ENTRADAS_POR_HORA,
+  dataKey = "value",
+  nameKey = "hora",
+  barColor = "var(--primary)",
+  activeBarColor = "var(--chart-2)"
+}) {
   const [view, setView] = useState("hoje");
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4">
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow duration-300">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">Entradas por Período</h3>
-          <p className="text-xs text-muted-foreground">Visitantes registrados</p>
+          <h3 className="text-sm font-bold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
-        <div className="flex bg-muted rounded-lg p-0.5 text-xs font-medium">
+        <div className="flex bg-muted rounded-lg p-0.5 text-[10px] font-bold uppercase tracking-wider">
           {["hoje", "semana"].map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
               className={[
-                "px-3 py-1 rounded-md capitalize transition-all",
+                "px-3 py-1.5 rounded-md transition-all duration-300",
                 view === v
-                  ? "bg-background text-foreground shadow-sm"
+                  ? "bg-background text-foreground shadow-sm scale-105"
                   : "text-muted-foreground hover:text-foreground",
               ].join(" ")}
             >
@@ -32,43 +40,56 @@ export default function EntradasChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart
-          data={ENTRADAS_POR_HORA}
-          barSize={28}
-          margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
-        >
-          <XAxis
-            dataKey="hora"
-            tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <Tooltip
-            contentStyle={{
-              fontSize: 12,
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border)",
-              background: "var(--popover)",
-              color: "var(--popover-foreground)",
-            }}
-            cursor={{ fill: "var(--muted)" }}
-          />
-          <Bar dataKey="value" name="Entradas" radius={[4, 4, 0, 0]}>
-            {ENTRADAS_POR_HORA.map((entry) => (
-              <Cell
-                key={entry.hora}
-                fill={entry.hora === "11h" ? "var(--primary)" : "var(--accent)"}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="h-[180px] w-full mt-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            barSize={32}
+            margin={{ top: 10, right: 0, bottom: 0, left: -24 }}
+          >
+            <XAxis
+              dataKey={nameKey}
+              tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              dy={10}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
+              axisLine={false}
+              tickLine={false}
+              dx={-10}
+            />
+            <Tooltip
+              cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+              contentStyle={{
+                fontSize: 12,
+                fontWeight: "bold",
+                borderRadius: "12px",
+                border: "1px solid var(--border)",
+                background: "rgba(255, 255, 255, 0.9)",
+                backdropFilter: "blur(8px)",
+                color: "var(--foreground)",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)"
+              }}
+              itemStyle={{ color: barColor }}
+            />
+            <Bar dataKey={dataKey} name="Total" radius={[6, 6, 0, 0]} animationDuration={1500} animationEasing="ease-out">
+              {data.map((entry, index) => {
+                // Destacar o maior valor visualmente como exemplo de dinâmica
+                const isMax = entry[dataKey] === Math.max(...data.map(d => d[dataKey]));
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={isMax ? activeBarColor : barColor}
+                    className="transition-all duration-300 hover:opacity-80 cursor-pointer"
+                  />
+                );
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
