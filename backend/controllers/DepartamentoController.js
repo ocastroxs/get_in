@@ -1,10 +1,19 @@
-import { Read, Create } from "../config/database.js"
+// import { Read, Create } from "../config/database.js"
+import { prisma } from "../config/prisma.js";
 
 class DepartamentoController {
 
     static async read(req, res){
         try{
-            const departamento = await Read("departamentos")
+            const departamento = await prisma.departamento.findMany()
+
+            if(departamento.length === 0) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum departamento encontrado"
+                })
+            }
+
             res.status(200).json({
                 sucesso: true,
                 mensagem: "Departamentos listados com sucesso",
@@ -25,12 +34,37 @@ class DepartamentoController {
         static async create(req, res){
         try{
             const {nome, idGestor} = req.body;
-            const data = await {
-                nome: nome,
-                idGestor: idGestor
-            } 
 
-            await Create("departamentos", data)
+
+            // VERIFICA SE O NOME DO DEPARTAMENTO FOI FORNECIDO
+            if(!nome) {
+                return res.status(400).json({
+                    sucesso: false,
+                    mensagem: "O nome do departamento é obrigatório"
+                })
+            }
+        
+            // LISTA OS DEPARTAMENTOS EXISTENTES PARA VER SE O NOME DO DEPARTAMENTO JÁ EXISTE
+            const departamento = await prisma.departamento.findUnique({
+                where: { nome: nome}
+            })
+
+
+            // SE O DEPARTAMENTO EXISTIR, RETORNA UM ERRO
+            if(departamento) {
+                return res.status(400).json({
+                    sucesso: false,
+                    mensagem: "Departamento já existe"
+                })
+            }
+
+            // CRIA O DEPARTAMENTO 
+            await prisma.departamento.create({
+                data: {
+                    nome: nome,
+                    idGestor: idGestor
+                }
+            })
             
             res.status(200).json({
                 sucesso: true,
