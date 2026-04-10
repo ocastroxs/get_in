@@ -1,4 +1,5 @@
-import { League_Spartan, Inter } from "next/font/google";
+"use client";
+
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +23,26 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  useEffect(() => {
+    // Suprimir avisos específicos do Recharts sobre dimensões dos gráficos
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      const message = args.join(' ');
+      if (message.includes('The width(-1) and height(-1) of chart should be greater than 0')) {
+        return; // Não mostrar este aviso
+      }
+      originalWarn.apply(console, args);
+    };
+
+    return () => {
+      console.warn = originalWarn; // Restaurar quando o componente for desmontado
+    };
+  }, []);
+
   return (
     <html
       lang="pt-br"
-      className={cn("h-full antialiased", leagueSpartan.variable, inter.variable)}
+      className="h-full antialiased"
     >
       <body className="min-h-full">{children}</body>
     </html>
