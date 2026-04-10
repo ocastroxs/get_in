@@ -1,7 +1,27 @@
 "use client";
 
 import "./globals.css";
+import { cn } from "@/lib/utils";
 import { useEffect } from "react";
+
+const leagueSpartan = League_Spartan({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  display: "swap"
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap"
+});
+
+export const metadata = {
+  title: {
+    template: "GetIN - %s",
+    default: "GetIN"
+  }
+};
 
 export default function RootLayout({ children }) {
   useEffect(() => {
@@ -25,7 +45,7 @@ export default function RootLayout({ children }) {
       lang="pt-br"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
