@@ -1,4 +1,4 @@
-import { getConnection, hashPassword, Create, Read, Update, Delete, FindOne } from '../config/database.js';
+import { getConnection, hashPassword, Create, Read, Update, Delete, FindOne, comparePassword } from '../config/database.js';
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -8,22 +8,35 @@ class AuthController {
     static async login(req, res) {
         try {
             const { email, senha } = req.body
-            const senhaHash = await hashPassword(senha) // cria um hash da senha usando a função hashPassword do database.js
-            const user = await Read("usuarios", `email = '${email}' AND senhaHash = '${senhaHash}'`)// le o valor de email e senha do banco de dados
-            if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
-                
-                const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })//cria um token JWT com o ID e email do usuário usando a chave secreta definida no .env e o tempo de expiração definido no .env
 
-                return res.status(200).json({
-                    token: token,
-                    sucesso: true,
-                    mensagem: "login bem-sucedido",
-                    dados: user[0] // retorna resultados do usuário encontrado
-                })
+            const user = await prisma.usuarios.findUnique({
+                where: {
+                    email: email
+                }
+            })
+
+
+            if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
+                const validacao = comparePassword(senha, user.senhaHash)
+                if (validacao) {
+                    const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })//cria um token JWT com o ID e email do usuário usando a chave secreta definida no .env e o tempo de expiração definido no .env
+
+                    return res.status(200).json({
+                        token: token,
+                        sucesso: true,
+                        mensagem: "login bem-sucedido",
+                        dados: user[0] // retorna resultados do usuário encontrado
+                    })
+                } else {
+                    return res.status(401).json({
+                        sucesso: false,
+                        mensagem: "senha incorretos"
+                    })
+                }
             } else {
                 return res.status(401).json({
                     sucesso: false,
-                    mensagem: "email ou senha incorretos"
+                    mensagem: "Usuario não encontrado"
                 })
             }
         } catch (e) {
@@ -54,15 +67,25 @@ class AuthController {
             let idUsuario
 
             //verifica se o usuario já existe
-            const usuarioExistente = await FindOne("usuarios", "cpf = ? or email = ?", [cpf, email]);
-
+            const usuarioExistente = await prisma.usuarios.findFirst({
+                where: {
+                    OR: [
+                        { cpf: cpf },
+                        { email: email }
+                    ]
+                }
+            })
             if (usuarioExistente) {
                 idUsuario = usuarioExistente.id
 
             } else {
                 // cria usuário
                 datauser = { nome, cpf, celular, email };
-                idUsuario = await Create("usuarios", datauser) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+                const usuario = await prisma.usuarios.create({
+                    data: datauser
+                })
+
+                const idUsuario = usuario.id // cria um novo usuário na tabela "usuarios" usando a função create do database.js
 
             }
             //verifica se a um registro na tabela funcionarios
@@ -95,8 +118,9 @@ class AuthController {
                     senhaHash: senhaHash
                 };
 
-                const resultfunc = await Create("funcionarios", newFunc);
-
+                const resultfunc = await prisma.funcionarios.create({
+                    data: newFunc
+                })
                 return res.status(201).json({
                     sucesso: true,
                     mensagem: "Usuário e funcionário criados com sucesso",
