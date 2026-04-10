@@ -2,6 +2,7 @@
 
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 const leagueSpartan = League_Spartan({
   subsets: ["latin"],
