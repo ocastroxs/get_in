@@ -44,7 +44,7 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch('http://localhost:3000/dep/read');
+        const response = await fetch('http://localhost:3000/dep/');
         const data = await response.json();
         if (data.sucesso) {
           setDepartamentos(data.data);
@@ -121,7 +121,7 @@ const CadastroFuncionario = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/auth/criar', {
+      const response = await fetch('http://localhost:3000/auth/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
