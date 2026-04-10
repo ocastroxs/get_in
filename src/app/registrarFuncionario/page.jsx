@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2 } from 'lucide-react';
+import ParticlesBackground from '@/components/ui/ParticlesBackground';
 
 const CadastroFuncionario = () => {
   // ==========================================
@@ -371,9 +372,12 @@ const CadastroFuncionario = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] p-10 font-sans">
-      <div className="max-w-4xl mx-auto">
+ return (
+    <div className="min-h-screen p-10 font-sans relative">
+      {/* Background Animado */}
+      <ParticlesBackground />
+      
+      <div className="max-w-4xl mx-auto relative z-10">
         
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-[#0A2540] mb-2 tracking-tight">Novo Funcionário</h1>
@@ -402,7 +406,7 @@ const CadastroFuncionario = () => {
           })}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#E2E8F0] p-8 max-w-3xl">
+        <div className="bg-white/70 backdrop-blur-md rounded-xl shadow-sm border border-white/20 p-8 max-w-3xl">
           <form onSubmit={(e) => e.preventDefault()}>
             
             {renderizarPasso()}
@@ -410,7 +414,7 @@ const CadastroFuncionario = () => {
             {!sucesso && (
               <div className="pt-8 mt-8 border-t border-[#E2E8F0] flex justify-between items-center">
                 {passoAtual > 1 ? (
-                  <button type="button" onClick={passoAnterior} disabled={loading} className="text-gray-600 px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm disabled:opacity-50">
+                  <button type="button" onClick={passoAnterior} disabled={loading} className="text-gray-600 px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center hover:bg-white/50 border border-gray-200 transition-colors shadow-sm disabled:opacity-50">
                     <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
                   </button>
                 ) : <div></div>}
