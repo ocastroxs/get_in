@@ -1,6 +1,8 @@
 import { getConnection, hashPassword, Create, Read, Update, Delete, FindOne, comparePassword } from '../config/database.js';
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import { prisma } from '../config/prisma.js';
+
 dotenv.config()
 
 class AuthController {
@@ -9,36 +11,56 @@ class AuthController {
         try {
             const { email, senha } = req.body
 
-            const user = await prisma.usuarios.findUnique({
+            // busca usuário
+            const user = await prisma.usuario.findUnique({
+                where: { email }
+            })
+
+            if (!user) {
+                return res.status(401).json({
+                    sucesso: false,
+                    mensagem: "Usuário não encontrado"
+                })
+            }
+
+            // busca funcionario
+            const func = await prisma.funcionario.findFirst({
                 where: {
-                    email: email
+                    idUsuario: user.id
                 }
             })
 
-
-            if (user.length > 0) {// verifica valor retornado ou seja se o usuario existe
-                const validacao = comparePassword(senha, user.senhaHash)
-                if (validacao) {
-                    const token = jwt.sign({ id: user[0].id, email: user[0].email }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })//cria um token JWT com o ID e email do usuário usando a chave secreta definida no .env e o tempo de expiração definido no .env
-
-                    return res.status(200).json({
-                        token: token,
-                        sucesso: true,
-                        mensagem: "login bem-sucedido",
-                        dados: user[0] // retorna resultados do usuário encontrado
-                    })
-                } else {
-                    return res.status(401).json({
-                        sucesso: false,
-                        mensagem: "senha incorretos"
-                    })
-                }
-            } else {
+            if (!func) {
                 return res.status(401).json({
                     sucesso: false,
-                    mensagem: "Usuario não encontrado"
+                    mensagem: "Funcionário não encontrado"
                 })
             }
+
+            // valida senha
+            const validacao = await comparePassword(senha, func.senhaHash)
+
+            if (!validacao) {
+                return res.status(401).json({
+                    sucesso: false,
+                    mensagem: "Senha incorreta"
+                })
+            }
+
+            // gera token
+            const token = jwt.sign(
+                { id: user.id, email: user.email },
+                process.env.JWT_SECRET,
+                { expiresIn: process.env.JWT_EXPIRES_IN }
+            )
+
+            return res.status(200).json({
+                token,
+                sucesso: true,
+                mensagem: "login bem-sucedido",
+                dados: user
+            })
+
         } catch (e) {
             return res.status(500).json({
                 sucesso: false,
@@ -47,7 +69,6 @@ class AuthController {
             })
         }
     }
-
     static async register(req, res) {
 
         try {
@@ -67,7 +88,7 @@ class AuthController {
             let idUsuario
 
             //verifica se o usuario já existe
-            const usuarioExistente = await prisma.usuarios.findFirst({
+            const usuarioExistente = await prisma.usuario.findFirst({
                 where: {
                     OR: [
                         { cpf: cpf },
@@ -81,19 +102,19 @@ class AuthController {
             } else {
                 // cria usuário
                 datauser = { nome, cpf, celular, email };
-                const usuario = await prisma.usuarios.create({
+                const usuario = await prisma.usuario.create({
                     data: datauser
                 })
 
-                const idUsuario = usuario.id // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+                idUsuario = usuario.id // cria um novo usuário na tabela "usuarios" usando a função create do database.js
 
             }
             //verifica se a um registro na tabela funcionarios
-            const funcExistente = await FindOne(
-                "funcionarios",
-                "idUsuario = ?",
-                [idUsuario]
-            );
+            const funcExistente = await prisma.funcionario.findFirst({
+                where: {
+                    idUsuario: idUsuario
+                }
+            })
 
             if (funcExistente) {
                 return res.status(400).json({
@@ -111,26 +132,31 @@ class AuthController {
 
                 const newFunc = {
                     idUsuario,
-                    idDepartamento,
+                    idDepartamento: Number(idDepartamento),
                     tipo,
-                    dataDeNascimento,
+                    dataDeNascimento: new Date(dataDeNascimento),
                     imagem,
                     senhaHash: senhaHash
                 };
 
-                const resultfunc = await prisma.funcionarios.create({
+                const resultfunc = await prisma.funcionario.create({
                     data: newFunc
                 })
                 return res.status(201).json({
                     sucesso: true,
                     mensagem: "Usuário e funcionário criados com sucesso",
                     dados: { id: idUsuario, ...datauser },
-                    dado2: { id: resultfunc, ...newFunc }
+                    dado2: { id: resultfunc.id, ...newFunc }
                 });
 
             } catch (e) {
                 if (!usuarioExistente) {//deleta o usuario soamente se ele foi criado agora 
-                    await Delete("usuarios", `id = ${result}`);
+                    await prisma.usuario.deleteMany({
+                        where: {
+                            id: idUsuario
+
+                        }
+                    })
                 }
                 return res.status(500).json({
                     sucesso: false,
@@ -151,7 +177,6 @@ class AuthController {
 
     static async logout(req, res) {
         try {
-            sessionStorage.removeItem("token")//remove o token do sessionStorage para efetuar o logout do usuário
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logout bem-sucedido"
