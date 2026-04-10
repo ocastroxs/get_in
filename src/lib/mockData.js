@@ -145,4 +145,23 @@ export const EMPRESAS_MAIS_VISITAS = [
   { nome: "HabLab", visitas: 82, alertas: 0 },
   { nome: "Sigma Ltda", visitas: 76, alertas: 0 },
   { nome: "FiltraTec", visitas: 54, alertas: 1 },
-];
+];
+export const VISITANTES_HOJE = [
+  { id: 1, nome: "Marina Souza",    empresa: "Nutrilab",          cpf: "012.345.678-90", entrada: "07:42", saida: null,    setor: "Lab",  status: "ativo",     cracha: "TAG-011" },
+  { id: 2, nome: "Carlos Mendes",   empresa: "Manutenção Rápida", cpf: "123.456.789-00", entrada: "06:50", saida: null,    setor: "Adm",  status: "semsaida",  cracha: "TAG-018" },
+  { id: 3, nome: "Ana Pereira",     empresa: "Auditoria Sul",     cpf: "099.785.432-10", entrada: "08:15", saida: "12:30", setor: "Adm",  status: "finalizado", cracha: "TAG-004" },
+  { id: 4, nome: "João Carvalho",   empresa: "TechFix Ltda",      cpf: "321.654.987-55", entrada: "08:00", saida: null,    setor: "Prod", status: "ativo",     cracha: "TAG-022" },
+  { id: 5, nome: "Fernanda Lima",   empresa: "ForneSeg",          cpf: "321.654.987-11", entrada: "09:00", saida: "17:45", setor: "Adm",  status: "finalizado", cracha: "TAG-007" },
+  { id: 6, nome: "Pedro Rocha",     empresa: "SupriTec",          cpf: "456.789.123-77", entrada: "07:10", saida: null,    setor: "Prod", status: "semsaida",  cracha: "TAG-003" },
+  { id: 7, nome: "Marcos Oliveira", empresa: "Manutenção Rápida", cpf: "654.321.098-44", entrada: "10:30", saida: "15:00", setor: "Adm",  status: "finalizado", cracha: "TAG-016" },
+  { id: 8, nome: "Lívia Santos",    empresa: "Nutrilab",          cpf: "111.222.333-44", entrada: "11:00", saida: null,    setor: "Lab",  status: "ativo",     cracha: "TAG-031" },
+  { id: 9, nome: "Roberto Faria",   empresa: "LogiMax",           cpf: "555.666.777-88", entrada: "08:30", saida: "13:00", setor: "Prod", status: "finalizado", cracha: "TAG-009" },
+  { id: 10, nome: "Tatiane Braga",  empresa: "Auditoria Sul",     cpf: "999.888.777-66", entrada: "09:45", saida: null,    setor: "Adm",  status: "ativo",     cracha: "TAG-025" },
+  { id: 11, nome: "Eduardo Lima",   empresa: "TechFix Ltda",      cpf: "432.109.876-32", entrada: "13:00", saida: "16:00", setor: "Lab",  status: "finalizado", cracha: "TAG-041" },
+  { id: 12, nome: "Camila Torres",  empresa: "SupriTec",          cpf: "876.543.210-11", entrada: "14:20", saida: null,    setor: "Prod", status: "ativo",     cracha: "TAG-052" },
+];
+
+export const ALERTAS_VISITANTES = [
+  { nome: "Carlos Mendes", setor: "Almox" },
+  { nome: "Pedro Rocha",   setor: "Prod" },
+];
