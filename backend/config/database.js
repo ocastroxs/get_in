@@ -109,7 +109,7 @@ async function hashPassword(password) { // função para criar um hash de uma se
 
 async function comparePassword(password, hash) {// função para comparar uma senha com um hash armazenado no banco de dados
     try{
-        return await bcrypt.hash(password,hash) // o bcrypt compara a senha fornecida com o hash armazenado, retornando true se corresponderem ou false caso contrário.
+        return await bcrypt.compare(password,hash) // o bcrypt compara a senha fornecida com o hash armazenado, retornando true se corresponderem ou false caso contrário.
     } catch (error) {
         console.error('Erro ao comparar senha:', error)
         return false
