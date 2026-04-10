@@ -40,8 +40,8 @@ export default function EntradasChart({
         </div>
       </div>
 
-      <div className="h-[180px] w-full mt-2">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[180px] w-full mt-2" style={{ minWidth: '300px', minHeight: '180px' }}>
+        <ResponsiveContainer width={400} height={180}>
           <BarChart
             data={data}
             barSize={32}

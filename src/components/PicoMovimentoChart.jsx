@@ -13,12 +13,13 @@ export default function PicoMovimentoChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart
-          data={PICO_MOVIMENTO}
-          barSize={28}
-          margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
-        >
+      <div className="w-full" style={{ minWidth: '300px', height: '160px' }}>
+        <ResponsiveContainer width={400} height={160}>
+          <BarChart
+            data={PICO_MOVIMENTO}
+            barSize={28}
+            margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
+          >
           <XAxis
             dataKey="hora"
             tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
@@ -50,6 +51,7 @@ export default function PicoMovimentoChart() {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }

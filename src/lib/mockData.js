@@ -8,7 +8,7 @@ export const MENU_ITEMS = {
   gerente: {
     principal: [
       { id: "dashboard", label: "Dashboard Geral", icon: "LayoutDashboard", href: "/dashboard" },
-      { id: "visitantes", label: "Visitantes", icon: "Users", href: "/visitantes", badge: 2 },
+      { id: "visitantes", label: "Visitantes", icon: "Users", href: "/dashboard/visitantes", badge: 2 },
       { id: "setores", label: "Setores", icon: "Building2", href: "/setores" },
       { id: "crachas", label: "Crachás", icon: "CreditCard", href: "/crachas" },
     ],
@@ -25,7 +25,7 @@ export const MENU_ITEMS = {
   supervisor: {
     principal: [
       { id: "dashboard", label: "Dashboard Geral", icon: "LayoutDashboard", href: "/dashboard" },
-      { id: "visitantes", label: "Visitantes", icon: "Users", href: "/visitantes", badge: 2 },
+      { id: "visitantes", label: "Visitantes", icon: "Users", href: "/dashboard/visitantes", badge: 2 },
       { id: "setores", label: "Setores", icon: "Building2", href: "/setores" },
     ],
     operacao: [

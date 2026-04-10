@@ -32,12 +32,13 @@ export default function EntradasChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart
-          data={ENTRADAS_POR_HORA}
-          barSize={28}
-          margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
-        >
+      <div className="w-full" style={{ minWidth: '300px', height: '160px' }}>
+        <ResponsiveContainer width={400} height={160}>
+          <BarChart
+            data={ENTRADAS_POR_HORA}
+            barSize={28}
+            margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
+          >
           <XAxis
             dataKey="hora"
             tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
@@ -69,6 +70,7 @@ export default function EntradasChart() {
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 }
