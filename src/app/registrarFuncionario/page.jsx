@@ -1,12 +1,15 @@
 'use client';
-import React, { useState } from 'react';
-import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2 } from 'lucide-react';
 
 const CadastroFuncionario = () => {
   // ==========================================
   // 1. ESTADO CENTRAL
   // ==========================================
   const [passoAtual, setPassoAtual] = useState(1);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [sucesso, setSucesso] = useState(false);
   const [formData, setFormData] = useState({
     // Passo 1: Dados
     nome: '',
@@ -19,7 +22,7 @@ const CadastroFuncionario = () => {
     // Passo 2: Perfil
     nivel_acesso: '', 
     turno: '',
-    departamento: '',
+    idDepartamento: '',
     senha: '',
     confirmarSenha: '',
     
@@ -36,7 +39,25 @@ const CadastroFuncionario = () => {
   const [erro, setErro] = useState('');
 
   // ==========================================
-  // 2. MÁSCARAS E HANDLERS
+  // 2. BUSCA DE DEPARTAMENTOS (API)
+  // ==========================================
+  useEffect(() => {
+    const fetchDepartamentos = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/dep/read');
+        const data = await response.json();
+        if (data.sucesso) {
+          setDepartamentos(data.data);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar departamentos:", err);
+      }
+    };
+    fetchDepartamentos();
+  }, []);
+
+  // ==========================================
+  // 3. MÁSCARAS E HANDLERS
   // ==========================================
   const maskCPF = (value) => value.replace(/\D/g, '').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})/, '$1-$2').replace(/(-\d{2})\d+?$/, '$1');
   const maskPhone = (value) => value.replace(/\D/g, '').replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4,5})(\d)/, '$1-$2').replace(/(-\d{4})\d+?$/, '$1');
@@ -64,7 +85,7 @@ const CadastroFuncionario = () => {
   const passoAnterior = () => setPassoAtual(prev => prev - 1);
 
   // ==========================================
-  // 3. INTEGRAÇÃO COM O BACKEND
+  // 4. INTEGRAÇÃO REAL COM O BACKEND
   // ==========================================
   const finalizarCadastro = async () => {
     setErro('');
@@ -73,26 +94,57 @@ const CadastroFuncionario = () => {
       return;
     }
 
-    const setoresPermitidos = Object.keys(formData.setores).filter(k => formData.setores[k]);
+    setLoading(true);
+
+    // Mapeamento de Nível de Acesso para o Enum do Backend
+    const tipoMap = {
+      'funcionario': 'func',
+      'portaria': 'port',
+      'supervisor': 'sup',
+      'gerente': 'ger'
+    };
+
+    // Formatação da Data de Admissão (dd/mm/aaaa -> ISO)
+    const [dia, mes, ano] = formData.dataAdmissao.split('/');
+    const dataISO = ano && mes && dia ? `${ano}-${mes}-${dia}` : null;
 
     const payloadBackend = {
       nome: formData.nome,
-      email: formData.email,
-      senha: formData.senha,
-      nivel_acesso: formData.nivel_acesso,
       cpf: formData.cpf,
-      telefone: formData.telefone,
-      departamento: formData.departamento,
-      turno: formData.turno,
-      setores_permitidos: setoresPermitidos
+      celular: formData.telefone,
+      email: formData.email,
+      idDepartamento: parseInt(formData.idDepartamento),
+      tipo: tipoMap[formData.nivel_acesso] || 'func',
+      dataDeNascimento: dataISO,
+      imagem: null, // Opcional no backend
+      senha: formData.senha
     };
 
-    console.log("Enviando para a API:", payloadBackend);
-    alert('Simulação: Cadastro confirmado com sucesso! Verifique o console (F12).');
+    try {
+      const response = await fetch('http://localhost:3000/auth/criar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payloadBackend)
+      });
+
+      const data = await response.json();
+
+      if (data.sucesso) {
+        setSucesso(true);
+      } else {
+        setErro(data.mensagem || 'Erro ao realizar o cadastro.');
+      }
+    } catch (err) {
+      setErro('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ==========================================
-  // 4. CONFIGURAÇÃO DOS SETORES E TAGS
+  // 5. CONFIGURAÇÃO DOS SETORES E TAGS
   // ==========================================
   const setoresConfig = [
     { id: 'producao', label: 'Produção', tag: 'Área restrita', tagColor: 'text-red-500 bg-red-50', dotColor: 'bg-red-500' },
@@ -111,9 +163,27 @@ const CadastroFuncionario = () => {
   };
 
   // ==========================================
-  // 5. RENDERIZAÇÃO DAS ETAPAS
+  // 6. RENDERIZAÇÃO DAS ETAPAS
   // ==========================================
   const renderizarPasso = () => {
+    if (sucesso) {
+      return (
+        <div className="flex flex-col items-center justify-center py-10 space-y-4 animate-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+            <Check className="w-10 h-10" strokeWidth={3} />
+          </div>
+          <h2 className="text-2xl font-bold text-[#0A2540]">Cadastro Concluído!</h2>
+          <p className="text-gray-500 text-center">O funcionário foi registrado com sucesso no sistema.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-6 bg-[#0A2540] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#133c66] transition-colors"
+          >
+            Cadastrar outro
+          </button>
+        </div>
+      );
+    }
+
     switch (passoAtual) {
       case 1:
         return (
@@ -139,17 +209,8 @@ const CadastroFuncionario = () => {
                 <label className="text-xs font-semibold text-gray-600 mb-2">Telefone</label>
                 <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} placeholder="(11) 99999-9999" maxLength={15} className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]" />
               </div>
-              <div className="flex flex-col">
-                <label className="text-xs font-semibold text-gray-600 mb-2">Matrícula</label>
-                <input type="text" name="matricula" value={formData.matricula} onChange={handleChange} placeholder="FUN-2024-001" className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]" />
-              </div>
-              <div className="flex flex-col relative">
-                <label className="text-xs font-semibold text-gray-600 mb-2">Data de admissão</label>
-                <div className="relative">
-                  <input type="text" name="dataAdmissao" value={formData.dataAdmissao} onChange={handleChange} placeholder="dd/mm/aaaa" maxLength={10} className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]" />
-                  <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-                </div>
-              </div>
+             
+              
             </div>
           </div>
         );
@@ -162,9 +223,7 @@ const CadastroFuncionario = () => {
               <p className="text-sm text-gray-500">Selecione o nível de permissão e o turno de trabalho.</p>
             </div>
 
-            {/* Layout em 4 colunas para caber o gerente na ponta direita */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              
               <div onClick={() => selecionarNivelAcesso('portaria')} className={`cursor-pointer rounded-xl p-5 flex flex-col items-center text-center transition-all border-2 ${formData.nivel_acesso === 'portaria' ? 'border-[#0A2540] bg-[#f8fafc]' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
                 <div className="w-10 h-10 rounded-full bg-[#EBF3FB] flex items-center justify-center mb-3 text-[#4DA8EA]"><Shield className="w-5 h-5" /></div>
                 <h3 className="font-bold text-[#0A2540] text-sm mb-1">Portaria</h3>
@@ -188,7 +247,6 @@ const CadastroFuncionario = () => {
                 <h3 className="font-bold text-[#0A2540] text-sm mb-1">Gerente</h3>
                 <p className="text-[10px] text-gray-500 leading-tight">Gestão de equipe e relatórios</p>
               </div>
-
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5 mt-2">
@@ -204,12 +262,11 @@ const CadastroFuncionario = () => {
               </div>
               <div className="flex flex-col">
                 <label className="text-xs font-semibold text-gray-600 mb-2">Departamento</label>
-                <select name="departamento" value={formData.departamento} onChange={handleChange} className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]">
+                <select name="idDepartamento" value={formData.idDepartamento} onChange={handleChange} className="px-4 py-2.5 bg-gray-50/50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]">
                   <option value="">Selecione</option>
-                  <option value="Administrativo">Administrativo</option>
-                  <option value="Recepção">Recepção</option>
-                  <option value="Segurança">Segurança</option>
-                  <option value="TI">TI</option>
+                  {departamentos.map(dep => (
+                    <option key={dep.id} value={dep.id}>{dep.nome}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex flex-col">
@@ -299,24 +356,10 @@ const CadastroFuncionario = () => {
                 </div>
                 <div className="flex justify-between items-center py-2.5 border-b border-gray-100 last:border-0">
                   <span className="text-sm text-gray-500">Departamento</span>
-                  <span className="text-sm font-semibold text-[#0A2540] capitalize">{formData.departamento || '-'}</span>
+                  <span className="text-sm font-semibold text-[#0A2540] capitalize">
+                    {departamentos.find(d => d.id === parseInt(formData.idDepartamento))?.nome || '-'}
+                  </span>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <h3 className="text-[10px] font-bold text-gray-400 tracking-widest uppercase mb-3 border-b border-gray-200 pb-2">Setores Habilitados</h3>
-              <div className="flex flex-wrap gap-2">
-                {setoresConfig
-                  .filter(setor => formData.setores[setor.id])
-                  .map(setor => (
-                    <span key={setor.id} className="px-3 py-1.5 bg-[#F1F5F9] text-[#0A2540] text-xs font-semibold rounded-md shadow-sm">
-                      {setor.label}
-                    </span>
-                  ))}
-                {Object.values(formData.setores).every(v => !v) && (
-                  <span className="text-sm text-gray-400">Nenhum setor habilitado</span>
-                )}
               </div>
             </div>
 
@@ -364,24 +407,26 @@ const CadastroFuncionario = () => {
             
             {renderizarPasso()}
 
-            <div className="pt-8 mt-8 border-t border-[#E2E8F0] flex justify-between items-center">
-              {passoAtual > 1 ? (
-                <button type="button" onClick={passoAnterior} className="text-gray-600 px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm">
-                  <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
-                </button>
-              ) : <div></div>}
+            {!sucesso && (
+              <div className="pt-8 mt-8 border-t border-[#E2E8F0] flex justify-between items-center">
+                {passoAtual > 1 ? (
+                  <button type="button" onClick={passoAnterior} disabled={loading} className="text-gray-600 px-5 py-2.5 rounded-xl text-sm font-semibold flex items-center hover:bg-gray-50 border border-gray-200 transition-colors shadow-sm disabled:opacity-50">
+                    <ArrowLeft className="mr-2 w-4 h-4" /> Voltar
+                  </button>
+                ) : <div></div>}
 
-              {passoAtual < 4 ? (
-                <button type="button" onClick={proximoPasso} className="bg-[#0A2540] hover:bg-[#133c66] text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center transition-colors shadow-sm">
-                  {passoAtual === 3 ? 'Revisar cadastro' : 'Próximo passo'} <ArrowRight className="ml-2 w-4 h-4" />
-                </button>
-              ) : (
-                <button type="button" onClick={finalizarCadastro} className="bg-[#10B981] hover:bg-[#059669] text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center transition-colors shadow-sm">
-                  <Check className="mr-2 w-4 h-4" /> Confirmar cadastro 
-                </button>
-              )}
-            </div>
-
+                {passoAtual < 4 ? (
+                  <button type="button" onClick={proximoPasso} className="bg-[#0A2540] hover:bg-[#133c66] text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center transition-colors shadow-sm">
+                    {passoAtual === 3 ? 'Revisar cadastro' : 'Próximo passo'} <ArrowRight className="ml-2 w-4 h-4" />
+                  </button>
+                ) : (
+                  <button type="button" onClick={finalizarCadastro} disabled={loading} className="bg-[#10B981] hover:bg-[#059669] text-white px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center transition-colors shadow-sm disabled:opacity-50">
+                    {loading ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : <Check className="mr-2 w-4 h-4" />}
+                    {loading ? 'Processando...' : 'Confirmar cadastro'}
+                  </button>
+                )}
+              </div>
+            )}
           </form>
         </div>
 
