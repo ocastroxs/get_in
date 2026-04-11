@@ -1,6 +1,7 @@
-import { League_Spartan, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Inter, League_Spartan } from "next/font/google";
+import ConsoleWarningSuppressor from "@/components/ConsoleWarningSuppressor";
 
 const leagueSpartan = League_Spartan({
   subsets: ["latin"],
@@ -15,17 +16,18 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "GetIN",
-  description: "Sistema de Controle de Visitantes e Acesso a Setores",
+  title: {
+    template: "GetIN - %s",
+    default: "GetIN"
+  }
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="pt-br"
-      className={cn("h-full antialiased", leagueSpartan.variable, inter.variable)}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pt-br" className="h-full antialiased">
+      <body className={cn(leagueSpartan.variable, inter.variable, "min-h-full")}> 
+        <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
+      </body>
     </html>
   );
 }
