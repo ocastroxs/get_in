@@ -1,16 +1,19 @@
 import { getConnection, Create, Read, Update, Delete } from '../config/database.js';
+import { prisma } from '../config/prisma.js';
 
 class CrachaController {
 
+    // /cracha
     static async create(req, res) {
         try {
             const status = "disponivel";
 
-            const data = {
-                status: status
-            }
 
-            const result = await Create('crachas', data);
+            const result = await prisma.cracha.create({
+                data: {
+                    status: status
+                }
+            })
 
             if (!result) {
                 return res.status(400).json({ erro: 'Erro ao criar crachá' });
@@ -23,37 +26,46 @@ class CrachaController {
 
 
         } catch (e) {
-            res.status(500).json({ 
+            res.status(500).json({
                 sucesso: false,
                 mensagem: 'Erro ao criar crachá',
-                erro: e.message});
+                erro: e.message
+            });
         }
     }
 
     static async read(req, res) {
-        try{
-            const crachas = await Read('crachas');
+        try {
+            const crachas = await prisma.cracha.findMany();
 
             res.status(200).json({
-                sucesso:true,
+                sucesso: true,
                 mensagem: "Crachás listados com sucesso",
                 data: crachas
             })
         } catch {
             res.status(500).json({
-                sucesso:false,
+                sucesso: false,
                 mensagem: "Erro ao listar crachás",
                 erro: e.message
             })
         }
     }
 
-    static async update(req,res){
+    static async update(req, res) {
         try {
-            const {id} = req.params;
-            const {status} = req.body;
+            const { id } = req.params;
+            const { status } = req.body;
 
-            const result = await Update("crachas", status, `id = ${id}`);
+            const result = await prisma.cracha.update({
+                where: {
+                    id: Number(id)
+                },
+                data: {
+                    status: status
+                }
+            })
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Crachá atualizado com sucesso",
@@ -68,17 +80,22 @@ class CrachaController {
         }
     }
 
-    static async delete(req,res){
-        try{
-            const {id} = req.params;
+    static async delete(req, res) {
+        try {
+            const { id } = req.params;
+            
 
-            const result = await Delete("crachas", `id = ${id}`);
+            const result = await prisma.cracha.delete({
+                where: {
+                    id: Number(id)
+                }
+            })
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Crachá deletado com sucesso",
                 dados: result
             })
-        } catch {
+        } catch (e){
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao deletar o crachá",
@@ -87,11 +104,15 @@ class CrachaController {
         }
     }
 
-    static async readById(req,res){
+    static async readById(req, res) {
         try {
-            const {id} = req.params;
+            const { id } = req.params;
 
-            const result = await Read("crachas", `id = ${id}`);
+            const result = await prisma.cracha.findMany({
+                where: {
+                    id: Number(id)
+                }
+            })
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Crachá encontrado com sucesso",
@@ -106,11 +127,27 @@ class CrachaController {
         }
     }
 
-    static async readByStatus(req,res){
+    static async readByStatus(req, res) {
         try {
-            const {status} = req.params;
+            let { status } = req.params;
 
-            const result = await Read("crachas", `status = ${status}`);
+            switch (status) {
+                case 'd': status = 'disponivel'
+                 break;
+                case 'p': status = 'perdido'
+                 break;
+                case 'e': status = 'emUso'
+                 break;
+            }
+
+            console.log(status)
+
+            const result = await prisma.cracha.findMany({
+                where: {
+                    status: status
+                }
+            })
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Crachás encontrados com sucesso",
