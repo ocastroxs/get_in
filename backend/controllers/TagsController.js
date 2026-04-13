@@ -3,7 +3,7 @@ import { Create, Read, Update, Delete } from "../config/database";
 class TagsController {
     static async Read(req, res) {
         try {
-            const tags = await Read("tags")//le as tags da tabela "tags"
+            const tags = await prisma.tag.findMany() //le as tags da tabela "tags"
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Tags lidas com sucesso",
@@ -30,7 +30,9 @@ class TagsController {
                 validade
             }
 
-            const result = await Create("tags", newTag)// cria uma nova tag na tabela "tags"
+            const result = await prisma.tag.create({
+                data: newTag
+            }) // cria uma nova tag na tabela "tags"
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Tag criado com sucesso",
@@ -59,7 +61,12 @@ class TagsController {
                 validade
             }
 
-            const result = await Update("tags", updatedTag, `id= ${id}`)//atualiza a tag com o id fornecido usando os dados fornecidos
+            const result = await prisma.tag.update({
+                where: {
+                    id: Number(id)
+                },
+                data: updatedTag
+            }) // atualiza a tag com o id fornecido usando os dados fornecidos
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Tag atualizado com sucesso",
@@ -78,7 +85,11 @@ class TagsController {
         try {
             const { id } = req.params //pega o id da tag a ser deletada 
 
-            await Delete("tags", `id= ${id}`)//deleta a tag com o id fornecido
+            await prisma.tag.delete({
+                where: {
+                    id: Number(id)
+                }
+            }) //deleta a tag com o id fornecido
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Tag deletado com sucesso",
@@ -96,11 +107,15 @@ class TagsController {
         try {
             const { id } = req.params //pega o id da tag a ser lida
 
-            const tag = await Read("tags", `id = ${id}`)//le a tag com o id fornecido
+            const tag = await prisma.tag.findUnique({
+                where: {
+                    id: Number(id)
+                }
+            }) //le a tag com o id fornecido
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Tag lida com sucesso",
-                dados: tag[0]
+                dados: tag 
             })
         } catch (e) {
             return res.status(500).json({

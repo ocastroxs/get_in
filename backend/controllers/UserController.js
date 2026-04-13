@@ -30,7 +30,11 @@ class UserController {
     static async ReadId(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
-            const user = await Read("usuarios", `id = ${id}`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo ID
+            const user = await prisma.usuario.findUnique({
+                where: {
+                    id: Number(id)
+                }
+            }); // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo ID
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuário lido com sucesso",
@@ -47,7 +51,13 @@ class UserController {
     static async ReadName(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
-            const user = await Read("usuarios", `nome like '%${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo nome
+            const user = await prisma.usuario.findMany({
+                where: {
+                    nome: {
+                        contains: id
+                    }
+                }
+            }); // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo nome
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuário lido com sucesso",
@@ -64,7 +74,13 @@ class UserController {
     static async ReadCpf(req, res) {
         try {
             const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
-            const user = await Read("usuarios", `cpf like '${id}%'`) // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo CPF
+            const user = await prisma.usuario.findMany({
+                where: {
+                    cpf: {
+                        contains: id
+                    }
+                }
+            }); // le o usuário da tabela "usuarios" usando a função read do database.js, filtrando pelo CPF
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuário lido com sucesso",
@@ -88,7 +104,9 @@ class UserController {
                 celular: cel,
                 email: email
             }
-            const result = await Create("usuarios", data) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
+            const result = await prisma.usuario.create({
+                data: data
+            }) // cria um novo usuário na tabela "usuarios" usando a função create do database.js
             return res.status(201).json({
                 sucesso: true,
                 mensagem: "Usuário criado com sucesso",
@@ -114,7 +132,12 @@ class UserController {
             email: email
         }
         try {
-            const result = await Update("usuarios", data, `id = ${id}`) // atualiza o usuário na tabela "usuarios" usando a função update do database.js, filtrando pelo ID
+            const result = await prisma.usuario.update({
+                where: {
+                    id: Number(id)
+                },
+                data: data
+            }) // atualiza o usuário na tabela "usuarios" usando a função update do database.js, filtrando pelo ID
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuário atualizado com sucesso",
@@ -132,7 +155,11 @@ class UserController {
     static async Delete(req, res) { // remove um usuário existente
         const { id } = req.params; // obtém o ID do usuário a partir dos parâmetros da rota
         try {
-            const result = await Delete("usuarios", `id = ${id}`) // deleta o usuário da tabela "usuarios" usando a função delete do database.js, filtrando pelo ID
+            const result = await prisma.usuario.delete({
+                where: {
+                    id: Number(id)
+                }
+            }) // deleta o usuário da tabela "usuarios" usando a função delete do database.js, filtrando pelo ID    
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuário deletado com sucesso",
