@@ -1,9 +1,8 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Image from "next/image";
-import { LoginForm } from "@/components/login-form";
-import { Users2, ChevronRight } from "lucide-react";
+import { useState } from "react"
+import { LoginForm } from "@/components/login-form"
+import { Users2, ChevronRight } from "lucide-react"
 
 export default function LoginPage() {
   return (
@@ -14,23 +13,22 @@ export default function LoginPage() {
         <div
           className="absolute inset-0 opacity-[0.08]"
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundSize: "40px 40px"
           }}
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-linear-to-br from-[#0B2447]/0 via-[#0B2447]/0 to-[#0B2447]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0B2447]/0 via-[#0B2447]/0 to-[#0B2447]" />
 
         {/* Decorative circles */}
-        <div className="absolute top-12 right-24 w-32 h-32 rounded-full border border-white/6" />
-        <div className="absolute bottom-20 right-12 w-56 h-56 rounded-full border border-white/4" />
-        <div className="absolute bottom-64 right-72 w-72 h-72 rounded-full border border-white/3" />
+        <div className="absolute top-12 right-24 w-32 h-32 rounded-full border border-white/[0.06]" />
+        <div className="absolute bottom-20 right-12 w-56 h-56 rounded-full border border-white/[0.04]" />
+        <div className="absolute bottom-64 right-72 w-72 h-72 rounded-full border border-white/[0.03]" />
 
         {/* Content */}
         <div className="relative z-10 flex h-full flex-col p-10">
           {/* Logo top */}
-          <Image src="/logo-w.svg" alt="Logo" width={500} height={500} className="w-40 h-40 absolute -top-5" />
+          <img src="logo-w.svg" alt="Logo" className="w-42 h-42 absolute -top-5"/>
 
           {/* Center content */}
           <div className="flex-1 flex flex-col gap-4 max-w-lg justify-center mt-50">
@@ -42,7 +40,8 @@ export default function LoginPage() {
             <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading">
               Controle de
               <br />
-              acesso <span className="text-blue-400">inteligente</span>
+              acesso{" "}
+              <span className="text-blue-400">inteligente</span>
               <br />
               para sua fábrica.
             </h1>
@@ -53,7 +52,7 @@ export default function LoginPage() {
           </div>
 
           {/* Stats bar */}
-          <div className="rounded-xl bg-white/4 border border-white/8 p-5 transition-all duration-300 hover:-translate-y-1">
+          <div className="rounded-xl bg-white/[0.04] border border-white/[0.08] p-5 transition-all duration-300 hover:-translate-y-1">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="flex items-baseline gap-0.5">
