@@ -72,7 +72,9 @@ const CadastroFuncionario = () => {
         const response = await fetch('http://localhost:8080/dep/');
         const data = await response.json();
         if (data.sucesso) setDepartamentos(data.data);
-      } catch (err) { console.error("Erro ao carregar departamentos:", err); }
+      } catch{
+        return;
+      }
     };
     fetchDepartamentos();
   }, []);
