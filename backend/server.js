@@ -15,6 +15,7 @@ import UserRouter from './router/UserRouter.js';
 import FuncRouter from './router/FuncRouter.js';
 import CrachaRouter from './router/CrachaRouter.js';
 import DepRouter from './router/DepRouter.js';
+import LogsRouter from './router/LogsRouter.js';
 
 // -------REGISTRO DAS ROTAS------- //
 
@@ -23,6 +24,7 @@ app.use('/auth', AuthRouter);
 app.use('/func', FuncRouter);
 app.use('/dep', DepRouter);
 app.use('/cracha', CrachaRouter);
+app.use('/logs', LogsRouter);
 
 
 

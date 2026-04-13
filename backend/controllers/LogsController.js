@@ -1,10 +1,18 @@
-import { Create, Update, Read, Delete } from "../config/database";
+import { prisma } from '../config/prisma.js';
 
 class LogsController {
 
     static async Read(req, res) {
         try {
-            const logs = await Read("logs")//le os logs do banco
+            const logs = await prisma.log.findMany() //le os logs do banco
+            
+            if(logs.length === 0){
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum log encontrado",
+                })
+            }
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logs lidas com sucesso",
@@ -30,7 +38,9 @@ class LogsController {
                 dataDeSaida
             }
 
-            await Create("logs", newlog)//cria uma nova log no banco
+            await prisma.log.create({
+                data: newlog
+            }) //cria uma nova log no banco
 
             return res.status(200).json({
                 sucesso: true,
@@ -50,13 +60,23 @@ class LogsController {
         try {
             const { id } = req.params
             const { idDispositivo, idUsuario, dataDeEntrada, dataDeSaida } = req.body
-
             const updatedLog = {
                 idDispositivo,
                 idUsuario,
                 dataDeEntrada,
                 dataDeSaida
             }
+            await prisma.log.update({
+                where: { id: Number(id) },
+                data: updatedLog
+            })
+
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Log atualizada com sucesso",
+                dados: updatedLog
+            })
+
         } catch (e) {
             return res.status(500).json({
                 sucesso: false,
@@ -69,7 +89,10 @@ class LogsController {
     static async Delete(req, res) {
         try {
             const { id } = req.params
-            await Delete("logs", `id = ${id}`)//deleta a log com o id fornecido
+            await prisma.log.delete({
+                where: {id: Number(id)}
+            })  //deleta a log com o id fornecido
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Log deletado com sucesso",
@@ -87,7 +110,17 @@ class LogsController {
         try {
             const { idUsuario } = req.params
 
-            const logs = await Read("logs", `idUsuario = ${idUsuario}`)//le as logs de um usuario especifico
+            const logs = await prisma.log.findMany({
+                where: { idUsuario: Number(idUsuario) }
+            }) //le as logs de um usuario especifico
+
+            if(logs.length === 0){
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum log encontrado para esse usuário",
+                })
+            }
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logs lidas com sucesso",
@@ -106,7 +139,17 @@ class LogsController {
         try {
             const { idDispositivo } = req.params
 
-            const logs = await Read("logs", `idDIspositivos = ${idDispositivo}`) // le as logs baseado em umunico dispositivo
+            const logs = await prisma.log.findMany({
+                where: { idDispositivo: Number(idDispositivo) }
+            }) // le as logs baseado em um unico dispositivo
+
+            if(logs.length === 0){
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum log encontrado para esse dispositivo",
+                })
+            }
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Logs lidas com sucesso",
@@ -124,11 +167,22 @@ class LogsController {
     static async ReadById(req, res) {
         try {
             const { id } = req.params
-            const log = await Read("logs", `id = ${id}`)
+            const log = await prisma.log.findUnique({
+                where: { id: Number(id) }
+            })
+
+            if(!log){
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Nenhum log encontrado com esse id",
+                })
+            }
+
+
             return res.status(200).json({
                 sucesso:true,
                 mensagem: "Log lida com sucesso",
-                dados: log[0]
+                dados: log
             })
         } catch (e){
             return res.status(500).json({
