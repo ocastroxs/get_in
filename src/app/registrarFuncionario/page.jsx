@@ -69,7 +69,7 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch('http://localhost:8080/dep/read');
+        const response = await fetch('http://localhost:8080/dep/');
         const data = await response.json();
         if (data.sucesso) setDepartamentos(data.data);
       } catch (err) { console.error("Erro ao carregar departamentos:", err); }
@@ -118,7 +118,7 @@ const CadastroFuncionario = () => {
       senha: formData.senha, imagem: null, dataDeNascimento: null
     };
     try {
-      const response = await fetch('http://localhost:8080/auth/criar', {
+      const response = await fetch('http://localhost:8080/auth/', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBackend)
       });
       const data = await response.json();
