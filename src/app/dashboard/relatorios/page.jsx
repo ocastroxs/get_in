@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
@@ -12,6 +12,23 @@ import { Users, ArrowRightLeft, Clock, AlertTriangle } from "lucide-react";
 import { STATS_RELATORIOS, HISTORICO_VISITAS, SETORES_MAIS_VISITADOS, EMPRESAS_MAIS_VISITAS } from "@/lib/mockData";
 
 export default function RelatoriosPage() {
+  const [stats, setStats] = useState(STATS_RELATORIOS); // Fallback para mock
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('http://localhost:3000/relatorios/stats');
+        const data = await res.json();
+        if (data.sucesso) {
+          setStats(data.data);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar stats:', error);
+      }
+    }
+    fetchStats();
+  }, []);
+
   return (
     <div className="flex flex-col gap-6 w-full pb-10">
 

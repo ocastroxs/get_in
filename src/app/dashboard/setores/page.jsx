@@ -71,24 +71,55 @@ const SETOR_VAZIO = {
 
 /**
  * 🔌 API — busca lista de setores
- * Substituir por: const res = await fetch('/api/setores'); return res.json();
  */
 async function apiListarSetores() {
-  return SETORES_MOCK;
+  try {
+    const res = await fetch('http://localhost:3000/dep');
+    if (!res.ok) throw new Error('Erro ao buscar setores');
+    const data = await res.json();
+    if (!data.sucesso) return SETORES_MOCK; // Fallback
+    return data.data.map(dep => ({
+      id: dep.id,
+      nome: dep.nome,
+      responsavel: dep.idGestor ? `Gestor ${dep.idGestor}` : 'N/A',
+      acesso: 'liberado',
+      status: 'ativo',
+      epiObrig: false,
+      visitantes: 0,
+      fluxo: 0,
+      ultimaAtualizacao: { data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }
+    }));
+  } catch (error) {
+    console.error(error);
+    return SETORES_MOCK; // Fallback
+  }
 }
 
 /**
  * 🔌 API — cria novo setor
- * Substituir por: await fetch('/api/setores', { method:'POST', body: JSON.stringify(payload) })
  */
 async function apiCriarSetor(payload) {
-  const nextNum = String(Math.floor(Math.random() * 900) + 100).padStart(3, "0");
-  return { ...payload, id: `SET-${nextNum}`, visitantes: 0, fluxo: 0, ultimaAtualizacao: { data: "29/07", hora: "agora" } };
+  try {
+    const res = await fetch('http://localhost:3000/dep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome: payload.nome, idGestor: null })
+    });
+    if (!res.ok) throw new Error('Erro ao criar setor');
+    const data = await res.json();
+    if (!data.sucesso) throw new Error(data.mensagem);
+    return { ...payload, id: Math.random(), visitantes: 0, fluxo: 0, ultimaAtualizacao: { data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() } };
+  } catch (error) {
+    console.error(error);
+    // Fallback mock
+    const nextNum = String(Math.floor(Math.random() * 900) + 100).padStart(3, "0");
+    return { ...payload, id: `SET-${nextNum}`, visitantes: 0, fluxo: 0, ultimaAtualizacao: { data: "29/07", hora: "agora" } };
+  }
 }
 
 /**
  * 🔌 API — edita setor existente
- * Substituir por: await fetch(`/api/setores/${id}`, { method:'PUT', body: JSON.stringify(payload) })
+ * Como backend não tem PUT, usar mock
  */
 async function apiEditarSetor(id, payload) {
   return { ...payload, id };
@@ -96,7 +127,7 @@ async function apiEditarSetor(id, payload) {
 
 /**
  * 🔌 API — exclui setor
- * Substituir por: await fetch(`/api/setores/${id}`, { method:'DELETE' })
+ * Como backend não tem DELETE, usar mock
  */
 async function apiExcluirSetor(id) {
   return { ok: true };
