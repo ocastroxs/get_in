@@ -9,7 +9,7 @@ export const MENU_ITEMS = {
     principal: [
       { id: "dashboard", label: "Dashboard Geral", icon: "LayoutDashboard", href: "/dashboard" },
       { id: "visitantes", label: "Visitantes", icon: "Users", href: "/dashboard/visitantes", badge: 2 },
-      { id: "setores", label: "Setores", icon: "Building2", href: "/setores" },
+      { id: "setores", label: "Setores", icon: "Building2", href: "/dashboard/setores" },
       { id: "crachas", label: "Crachás", icon: "CreditCard", href: "/crachas" },
     ],
     operacao: [
@@ -26,7 +26,7 @@ export const MENU_ITEMS = {
     principal: [
       { id: "dashboard", label: "Dashboard Geral", icon: "LayoutDashboard", href: "/dashboard" },
       { id: "visitantes", label: "Visitantes", icon: "Users", href: "/dashboard/visitantes", badge: 2 },
-      { id: "setores", label: "Setores", icon: "Building2", href: "/setores" },
+      { id: "setores", label: "Setores", icon: "Building2", href: "/dashboard/setores" },
     ],
     operacao: [
       { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
