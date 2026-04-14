@@ -1,4 +1,4 @@
-import { Create, Update, Delete, Read } from "../config/database";
+import { prisma } from "../config/prisma.js";
 
 class RequisicaoFuncionarioController {
     static async Create(req, res) {
