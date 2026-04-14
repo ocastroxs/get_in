@@ -441,7 +441,7 @@ export default function SetoresPage() {
   // ── KPIs ─────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
     const maiorFluxo = setores.reduce((a, b) => b.fluxo > a.fluxo ? b : a, setores[0]);
-    const bloqueados = setores.filter((s) => s.acesso === "bloqueado").length;
+    const bloqueados = setores.filter((s) => s.acesso === "bloqueado").length; 
     const restritos  = setores.filter((s) => s.acesso === "restrito").length;
     return {
       total:      setores.length,
