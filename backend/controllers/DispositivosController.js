@@ -1,4 +1,4 @@
-import { Create, Read, Delete, Update } from "../config/database";
+import { prisma } from '../config/prisma.js';
 
 class DispositivosController {
 

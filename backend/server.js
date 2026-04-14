@@ -16,6 +16,11 @@ import FuncRouter from './router/FuncRouter.js';
 import CrachaRouter from './router/CrachaRouter.js';
 import DepRouter from './router/DepRouter.js';
 import LogsRouter from './router/LogsRouter.js';
+import DispositivosRouter from "./router/DispositivosRouter.js";
+
+// requisições 
+import RequisicaoFuncRouter from './router/RequisicaoFuncRouter.js';
+import RequisicaoVisiRouter from './router/RequisicaoVisiRouter.js';
 
 // -------REGISTRO DAS ROTAS------- //
 
@@ -25,6 +30,11 @@ app.use('/func', FuncRouter);
 app.use('/dep', DepRouter);
 app.use('/cracha', CrachaRouter);
 app.use('/logs', LogsRouter);
+app.use('/disp', DispositivosRouter);
+
+// requisições
+app.use('/reqfunc', RequisicaoFuncRouter);
+app.use('/reqvisi', RequisicaoVisiRouter);
 
 
 
