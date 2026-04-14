@@ -3,7 +3,7 @@ import { getConnection, Create, Read, Update, Delete, hashPassword } from '../co
 class FuncController {
     static async Read(req, res) {
         try {
-            const func = await Read("funcionarios"); // le os funcionaruos da tabela "funcionarios"
+            const func = await prisma.funcionario.findMany() // le os funcionaruos da tabela "funcionarios"
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Funcionarios lidos com sucesso",
@@ -18,16 +18,68 @@ class FuncController {
         }
     }
 
-    static async ReadId(req, res){
+    static async ReadId(req, res) {
         try {
-            const {id} = req.params;
-            const func = await Read("funcionarios", `id = ${id}`)//le o resultado do banco e filtra por id por meio da função read do database.js
+            const { id } = req.params;
+            const func = await prisma.funcionario.findUnique({
+                where: {
+                    id: Number(id)
+                }
+            })//le o resultado do banco e filtra por id por meio da função read do database.js
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Funcionario lido com sucesso",
                 dados: func
             })
-        } catch (e){
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o funcionario",
+                erro: e.message
+            })
+        }
+    }
+
+    static async ReadName(req, res) {
+        try {
+            const { id } = req.params;
+            const func = await prisma.funcionario.findMany({
+                where: {
+                    nome: {
+                        contains: id
+                    }
+                }
+            })//le o resultado do banco e filtra por nome por meio da função read do database.js
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Funcionario lido com sucesso",
+                dados: func
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o funcionario",
+                erro: e.message
+            })
+        }
+    }
+
+    static async ReadCpf(req, res) {
+        try {
+            const { id } = req.params;
+            const func = await prisma.funcionario.findMany({
+                where: {
+                    cpf: {
+                        contains: id
+                    }
+                }
+            })//le o resultado do banco e filtra por cpf por meio da função read do database.js
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Funcionario lido com sucesso",
+                dados: func
+            })
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao ler o funcionario",
@@ -51,7 +103,9 @@ class FuncController {
                 senhaHash
             }
 
-            const result = await Create("funcionarios", newFunc)// cria um novo funcionario na tabela "funcionarios" 
+            const result = await prisma.funcionario.create({
+                data: newFunc
+            })// cria um novo funcionario na tabela "funcionarios" 
             return res.status(201).json({
                 sucesso: true,
                 mensagem: "Funcionario criado com sucesso",
@@ -68,8 +122,8 @@ class FuncController {
 
     static async Update(req, res) {
         try {
-            const {id}=req.body
-            const { idUser, idDepartamento, tipo, dataDeNascimento, imagem, senha} = req.body
+            const { id } = req.body
+            const { idUser, idDepartamento, tipo, dataDeNascimento, imagem, senha } = req.body
 
             const senhaHash = await hashPassword(senha) // cria um hash da senha usando a função hashPassword do database.js
 
@@ -82,31 +136,40 @@ class FuncController {
                 senhaHash
             }
 
-            const result = await Update("funcionarios", updatedFunc, `id = ${id}`)// atualiza o funcionario buscando por id 
+            const result = await prisma.funcionario.update({
+                where: {
+                    id: Number(id)
+                },
+                data: updatedFunc
+            })// atualiza o funcionario buscando por id 
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Funcionario atualizado com sucesso",
                 dados: result
-            }) 
+            })
         } catch (e) {
             return res.status(500).json({
-                sucesso:false,
+                sucesso: false,
                 mensagem: "Erro ao atualizar funcionario",
                 erro: e.message
             })
         }
     }
 
-    static async Delete(req,res) {
+    static async Delete(req, res) {
         try {
-            const {id} = req.params // obtém o ID do funcionario a partir dos parâmetros da rota
-            const result = await Delete("funcionarios", `id = ${id}`)//deleta o funcionario da tabela "funcionarios" usando a função delete do database.js, filtrando pelo ID
+            const { id } = req.params // obtém o ID do funcionario a partir dos parâmetros da rota
+            const result = await prisma.funcionario.delete({
+                where: {
+                    id: Number(id)
+                }
+            })//deleta o funcionario da tabela "funcionarios" usando a função delete do database.js, filtrando pelo ID
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Funcionario deletado com sucesso",
                 dados: result
             })
-        } catch (e){
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao deletar funcionario",
@@ -115,7 +178,7 @@ class FuncController {
         }
     }
 
-    
+
 }
 
 export default FuncController;

@@ -82,6 +82,97 @@ class DepartamentoController {
 
     }
 
+    static async readById(req, res){
+        try{
+            const {id} = req.params;
+            const departamento = await prisma.departamento.findUnique({
+                where: { id: Number(id) }
+            })  
+            if(!departamento) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Departamento não encontrado"
+                })
+            }
+
+            res.status(200).json({
+                sucesso: true,
+                mensagem: "Departamento lido com sucesso",
+                dados: departamento
+            })
+
+        }
+        catch(e) {
+            res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao ler o departamento",
+                erro: e.message
+            })
+        }
+    }
+
+    static async update(req, res){
+        try{
+            const {id} = req.params;
+            const {nome, idGestor} = req.body;
+            const departamento = await prisma.departamento.findUnique({
+                where: { id: Number(id) }
+            })
+            if(!departamento) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Departamento não encontrado"
+                })
+            }
+            await prisma.departamento.update({
+                where: { id: Number(id) },
+                data: {
+                    nome: nome,
+                    idGestor: idGestor
+                }
+            })
+            res.status(200).json({
+                sucesso: true,
+                mensagem: "Departamento atualizado com sucesso"
+            })
+        }
+        catch(e) {
+            res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao atualizar o departamento",
+                erro: e.message
+            })
+        }
+    }
+
+    static async delete(req, res){
+        try{
+            const {id} = req.params;
+            const departamento = await prisma.departamento.findUnique({
+                where: { id: Number(id) }
+            })
+            if(!departamento) {
+                return res.status(404).json({
+                    sucesso: false,
+                    mensagem: "Departamento não encontrado"
+                })
+            }
+            await prisma.departamento.delete({
+                where: { id: Number(id) }
+            })
+            res.status(200).json({
+                sucesso: true,
+                mensagem: "Departamento deletado com sucesso"
+            })
+        }
+        catch(e) {
+            res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao deletar o departamento",
+                erro: e.message
+            })
+        }
+    }
 }
 
 export default DepartamentoController

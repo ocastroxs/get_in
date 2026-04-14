@@ -10,11 +10,13 @@ class DispositivosController {
             const { idDepartamento, local, dataManutencao } = req.body// faz a requisição dos valores do body
             const data = { idDepartamento, local, dataManutencao }
 
-            const result = await Create("dispositivos", data)//cria o registro na tabela
+            const result = await prisma.dispositivo.create({
+                data: data
+            })//cria o registro na tabela
             return res.status(201).json({
                 sucesso: true,
                 mensagem: "Dispositivo cadastrado com sucesso",
-                dados: { id: result.insertId, ...data }//retorna os valores com o id do dispositivo que foi criado
+                dados: result//retorna os valores com o id do dispositivo que foi criado
             })
         } catch (e) {
             return res.status(500).json({
@@ -35,7 +37,17 @@ class DispositivosController {
                 dataManutencao
             }
 
-            const result = await Update("dispositivos", data, `id=${id}`)
+            const result = await prisma.dispositivo.update({
+                where: {
+                    id: Number(id)
+                },
+                data: {
+                    idDepartamento: Number(idDepartamento),
+                    local,
+                    dataManutencao: new Date(dataManutencao)
+                }
+            })
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Dados do dispositivos atualizados",
@@ -50,15 +62,15 @@ class DispositivosController {
         }
     }
 
-    static async Read(req,res){
+    static async Read(req, res) {
         try {
-            const dispositivos = await Read("dispositivos")
+            const dispositivos = await prisma.dispositivo.findMany()
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Dispositivos lidos com sucesso",
                 dados: dispositivos
             })
-        } catch (e){
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao ler dispositivos",
@@ -67,11 +79,16 @@ class DispositivosController {
         }
     }
 
-    static async ReadById(req,res){
-        try{
-            const {id} = req.params
+    static async ReadById(req, res) {
+        try {
+            const { id } = req.params
 
-            const dado = await Read("dispositivos", `id= ${id}`)
+            const dado = await prisma.dispositivo.findUnique({
+                where: {
+                    id: Number(id)
+                }
+            })
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "dispositivo lido com sucesso",
@@ -86,17 +103,22 @@ class DispositivosController {
         }
     }
 
-    static async ReadBySetor(req,res) {
+    static async ReadBySetor(req, res) {
         try {
-            const {id} = req.params
+            const { id } = req.params
 
-            const dado = await Read("dispositivos", `idDepartamento =${id}`)
+            const dado = await prisma.dispositivo.findMany({
+                where: {
+                    idDepartamento: Number(id)
+                }
+            })
+
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Dispositivos encontrados com sucesso",
                 dados: dado
             })
-        } catch (e){
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao encontrar dispositivos",
@@ -105,18 +127,24 @@ class DispositivosController {
         }
     }
 
-    static async ReadByName(req,res){
+    static async ReadByName(req, res) {
         try {
-            const {name} = req.params
+            const { name } = req.params
 
-            const dado = await Read("dipositivos", `local like '%${name}%`) // verifica se tem o valor procurado em qualquer posição no nome dos registros
+            const dado = await prisma.dispositivo.findMany({
+                where: {
+                    local: {
+                        contains: name
+                    }
+                }
+            }) // verifica se tem o valor procurado em qualquer posição no nome dos registros
             return res.status(200).json({
                 sucesso: true,
                 mensagem: "Usuarios encontrados com sucesso",
                 dados: dado
             })
-        
-        } catch (e){
+
+        } catch (e) {
             return res.status(500).json({
                 sucesso: false,
                 mensagem: "Erro ao procurar usuarios desejados",
@@ -125,6 +153,27 @@ class DispositivosController {
         }
     }
 
+    static async Delete(req, res) {
+        try {
+            const { id } = req.params
+            const result = await prisma.dispositivo.delete({
+                where: {
+                    id: Number(id)
+                }
+            })
+            return res.status(200).json({
+                sucesso: true,
+                mensagem: "Dispositivo deletado com sucesso",
+                dados: result
+            })
+        } catch (e) {
+            return res.status(500).json({
+                sucesso: false,
+                mensagem: "Erro ao deletar o dispositivo",
+                erro: e.message
+            })
+        }
+    }
 }
 
 export default DispositivosController;
