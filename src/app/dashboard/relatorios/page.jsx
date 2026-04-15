@@ -17,7 +17,7 @@ export default function RelatoriosPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('http://localhost:3000/relatorios/stats');
+        const res = await fetch('http://localhost:8080/relatorios/stats');
         const data = await res.json();
         if (data.sucesso) {
           setStats(data.data);
