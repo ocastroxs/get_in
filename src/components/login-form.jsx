@@ -7,76 +7,247 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 
 export function LoginForm({ className, ...props }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validate = () => {
+    const newErrors = {};
+    if (!email) {
+      newErrors.email = "O e-mail é obrigatório.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Informe um e-mail válido.";
+    }
+    if (!password) {
+      newErrors.password = "A senha é obrigatória.";
+    } else if (password.length < 6) {
+      newErrors.password = "A senha deve ter ao menos 6 caracteres.";
+    }
+    return newErrors;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    setErrors({});
+    setIsLoading(true);
+    // Simulação de chamada — substituir pela lógica real de autenticação
+    setTimeout(() => setIsLoading(false), 1500);
+  };
 
   return (
-    <form className={cn("flex flex-col gap-6", className)} {...props}>
-      {/* Header */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold font-heading">Bem-vindo de volta</h1>
-        <p className="text-sm text-muted-foreground">Acesse o painel com suas credenciais de segurança.</p>
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className={cn(
+        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700",
+        className
+      )}
+      {...props}
+    >
+      {/* Logo visível apenas em mobile (painel esquerdo oculto) */}
+      <div className="flex lg:hidden justify-center mb-2">
+        <img src="/logo-b.svg" alt="GetIN" className="h-10 w-auto" />
       </div>
 
-      {/* Email */}
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-3xl font-bold font-heading tracking-tight">
+          Bem-vindo de volta
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Acesse o painel com suas credenciais de segurança.
+        </p>
+      </div>
+
+      {/* Campo E-mail */}
       <Field>
         <FieldLabel htmlFor="email">E-mail</FieldLabel>
-        <div className="relative transition-transform duration-300 focus-within:-translate-y-1 shadow-xl!">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        <div
+          className={cn(
+            "relative transition-transform duration-300 focus-within:-translate-y-0.5",
+            errors.email && "animate-in shake"
+          )}
+        >
+          <Mail
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
+              errors.email ? "text-red-400" : "text-muted-foreground/50"
+            )}
+          />
           <Input
             id="email"
             type="email"
             placeholder="seu@email.com"
-            required
-            className="shadow-xl! focus-visible:ring-0 focus-visible:ring-offset-0 h-11 pl-10 border border-gray-200 bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400 focus-visible:border-gray-500"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+            }}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
+            className={cn(
+              "h-11 pl-10 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
+              "focus-visible:ring-0 focus-visible:ring-offset-0",
+              errors.email
+                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
+                : "border-gray-200 focus-visible:border-blue-500"
+            )}
           />
         </div>
+        {errors.email && (
+          <p
+            id="email-error"
+            role="alert"
+            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
+          >
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            {errors.email}
+          </p>
+        )}
       </Field>
 
-      {/* Password */}
+      {/* Campo Senha */}
       <Field>
         <FieldLabel htmlFor="password">Senha</FieldLabel>
-        <div className="relative transition-transform duration-300 focus-within:-translate-y-1 shadow-xl!">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+        <div
+          className={cn(
+            "relative transition-transform duration-300 focus-within:-translate-y-0.5",
+            errors.password && "animate-in shake"
+          )}
+        >
+          <Lock
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
+              errors.password ? "text-red-400" : "text-muted-foreground/50"
+            )}
+          />
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
             placeholder="••••••••"
-            required
-            className="shadow-xl! focus-visible:ring-0 focus-visible:ring-offset-0 h-11 pl-10 border border-gray-200 bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400 focus-visible:border-gray-500"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+            }}
+            aria-invalid={!!errors.password}
+            aria-describedby={errors.password ? "password-error" : undefined}
+            className={cn(
+              "h-11 pl-10 pr-11 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
+              "focus-visible:ring-0 focus-visible:ring-offset-0",
+              errors.password
+                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
+                : "border-gray-200 focus-visible:border-blue-500"
+            )}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
+        {errors.password && (
+          <p
+            id="password-error"
+            role="alert"
+            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
+          >
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            {errors.password}
+          </p>
+        )}
       </Field>
 
-      {/* Remember me + forgot password */}
+      {/* Manter conectado + Esqueci senha */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Checkbox id="remember" checked={remember} onCheckedChange={setRemember} />
-          <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+          <Checkbox
+            id="remember"
+            checked={remember}
+            onCheckedChange={setRemember}
+          />
+          <Label
+            htmlFor="remember"
+            className="text-sm text-muted-foreground cursor-pointer select-none"
+          >
             Manter conectado
           </Label>
         </div>
-        <a href="#" className="text-sm text-blue-500 hover:text-blue-600 hover:underline underline-offset-4 transition-colors">
+        <a
+          href="#"
+          className="text-sm text-blue-500 hover:text-blue-600 hover:underline underline-offset-4 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+        >
           Esqueci minha senha
         </a>
       </div>
 
-      {/* Submit button */}
+      {/* Botão de envio */}
       <Button
         type="submit"
-        className="h-12 w-full rounded-md bg-blue-500 hover:bg-blue-600 text-white font-medium shadow-lg! shadow-blue-500/20 transition-all duration-300 hover:cursor-pointer"
+        disabled={isLoading}
+        className={cn(
+          "h-12 w-full rounded-xl bg-blue-500 hover:bg-blue-600 active:scale-[0.98] text-white font-semibold",
+          "shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-blue-500/40 hover:cursor-pointer",
+          "disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+        )}
       >
-        <LogIn className="mr-2 h-4 w-4" />
-        Entrar no Sistema
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            <svg
+              className="h-4 w-4 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+            Entrando…
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            <LogIn className="h-4 w-4" />
+            Entrar no Sistema
+          </span>
+        )}
       </Button>
 
-      {/* Security footer */}
-      <div className="flex items-center gap-2 rounded-md border border-green-100 bg-green-50/50 p-3">
-        <ShieldCheck className="h-6 w-4 text-green-500 shrink-0" />
-        <p className="text-[12px] text-green-700 leading-relaxed font-medium">Conexão segura • Dados criptografados • Acesso auditado</p>
+      {/* Rodapé de segurança */}
+      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
+        <ShieldCheck className="h-5 w-5 text-green-500 shrink-0" />
+        <p className="text-[11px] text-green-700 leading-relaxed font-medium">
+          Conexão segura&nbsp;•&nbsp;Dados criptografados&nbsp;•&nbsp;Acesso auditado
+        </p>
       </div>
     </form>
   );
