@@ -9,6 +9,7 @@ import UltimosCheckouts from "@/components/UltimosCheckouts";
 import NaEmpresaAgora from "@/components/NaEmpresaAgora";
 import { STATS_TODAY } from "@/lib/mockData";
 import { Users, ArrowRightLeft, LogOut, Clock } from "lucide-react";
+import ParticlesBackground from "@/components/ui/ParticlesBackground";
 
 export default function DashboardPage() {
   return (
