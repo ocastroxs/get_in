@@ -182,3 +182,22 @@ export const EMPRESAS_LISTA = [
   { id: 7, nome: "Carrefour Ind.", categoria: "Fornecimento", cnpj: "78.901.234/0001-56", responsavel: "Beatriz Ramos", celular: "(11) 94567-8901", contato: "(11) 94567-8901", visitantes: 22, ultimaVisita: "29/07/2025 14:20", status: "Ativa", color: "#8b5cf6" },
   { id: 8, nome: "Vigilância Pro", categoria: "Segurança", cnpj: "89.012.345/0001-67", responsavel: "Roberto Alves", celular: "(21) 96578-9012", contato: "(21) 96578-9012", visitantes: 17, ultimaVisita: "29/07/2025 10:22", status: "Ativa", color: "#f97316" },
 ];
+
+export const STATS_MOVIMENTACAO = {
+  checkins: { value: 38, delta: 12, deltaDir: "up", sub: "vs ontem" },
+  checkouts: { value: 24, pct: 100, sub: "registrados" },
+  dentro: { value: 14, sub: "ainda dentro da fábrica" },
+  pendentes: { value: 2, sub: "aguardando aprovação" },
+};
+
+export const MOVIMENTACAO_LISTA = [
+  { id: 1, visitante: "João Carvalho", empresa: "SupliTec", cpf: "032.541.870-12", setor: "Produção", entrada: "08:02", saida: "—", status: "Alerta", statusColor: "text-red-600", statusBg: "bg-red-500" },
+  { id: 2, visitante: "Marina Souza", empresa: "NutriFab", cpf: "178.234.560-77", setor: "Laboratório", entrada: "09:15", saida: "—", status: "Dentro", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
+  { id: 3, visitante: "Carlos Mendes", empresa: "AçoForte", cpf: "874.019.230-45", setor: "Almoxarifado", entrada: "08:34", saida: "11:20", status: "Saiu", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 4, visitante: "Beatriz Ramos", empresa: "Carrefour", cpf: "561.872.340-09", setor: "Diretoria", entrada: "09:00", saida: "10:45", status: "Saiu", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 5, visitante: "André Costa", empresa: "SupliTec", cpf: "329.047.610-88", setor: "Produção", entrada: "09:10", saida: "—", status: "Dentro", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
+  { id: 6, visitante: "Fernanda Lima", empresa: "LogixBR", cpf: "712.398.050-23", setor: "Recepção", entrada: "09:30", saida: "—", status: "Aguard. aprovação", statusColor: "text-purple-600", statusBg: "bg-purple-500" },
+  { id: 7, visitante: "Ricardo Pereira", empresa: "MecParts", cpf: "480.156.720-61", setor: "Manutenção", entrada: "10:05", saida: "—", status: "Alerta", statusColor: "text-red-600", statusBg: "bg-red-500" },
+  { id: 8, visitante: "Camila Torres", empresa: "Vigilância Pro", cpf: "903.274.180-55", setor: "Portaria", entrada: "10:22", saida: "12:00", status: "Saiu", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 9, visitante: "Paulo Nascimento", empresa: "FoodAudit", cpf: "256.083.940-30", setor: "Laboratório", entrada: "11:00", saida: "—", status: "Dentro", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
+];
