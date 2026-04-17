@@ -201,3 +201,28 @@ export const MOVIMENTACAO_LISTA = [
   { id: 8, visitante: "Camila Torres", empresa: "Vigilância Pro", cpf: "903.274.180-55", setor: "Portaria", entrada: "10:22", saida: "12:00", status: "Saiu", statusColor: "text-green-600", statusBg: "bg-green-500" },
   { id: 9, visitante: "Paulo Nascimento", empresa: "FoodAudit", cpf: "256.083.940-30", setor: "Laboratório", entrada: "11:00", saida: "—", status: "Dentro", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
 ];
+
+export const STATS_CIRCULACAO = {
+  totalMovimentos: { value: 156, delta: 18, deltaDir: "up", sub: "movimentações hoje" },
+  ocupacaoAtual: { value: 42, pct: 84, sub: "da capacidade total" },
+  setorMaisAtivo: { nome: "Produção", movimentos: 64, sub: "maior fluxo de pessoas" },
+  tempoMedio: { value: "45m", sub: "permanência por setor" },
+};
+
+export const CIRCULACAO_LISTA = [
+  { id: 1, pessoa: "João Carvalho", tipo: "Visitante", origem: "Portaria", destino: "Produção", horario: "08:15", status: "Em trânsito", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
+  { id: 2, pessoa: "Marina Souza", tipo: "Visitante", origem: "Produção", destino: "Laboratório", horario: "09:45", status: "No local", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 3, pessoa: "Carlos Mendes", tipo: "Funcionário", origem: "Almoxarifado", destino: "Expedição", horario: "10:20", status: "No local", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 4, pessoa: "Ana Pereira", tipo: "Visitante", origem: "Recepção", destino: "Administração", horario: "10:35", status: "No local", statusColor: "text-green-600", statusBg: "bg-green-500" },
+  { id: 5, pessoa: "Ricardo Pereira", tipo: "Visitante", origem: "Produção", destino: "Manutenção", horario: "11:05", status: "Alerta", statusColor: "text-red-600", statusBg: "bg-red-500" },
+  { id: 6, pessoa: "Fernanda Lima", tipo: "Funcionário", origem: "Diretoria", destino: "Recepção", horario: "11:15", status: "Em trânsito", statusColor: "text-blue-600", statusBg: "bg-blue-500" },
+  { id: 7, pessoa: "Pedro Rocha", tipo: "Visitante", origem: "Portaria", destino: "Produção", horario: "11:30", status: "No local", statusColor: "text-green-600", statusBg: "bg-green-500" },
+];
+
+export const OCUPACAO_SETORES = [
+  { setor: "Produção", atual: 18, max: 25, color: "#3b82f6" },
+  { setor: "Laboratório", atual: 6, max: 10, color: "#10b981" },
+  { setor: "Almoxarifado", atual: 12, max: 15, color: "#f59e0b" },
+  { setor: "Administração", atual: 4, max: 20, color: "#8b5cf6" },
+  { setor: "Refeitório", atual: 2, max: 30, color: "#ec4899" },
+];
