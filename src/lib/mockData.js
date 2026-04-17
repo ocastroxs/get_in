@@ -165,3 +165,20 @@ export const ALERTAS_VISITANTES = [
   { nome: "Carlos Mendes", setor: "Almox" },
   { nome: "Pedro Rocha",   setor: "Prod" },
 ];
+export const STATS_EMPRESAS = {
+  total: { value: 24, delta: 2, deltaDir: "up", sub: "novas este mês" },
+  ativas: { value: 19, pct: 79, sub: "do total cadastrado" },
+  maisVisitada: { nome: "SupliTec", visitas: 87, sub: "visitas acumuladas" },
+  menosVisitada: { nome: "TechServ", visitas: 3, sub: "visitas acumuladas" },
+};
+
+export const EMPRESAS_LISTA = [
+  { id: 1, nome: "SupliTec", categoria: "Fornecimento", cnpj: "12.345.678/0001-90", responsavel: "Marcos Oliveira", celular: "(11) 98765-4321", contato: "(11) 98765-4321", visitantes: 87, ultimaVisita: "29/07/2025 08:10", status: "Ativa", color: "#3b82f6" },
+  { id: 2, nome: "NutriFab", categoria: "Auditoria / Fiscal", cnpj: "23.456.789/0001-01", responsavel: "Ana Paula Melo", celular: "(11) 91234-5678", contato: "(11) 91234-5678", visitantes: 63, ultimaVisita: "29/07/2025 08:15", status: "Ativa", color: "#10b981" },
+  { id: 3, nome: "AçoForte", categoria: "Manutenção", cnpj: "34.567.890/0001-12", responsavel: "Paulo Gomes", celular: "(11) 93456-7890", contato: "(11) 93456-7890", visitantes: 51, ultimaVisita: "29/07/2025 08:34", status: "Ativa", color: "#f59e0b" },
+  { id: 4, nome: "MecParts", categoria: "Manutenção", cnpj: "45.678.901/0001-23", responsavel: "Cláudia Saraiva", celular: "(21) 98876-5432", contato: "(21) 98876-5432", visitantes: 44, ultimaVisita: "29/07/2025 10:05", status: "Ativa", color: "#10b981" },
+  { id: 5, nome: "FoodAudit", categoria: "Auditoria / Fiscal", cnpj: "56.789.012/0001-34", responsavel: "Renata Figueiredo", celular: "(11) 97654-3210", contato: "(11) 97654-3210", visitantes: 38, ultimaVisita: "29/07/2025 11:00", status: "Ativa", color: "#ec4899" },
+  { id: 6, nome: "LogixBR", categoria: "Logística", cnpj: "67.890.123/0001-45", responsavel: "Fernanda Costa", celular: "(31) 98123-4567", contato: "(31) 98123-4567", visitantes: 29, ultimaVisita: "29/07/2025 09:30", status: "Ativa", color: "#1e3a8a" },
+  { id: 7, nome: "Carrefour Ind.", categoria: "Fornecimento", cnpj: "78.901.234/0001-56", responsavel: "Beatriz Ramos", celular: "(11) 94567-8901", contato: "(11) 94567-8901", visitantes: 22, ultimaVisita: "29/07/2025 14:20", status: "Ativa", color: "#8b5cf6" },
+  { id: 8, nome: "Vigilância Pro", categoria: "Segurança", cnpj: "89.012.345/0001-67", responsavel: "Roberto Alves", celular: "(21) 96578-9012", contato: "(21) 96578-9012", visitantes: 17, ultimaVisita: "29/07/2025 10:22", status: "Ativa", color: "#f97316" },
+];
