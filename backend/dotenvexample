@@ -1,10 +1,7 @@
-PORT=8080
+PORT=3001
 
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=sua_senha_aqui
-DB_NAME=techrent_db
+# Esta é a conexão correta:
+DATABASE_URL="postgresql:..."
 
 JWT_SECRET=segredo_muito_dificil
 JWT_EXPIRES_IN=9h
