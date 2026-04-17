@@ -1,22 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Building2, 
-  Download, 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreHorizontal, 
-  Edit2, 
-  History, 
+import {
+  Building2,
+  Download,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit2,
+  History,
   Printer,
   CheckCircle2,
   TrendingUp,
   TrendingDown,
   Briefcase,
   Users,
-  ArrowUpRight
+  ArrowUpRight,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { STATS_EMPRESAS, EMPRESAS_LISTA } from "@/lib/mockData";
@@ -27,14 +27,13 @@ export default function EmpresasPage() {
   const [filtroStatus, setFiltroStatus] = useState("Todas");
   const [busca, setBusca] = useState("");
 
-  const empresasFiltradas = EMPRESAS_LISTA.filter(emp => {
+  const empresasFiltradas = EMPRESAS_LISTA.filter((emp) => {
     const matchesStatus = filtroStatus === "Todas" || emp.status === filtroStatus;
-    const matchesBusca = emp.nome.toLowerCase().includes(busca.toLowerCase()) || 
-                         emp.cnpj.includes(busca);
+    const matchesBusca = emp.nome.toLowerCase().includes(busca.toLowerCase()) || emp.cnpj.includes(busca);
     return matchesStatus && matchesBusca;
   });
 
-  const maxVisitantes = Math.max(...EMPRESAS_LISTA.map(e => e.visitantes));
+  const maxVisitantes = Math.max(...EMPRESAS_LISTA.map((e) => e.visitantes));
 
   return (
     <div className="p-6 space-y-6">
@@ -42,9 +41,7 @@ export default function EmpresasPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Empresas Terceirizadas</h1>
-          <p className="text-sm text-muted-foreground">
-            Indústria Alimentos Puros • Ter 08h00 - 18h • 29 de julho de 2025
-          </p>
+          <p className="text-sm text-muted-foreground">Indústria Alimentos Puros • Ter 08h00 - 18h • 29 de julho de 2025</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" className="gap-2">
@@ -101,23 +98,23 @@ export default function EmpresasPage() {
               key={status}
               onClick={() => setFiltroStatus(status)}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
-                filtroStatus === status 
-                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" 
-                : "text-muted-foreground hover:bg-accent"
+                filtroStatus === status
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-accent"
               }`}
             >
               {status}
             </button>
           ))}
-          <div className="h-4 w-[1px] bg-border mx-2" />
+          <div className="h-4 w-px bg-border mx-2" />
           <Button variant="ghost" size="sm" className="text-xs gap-2">
             <Filter size={14} /> Ordenar por
           </Button>
         </div>
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-          <Input 
-            placeholder="Buscar empresa, CNPJ..." 
+          <Input
+            placeholder="Buscar empresa, CNPJ..."
             className="pl-9 h-9 text-xs"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -130,9 +127,7 @@ export default function EmpresasPage() {
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="font-bold text-sm">Registro de Empresas</h3>
-            <p className="text-[10px] text-muted-foreground">
-              {empresasFiltradas.length} empresas cadastradas • mostrando 8 por página
-            </p>
+            <p className="text-[10px] text-muted-foreground">{empresasFiltradas.length} empresas cadastradas • mostrando 8 por página</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" className="h-8 w-8">
@@ -163,7 +158,7 @@ export default function EmpresasPage() {
                 <tr key={emp.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div 
+                      <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                         style={{ backgroundColor: emp.color }}
                       >
@@ -175,44 +170,34 @@ export default function EmpresasPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">
-                    {emp.cnpj}
-                  </td>
+                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">{emp.cnpj}</td>
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold leading-none">{emp.responsavel}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">{emp.celular}</p>
                   </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">
-                    {emp.contato}
-                  </td>
+                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">{emp.contato}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3 min-w-[100px]">
                       <span className="text-xs font-bold w-4">{emp.visitantes}</span>
                       <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full rounded-full"
-                          style={{ 
+                          style={{
                             width: `${(emp.visitantes / maxVisitantes) * 100}%`,
-                            backgroundColor: emp.color
+                            backgroundColor: emp.color,
                           }}
                         />
                       </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-[11px] font-medium leading-none">
-                      {emp.ultimaVisita.split(' ')[0]}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {emp.ultimaVisita.split(' ')[1]}
-                    </p>
+                    <p className="text-[11px] font-medium leading-none">{emp.ultimaVisita.split(" ")[0]}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">{emp.ultimaVisita.split(" ")[1]}</p>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">
-                        {emp.status}
-                      </span>
+                      <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">{emp.status}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">

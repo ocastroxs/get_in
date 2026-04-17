@@ -1,22 +1,22 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  Printer, 
-  Clock, 
-  MoreHorizontal, 
-  CheckCircle2, 
-  AlertCircle, 
-  UserPlus, 
+import {
+  Search,
+  Filter,
+  Download,
+  Printer,
+  Clock,
+  MoreHorizontal,
+  CheckCircle2,
+  AlertCircle,
+  UserPlus,
   LogOut,
   Calendar,
   Building2,
   Users,
   ArrowRightLeft,
-  Eye
+  Eye,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { STATS_MOVIMENTACAO, MOVIMENTACAO_LISTA } from "@/lib/mockData";
@@ -27,16 +27,18 @@ export default function CheckinPage() {
   const [filtroStatus, setFiltroStatus] = useState("Todas");
   const [busca, setBusca] = useState("");
 
-  const registrosFiltrados = MOVIMENTACAO_LISTA.filter(reg => {
-    const matchesStatus = filtroStatus === "Todas" || 
-                         (filtroStatus === "Dentro" && reg.status === "Dentro") ||
-                         (filtroStatus === "Saiu" && reg.status === "Saiu") ||
-                         (filtroStatus === "Pendente" && reg.status === "Aguard. aprovação") ||
-                         (filtroStatus === "Alerta" && reg.status === "Alerta");
-    
-    const matchesBusca = reg.visitante.toLowerCase().includes(busca.toLowerCase()) || 
-                         reg.cpf.includes(busca) ||
-                         reg.empresa.toLowerCase().includes(busca.toLowerCase());
+  const registrosFiltrados = MOVIMENTACAO_LISTA.filter((reg) => {
+    const matchesStatus =
+      filtroStatus === "Todas" ||
+      (filtroStatus === "Dentro" && reg.status === "Dentro") ||
+      (filtroStatus === "Saiu" && reg.status === "Saiu") ||
+      (filtroStatus === "Pendente" && reg.status === "Aguard. aprovação") ||
+      (filtroStatus === "Alerta" && reg.status === "Alerta");
+
+    const matchesBusca =
+      reg.visitante.toLowerCase().includes(busca.toLowerCase()) ||
+      reg.cpf.includes(busca) ||
+      reg.empresa.toLowerCase().includes(busca.toLowerCase());
     return matchesStatus && matchesBusca;
   });
 
@@ -46,9 +48,7 @@ export default function CheckinPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Check-in / Check-out</h1>
-          <p className="text-sm text-muted-foreground">
-            Indústria Alimentos Puros • Ter 08h00 - 18h • 29 de julho de 2025
-          </p>
+          <p className="text-sm text-muted-foreground">Indústria Alimentos Puros • Ter 08h00 - 18h • 29 de julho de 2025</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" className="gap-2">
@@ -106,17 +106,17 @@ export default function CheckinPage() {
               key={status}
               onClick={() => setFiltroStatus(status)}
               className={`px-4 py-1.5 rounded-md text-xs font-medium transition-all ${
-                filtroStatus === status 
-                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm" 
-                : "text-muted-foreground hover:bg-accent"
+                filtroStatus === status
+                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-accent"
               }`}
             >
               {status}
             </button>
           ))}
-          
-          <div className="h-4 w-[1px] bg-border mx-2 hidden md:block" />
-          
+
+          <div className="h-4 w-px bg-border mx-2 hidden md:block" />
+
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="outline" size="sm" className="text-xs gap-2 h-8">
               <Building2 size={14} /> Todos os Setores
@@ -132,8 +132,8 @@ export default function CheckinPage() {
 
         <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-          <Input 
-            placeholder="Buscar visitante, CPF, empresa..." 
+          <Input
+            placeholder="Buscar visitante, CPF, empresa..."
             className="pl-9 h-9 text-xs"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -146,9 +146,7 @@ export default function CheckinPage() {
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="font-bold text-sm">Registro de Movimentação</h3>
-            <p className="text-[10px] text-muted-foreground">
-              {registrosFiltrados.length} registros hoje • mostrando 10 por página
-            </p>
+            <p className="text-[10px] text-muted-foreground">{registrosFiltrados.length} registros hoje • mostrando 10 por página</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -183,32 +181,20 @@ export default function CheckinPage() {
                   <td className="px-4 py-3">
                     <p className="text-xs font-bold leading-none">{reg.visitante}</p>
                   </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">
-                    {reg.empresa}
-                  </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">
-                    {reg.cpf}
-                  </td>
+                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">{reg.empresa}</td>
+                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">{reg.cpf}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md w-fit">
                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      <span className="text-[10px] font-bold text-foreground uppercase tracking-wider">
-                        {reg.setor}
-                      </span>
+                      <span className="text-[10px] font-bold text-foreground uppercase tracking-wider">{reg.setor}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-[11px] font-bold">
-                    {reg.entrada}
-                  </td>
-                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">
-                    {reg.saida}
-                  </td>
+                  <td className="px-4 py-3 text-[11px] font-bold">{reg.entrada}</td>
+                  <td className="px-4 py-3 text-[11px] font-medium text-muted-foreground">{reg.saida}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5">
                       <div className={`w-1.5 h-1.5 rounded-full ${reg.statusBg}`} />
-                      <span className={`text-[10px] font-bold ${reg.statusColor} uppercase tracking-wider`}>
-                        {reg.status}
-                      </span>
+                      <span className={`text-[10px] font-bold ${reg.statusColor} uppercase tracking-wider`}>{reg.status}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -218,7 +204,11 @@ export default function CheckinPage() {
                           Aprovar
                         </Button>
                       ) : reg.status !== "Saiu" ? (
-                        <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1.5 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] gap-1.5 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                        >
                           Check-out
                         </Button>
                       ) : (
