@@ -1,9 +1,55 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { LoginForm } from "@/components/login-form"
 import Image from "next/image"
 import { Users2, ChevronRight } from "lucide-react"
+
+const TITLES = [
+  "Controle de acesso inteligente para sua fábrica.",
+  "Rastreabilidade em tempo real.",
+  "Auditoria completa de visitantes.",
+];
+
+function AnimatedTitle() {
+  const [displayedText, setDisplayedText] = useState("");
+  const [titleIndex, setTitleIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [speed, setSpeed] = useState(100);
+
+  useEffect(() => {
+    const currentTitle = TITLES[titleIndex];
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        if (displayedText.length < currentTitle.length) {
+          setDisplayedText(currentTitle.substring(0, displayedText.length + 1));
+          setSpeed(100);
+        } else {
+          setSpeed(2000);
+          setIsDeleting(true);
+        }
+      } else {
+        if (displayedText.length > 0) {
+          setDisplayedText(displayedText.substring(0, displayedText.length - 1));
+          setSpeed(50);
+        } else {
+          setIsDeleting(false);
+          setTitleIndex((prev) => (prev + 1) % TITLES.length);
+          setSpeed(500);
+        }
+      }
+    }, speed);
+
+    return () => clearTimeout(timer);
+  }, [displayedText, titleIndex, isDeleting, speed]);
+
+  return (
+    <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading">
+      {displayedText}
+      <span className="animate-pulse">|</span>
+    </h1>
+  );
+}
 
 export default function LoginPage() {
   return (
@@ -12,9 +58,9 @@ export default function LoginPage() {
       <div className="relative hidden w-[60%] lg:block" style={{ background: "#0B2447" }}>
         {/* Grid pattern overlay */}
         <div
-          className="absolute inset-0 opacity-[0.08]"
+          className="absolute inset-0 opacity-[0.25]"
           style={{
-            backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
             backgroundSize: "40px 40px"
           }}
         />
@@ -36,17 +82,10 @@ export default function LoginPage() {
               <span className="text-[12px] uppercase tracking-[0.15em] text-blue-400 font-medium">Sistema Ativo</span>
             </div>
 
-            <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading">
-              Controle de
-              <br />
-              acesso{" "}
-              <span className="text-blue-400">inteligente</span>
-              <br />
-              para sua fábrica.
-            </h1>
+            <AnimatedTitle />
 
-            <p className="text-md leading-relaxed text-white/50">
-              Credenciamento digital, rastreabilidade em tempo real e auditoria completa de visitantes em todos os setores.
+            <p className="text-md leading-relaxed text-white/50 h-6">
+              Sistema de controle de acesso avançado para empresas modernas.
             </p>
           </div>
 
