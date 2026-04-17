@@ -2,13 +2,21 @@
 
 import { useState, useEffect } from "react"
 import { LoginForm } from "@/components/login-form"
-import Image from "next/image"
 import { Users2, ChevronRight } from "lucide-react"
 
 const TITLES = [
-  "Controle de acesso inteligente para sua fábrica.",
-  "Rastreabilidade em tempo real.",
-  "Auditoria completa de visitantes.",
+  {
+    text: "Controle de acesso inteligente para sua fábrica.",
+    highlights: ["inteligente"]
+  },
+  {
+    text: "Rastreabilidade em tempo real.",
+    highlights: ["tempo real"]
+  },
+  {
+    text: "Auditoria completa de visitantes.",
+    highlights: ["completa"]
+  },
 ];
 
 function AnimatedTitle() {
@@ -18,7 +26,7 @@ function AnimatedTitle() {
   const [speed, setSpeed] = useState(100);
 
   useEffect(() => {
-    const currentTitle = TITLES[titleIndex];
+    const currentTitle = TITLES[titleIndex].text;
     const timer = setTimeout(() => {
       if (!isDeleting) {
         if (displayedText.length < currentTitle.length) {
@@ -43,9 +51,42 @@ function AnimatedTitle() {
     return () => clearTimeout(timer);
   }, [displayedText, titleIndex, isDeleting, speed]);
 
+  const renderHighlightedText = () => {
+    const highlights = TITLES[titleIndex].highlights;
+    let parts = [{ text: displayedText, isHighlight: false }];
+
+    highlights.forEach((word) => {
+      const newParts = [];
+      parts.forEach((part) => {
+        if (part.isHighlight) {
+          newParts.push(part);
+        } else {
+          const regex = new RegExp(`(${word})`, "gi");
+          const split = part.text.split(regex);
+          split.forEach((segment, index) => {
+            if (segment.toLowerCase() === word.toLowerCase()) {
+              newParts.push({ text: segment, isHighlight: true });
+            } else if (segment) {
+              newParts.push({ text: segment, isHighlight: false });
+            }
+          });
+        }
+      });
+      parts = newParts;
+    });
+
+    return parts;
+  };
+
+  const parts = renderHighlightedText();
+
   return (
     <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading">
-      {displayedText}
+      {parts.map((part, idx) => (
+        <span key={idx} className={part.isHighlight ? "text-blue-400" : ""}>
+          {part.text}
+        </span>
+      ))}
       <span className="animate-pulse">|</span>
     </h1>
   );
@@ -65,15 +106,17 @@ export default function LoginPage() {
           }}
         />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-linear-to-br from-[#0B2447]/0 via-[#0B2447]/0 to-[#0B2447]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0B2447]/0 via-[#0B2447]/0 to-[#0B2447]" />
 
         {/* Decorative circles */}
-        <div className="absolute top-12 right-24 w-32 h-32 rounded-full border border-white/6" />
-        <div className="absolute bottom-20 right-12 w-56 h-56 rounded-full border border-white/4" />
-        <div className="absolute bottom-64 right-72 w-72 h-72 rounded-full border border-white/3" />
+        <div className="absolute top-12 right-24 w-32 h-32 rounded-full border border-white/[0.06]" />
+        <div className="absolute bottom-20 right-12 w-56 h-56 rounded-full border border-white/[0.04]" />
+        <div className="absolute bottom-64 right-72 w-72 h-72 rounded-full border border-white/[0.03]" />
 
         {/* Content */}
         <div className="relative z-10 flex h-full flex-col p-10">
+          {/* Logo top */}
+          <img src="logo-w.svg" alt="Logo" className="w-42 h-42 absolute -top-5"/>
 
           {/* Center content */}
           <div className="flex-1 flex flex-col gap-4 max-w-lg justify-center mt-50">
@@ -90,7 +133,7 @@ export default function LoginPage() {
           </div>
 
           {/* Stats bar */}
-          <div className="rounded-xl bg-white/4 border border-white/8 p-5 transition-all duration-300 hover:-translate-y-1">
+          <div className="rounded-xl bg-white/[0.04] border border-white/[0.08] p-5 transition-all duration-300 hover:-translate-y-1">
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <div className="flex items-baseline gap-0.5">
