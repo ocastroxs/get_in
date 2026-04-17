@@ -80,7 +80,7 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch('http://localhost:8080/dep/',{
+        const response = await fetch(`https://get-in-ilp5.onrender.com/dep`,{
         method: 'GET', headers: { 'Content-Type': 'application/json' }
         } );
         const data = await response.json();
@@ -132,7 +132,7 @@ const CadastroFuncionario = () => {
       senha: formData.senha, imagem: null, dataDeNascimento: null
     };
     try {
-      const response = await fetch('http://localhost:8080/auth/', {
+      const response = await fetch('https://get-in-ilp5.onrender.com/auth', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBackend)
       });
       const data = await response.json();
