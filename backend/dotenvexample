@@ -1,7 +1,0 @@
-PORT=3001
-
-# Esta é a conexão correta:
-DATABASE_URL="postgresql:..."
-
-JWT_SECRET=segredo_muito_dificil
-JWT_EXPIRES_IN=9h
