@@ -1,13 +1,97 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { LoginForm } from "@/components/login-form"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 
-/* ─────────────────────────────────────────────
-   Canvas de partículas adaptado para o painel
-   escuro (azul marinho) do lado esquerdo
-───────────────────────────────────────────── */
+const TITLES = [
+  {
+    text: "Controle de acesso inteligente para sua fábrica.",
+    highlights: ["inteligente"]
+  },
+  {
+    text: "Rastreabilidade em tempo real.",
+    highlights: ["tempo real"]
+  },
+  {
+    text: "Auditoria completa de visitantes.",
+    highlights: ["completa"]
+  },
+];
+
+function AnimatedTitle() {
+  const [displayedText, setDisplayedText] = useState("");
+  const [titleIndex, setTitleIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [speed, setSpeed] = useState(100);
+
+  useEffect(() => {
+    const currentTitle = TITLES[titleIndex].text;
+    const timer = setTimeout(() => {
+      if (!isDeleting) {
+        if (displayedText.length < currentTitle.length) {
+          setDisplayedText(currentTitle.substring(0, displayedText.length + 1));
+          setSpeed(100);
+        } else {
+          setSpeed(2000);
+          setIsDeleting(true);
+        }
+      } else {
+        if (displayedText.length > 0) {
+          setDisplayedText(displayedText.substring(0, displayedText.length - 1));
+          setSpeed(50);
+        } else {
+          setIsDeleting(false);
+          setTitleIndex((prev) => (prev + 1) % TITLES.length);
+          setSpeed(500);
+        }
+      }
+    }, speed);
+
+    return () => clearTimeout(timer);
+  }, [displayedText, titleIndex, isDeleting, speed]);
+
+  const renderHighlightedText = () => {
+    const highlights = TITLES[titleIndex].highlights;
+    let parts = [{ text: displayedText, isHighlight: false }];
+
+    highlights.forEach((word) => {
+      const newParts = [];
+      parts.forEach((part) => {
+        if (part.isHighlight) {
+          newParts.push(part);
+        } else {
+          const regex = new RegExp(`(${word})`, "gi");
+          const split = part.text.split(regex);
+          split.forEach((segment, index) => {
+            if (segment.toLowerCase() === word.toLowerCase()) {
+              newParts.push({ text: segment, isHighlight: true });
+            } else if (segment) {
+              newParts.push({ text: segment, isHighlight: false });
+            }
+          });
+        }
+      });
+      parts = newParts;
+    });
+
+    return parts;
+  };
+
+  const parts = renderHighlightedText();
+
+  return (
+    <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading min-h-[160px]">
+      {parts.map((part, idx) => (
+        <span key={idx} className={part.isHighlight ? "text-blue-400" : ""}>
+          {part.text}
+        </span>
+      ))}
+      <span className="animate-pulse">|</span>
+    </h1>
+  );
+}
+
 function PanelParticles() {
   const canvasRef = useRef(null)
 
@@ -91,9 +175,6 @@ function PanelParticles() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   Componente de estatística individual
-───────────────────────────────────────────── */
 function StatItem({ value, suffix, label, icon: Icon }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -109,9 +190,6 @@ function StatItem({ value, suffix, label, icon: Icon }) {
   )
 }
 
-/* ─────────────────────────────────────────────
-   Página de Login
-───────────────────────────────────────────── */
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full">
@@ -166,17 +244,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Título */}
-            <h1
-              className="text-5xl font-bold leading-[1.1] text-white tracking-tight font-heading animate-in fade-in slide-in-from-left-4 duration-700 delay-200"
-            >
-              Controle de
-              <br />
-              acesso{" "}
-              <span className="text-blue-400">inteligente</span>
-              <br />
-              para sua fábrica.
-            </h1>
+            {/* Título Animado */}
+            <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-200">
+              <AnimatedTitle />
+            </div>
 
             {/* Descrição */}
             <p

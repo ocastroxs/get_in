@@ -74,8 +74,8 @@ function ModalNovoVisitante({ onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ function AlertaBanner({ alertas, onDismiss }) {
   if (!alertas.length) return null;
   const nomes = alertas.map((a) => `${a.nome} [${a.setor}]`).join(" e ");
   return (
-    <div className="flex items-start gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 relative">
+    <div className="flex items-start gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 relative animate-in fade-in slide-in-from-top-2 duration-500">
       <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
       <span>
         <strong>{alertas.length} visitante{alertas.length > 1 ? "s" : ""} sem saída registrada</strong> com turno encerrado.{" "}
@@ -160,9 +160,9 @@ function AlertaBanner({ alertas, onDismiss }) {
 
 // ─── Linha da Tabela ─────────────────────────────────────────────────────────
 
-function LinhaVisitante({ v }) {
+function LinhaVisitante({ v, index }) {
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
+    <tr className="border-b border-border hover:bg-accent/40 transition-all animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
       <td className="py-3 px-4 font-medium text-sm text-foreground whitespace-nowrap">{v.nome}</td>
       <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">{v.empresa}</td>
       <td className="py-3 px-4 text-sm text-muted-foreground font-mono">{v.cpf}</td>
@@ -239,9 +239,9 @@ export default function VisitantesPage() {
         />
       )}
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 animate-in fade-in duration-700">
         {/* Topbar reutilizado — mas com botões próprios */}
-        <header className="flex items-center justify-between">
+        <header className="flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Visitantes</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -264,7 +264,7 @@ export default function VisitantesPage() {
         <AlertaBanner alertas={alertas} onDismiss={() => setAlertas([])} />
 
         {/* KPI Cards — reutilizando StatCard */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
           <StatCard
             label="Visitantes Hoje"
             value={stats.total}
@@ -301,7 +301,7 @@ export default function VisitantesPage() {
         </div>
 
         {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Filter size={13} />
             Filtros
@@ -364,7 +364,7 @@ export default function VisitantesPage() {
         </div>
 
         {/* Tabela */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
           {/* header da tabela */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
@@ -405,7 +405,7 @@ export default function VisitantesPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((v) => <LinhaVisitante key={v.id} v={v} />)
+                  filtrados.map((v, i) => <LinhaVisitante key={v.id} v={v} index={i} />)
                 )}
               </tbody>
             </table>

@@ -7,8 +7,8 @@ export default function StatusVisitantesChart() {
   const ativos = STATUS_VISITANTES.find((s) => s.name === "Dentro da fábrica")?.value ?? 0;
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3">
-      <div>
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+      <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
         <h3 className="text-sm font-semibold text-foreground">Status dos Visitantes</h3>
         <p className="text-xs text-muted-foreground">Situação atual — tempo real</p>
       </div>
@@ -51,8 +51,8 @@ export default function StatusVisitantesChart() {
         </div>
 
         <div className="flex flex-col gap-2 flex-1">
-          {STATUS_VISITANTES.map((item) => (
-            <div key={item.name} className="flex items-center justify-between gap-2">
+          {STATUS_VISITANTES.map((item, i) => (
+            <div key={item.name} className="flex items-center justify-between gap-2 p-1 rounded-lg hover:bg-muted/50 transition-all hover:translate-x-1 animate-in fade-in slide-in-from-right-2 duration-700" style={{ animationDelay: `${600 + i * 50}ms` }}>
               <div className="flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full shrink-0"

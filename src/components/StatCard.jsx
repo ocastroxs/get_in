@@ -12,7 +12,7 @@ export default function StatCard({
 }) {
   return (
     <div
-      className="bg-card text-card-foreground rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-shadow"
+      className="bg-card text-card-foreground rounded-xl border border-border p-4 flex flex-col gap-3 hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4 duration-700"
       style={{ borderBottomColor: accentVar, borderBottomWidth: "2px" }}
     >
       <div className="flex items-start justify-between">
@@ -20,7 +20,7 @@ export default function StatCard({
           {label}
         </p>
         {icon && (
-          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center transition-all group-hover:scale-110 animate-in fade-in zoom-in duration-700 delay-100">
             {icon}
           </div>
         )}
