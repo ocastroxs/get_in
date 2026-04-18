@@ -14,8 +14,8 @@ export default function TiposVisitantesChart({
   const total = data.reduce((s, v) => s + v[dataKey], 0);
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div>
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400">
+      <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
         <h3 className="text-sm font-bold text-foreground">{title}</h3>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
@@ -66,7 +66,7 @@ export default function TiposVisitantesChart({
 
         <div className="flex flex-col gap-3 flex-1">
           {data.map((item, i) => (
-            <div key={i} className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-colors">
+            <div key={i} className="flex items-center justify-between gap-2 p-1.5 rounded-lg hover:bg-muted/50 transition-all hover:translate-x-1 animate-in fade-in slide-in-from-right-2 duration-700" style={{ animationDelay: `${500 + i * 50}ms` }}>
               <div className="flex items-center gap-2">
                 <span
                   className="w-3 h-3 rounded-md shrink-0 shadow-sm"

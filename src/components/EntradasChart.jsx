@@ -16,9 +16,9 @@ export default function EntradasChart({
   const [view, setView] = useState("hoje");
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow duration-300">
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
           <h3 className="text-sm font-bold text-foreground">{title}</h3>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
@@ -74,7 +74,7 @@ export default function EntradasChart({
               }}
               itemStyle={{ color: barColor }}
             />
-            <Bar dataKey={dataKey} name="Total" radius={[6, 6, 0, 0]} animationDuration={1500} animationEasing="ease-out">
+            <Bar dataKey={dataKey} name="Total" radius={[6, 6, 0, 0]} animationDuration={1200} animationEasing="ease-out">
               {data.map((entry, index) => {
                 // Destacar o maior valor visualmente como exemplo de dinâmica
                 const isMax = entry[dataKey] === Math.max(...data.map(d => d[dataKey]));
