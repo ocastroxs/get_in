@@ -4,9 +4,6 @@ import { useState, useEffect, useRef } from "react"
 import { LoginForm } from "@/components/login-form"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 
-/* ─────────────────────────────────────────────
-   Componente de Título Animado (da branch castro)
-───────────────────────────────────────────── */
 const TITLES = [
   {
     text: "Controle de acesso inteligente para sua fábrica.",
@@ -95,10 +92,6 @@ function AnimatedTitle() {
   );
 }
 
-/* ─────────────────────────────────────────────
-   Canvas de partículas adaptado para o painel
-   escuro (azul marinho) do lado esquerdo
-───────────────────────────────────────────── */
 function PanelParticles() {
   const canvasRef = useRef(null)
 
@@ -182,9 +175,6 @@ function PanelParticles() {
   )
 }
 
-/* ─────────────────────────────────────────────
-   Componente de estatística individual
-───────────────────────────────────────────── */
 function StatItem({ value, suffix, label, icon: Icon }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -200,9 +190,6 @@ function StatItem({ value, suffix, label, icon: Icon }) {
   )
 }
 
-/* ─────────────────────────────────────────────
-   Página de Login
-───────────────────────────────────────────── */
 export default function LoginPage() {
   return (
     <div className="flex min-h-screen w-full">
