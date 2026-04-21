@@ -13,14 +13,14 @@ import ParticlesBackground from "@/components/ui/ParticlesBackground";
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Dashboard Geral"
         subtitle="Indústria Alimentos Puros · Turno 08h–18h · 29 de julho de 2025"
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-4 animate-in fade-in duration-700 delay-100">
         <StatCard
           label="Visitantes Hoje"
           value={STATS_TODAY.visitantes.value}
@@ -57,7 +57,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Gráficos — linha 1 */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4 animate-in fade-in duration-700 delay-200">
         <div className="col-span-2">
           <EntradasChart />
         </div>
@@ -65,13 +65,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Gráficos — linha 2 */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 animate-in fade-in duration-700 delay-300">
         <TiposVisitanteChart />
         <StatusVisitantesChart />
       </div>
 
       {/* Tabelas */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4 animate-in fade-in duration-700 delay-400">
         <UltimosCheckins />
         <UltimosCheckouts />
         <NaEmpresaAgora />
