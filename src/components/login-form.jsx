@@ -1,90 +1,83 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, ArrowRight, AlertCircle } from "lucide-react";
 
 export function LoginForm({ className, ...props }) {
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const validate = () => {
-    const newErrors = {};
-    if (!email) {
-      newErrors.email = "O e-mail é obrigatório.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = "Informe um e-mail válido.";
-    }
-    if (!password) {
-      newErrors.password = "A senha é obrigatória.";
-    } else if (password.length < 6) {
-      newErrors.password = "A senha deve ter ao menos 6 caracteres.";
-    }
-    return newErrors;
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
+    setError("");
+
+    // Validação básica
+    if (!email || !password) {
+      setError("Por favor, preencha todos os campos.");
       return;
     }
-    setErrors({});
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Por favor, insira um e-mail válido.");
+      return;
+    }
+
     setIsLoading(true);
-    // Simulação de chamada — substituir pela lógica real de autenticação
-    setTimeout(() => setIsLoading(false), 1500);
+
+    // Simular delay de autenticação
+    setTimeout(() => {
+      try {
+        login(email, password);
+      } catch (err) {
+        setError("Erro ao fazer login. Tente novamente.");
+        setIsLoading(false);
+      }
+    }, 1000);
   };
 
   return (
-    <form
+    <form 
       onSubmit={handleSubmit}
-      noValidate
-      className={cn(
-        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700",
-        className
-      )}
+      className={cn("flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-700", className)} 
       {...props}
     >
-      {/* Logo visível apenas em mobile (painel esquerdo oculto) */}
-      <div className="flex lg:hidden justify-center mb-2">
-        <img src="/logo-b.svg" alt="GetIN" className="h-10 w-auto" />
-      </div>
-
-      {/* Cabeçalho */}
-      <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-bold font-heading tracking-tight">
+      {/* Header com animação */}
+      <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-right-4 duration-700 delay-100">
+        <h1 className="text-3xl font-bold font-heading bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
           Bem-vindo de volta
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Acesse o painel com suas credenciais de segurança.
-        </p>
+        <p className="text-sm text-muted-foreground">Acesse o painel com suas credenciais de segurança.</p>
       </div>
 
-      {/* Campo E-mail */}
-      <Field>
+      {/* Error message */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border-2 border-red-200 bg-red-50/80 p-3 animate-in fade-in shake duration-300">
+          <AlertCircle className="h-5 w-5 text-red-600 shrink-0" />
+          <p className="text-sm text-red-700 font-medium">{error}</p>
+        </div>
+      )}
+
+      {/* Email com melhorias */}
+      <Field className="animate-in fade-in slide-in-from-right-4 duration-700 delay-150">
         <FieldLabel htmlFor="email">E-mail</FieldLabel>
-        <div
-          className={cn(
-            "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.email && "animate-in shake"
-          )}
-        >
-          <Mail
-            className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
-              errors.email ? "text-red-400" : "text-muted-foreground/50"
-            )}
-          />
+        <div className="relative transition-all duration-300 focus-within:-translate-y-1">
+          <Mail className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-300",
+            focusedField === "email" ? "text-blue-500" : "text-muted-foreground/50"
+          )} />
           <Input
             id="email"
             type="email"
@@ -92,46 +85,29 @@ export function LoginForm({ className, ...props }) {
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              setError("");
             }}
-            aria-invalid={!!errors.email}
-            aria-describedby={errors.email ? "email-error" : undefined}
+            onFocus={() => setFocusedField("email")}
+            onBlur={() => setFocusedField(null)}
+            disabled={isLoading}
             className={cn(
-              "h-11 pl-10 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
-              "focus-visible:ring-0 focus-visible:ring-offset-0",
-              errors.email
-                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-gray-200 focus-visible:border-blue-500"
+              "h-11 pl-10 border-2 bg-white/80 text-sm transition-all duration-300 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed",
+              focusedField === "email" 
+                ? "border-blue-400 shadow-lg shadow-blue-500/10 bg-white" 
+                : "border-gray-200 hover:border-gray-300"
             )}
           />
         </div>
-        {errors.email && (
-          <p
-            id="email-error"
-            role="alert"
-            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
-          >
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {errors.email}
-          </p>
-        )}
       </Field>
 
-      {/* Campo Senha */}
-      <Field>
+      {/* Password com melhorias */}
+      <Field className="animate-in fade-in slide-in-from-right-4 duration-700 delay-200">
         <FieldLabel htmlFor="password">Senha</FieldLabel>
-        <div
-          className={cn(
-            "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.password && "animate-in shake"
-          )}
-        >
-          <Lock
-            className={cn(
-              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
-              errors.password ? "text-red-400" : "text-muted-foreground/50"
-            )}
-          />
+        <div className="relative transition-all duration-300 focus-within:-translate-y-1">
+          <Lock className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-300",
+            focusedField === "password" ? "text-blue-500" : "text-muted-foreground/50"
+          )} />
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
@@ -139,116 +115,100 @@ export function LoginForm({ className, ...props }) {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+              setError("");
             }}
-            aria-invalid={!!errors.password}
-            aria-describedby={errors.password ? "password-error" : undefined}
+            onFocus={() => setFocusedField("password")}
+            onBlur={() => setFocusedField(null)}
+            disabled={isLoading}
             className={cn(
-              "h-11 pl-10 pr-11 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
-              "focus-visible:ring-0 focus-visible:ring-offset-0",
-              errors.password
-                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-gray-200 focus-visible:border-blue-500"
+              "h-11 pl-10 pr-10 border-2 bg-white/80 text-sm transition-all duration-300 placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed",
+              focusedField === "password" 
+                ? "border-blue-400 shadow-lg shadow-blue-500/10 bg-white" 
+                : "border-gray-200 hover:border-gray-300"
             )}
           />
           <button
             type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
-          >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4" />
-            ) : (
-              <Eye className="h-4 w-4" />
+            onClick={() => setShowPassword(!showPassword)}
+            disabled={isLoading}
+            className={cn(
+              "absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed",
+              focusedField === "password" ? "text-blue-500" : "text-muted-foreground/50 hover:text-muted-foreground"
             )}
+          >
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
-        {errors.password && (
-          <p
-            id="password-error"
-            role="alert"
-            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
-          >
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            {errors.password}
-          </p>
-        )}
       </Field>
 
-      {/* Manter conectado + Esqueci senha */}
-      <div className="flex items-center justify-between">
+      {/* Remember me + forgot password com melhorias */}
+      <div className="flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-700 delay-250">
         <div className="flex items-center gap-2">
-          <Checkbox
-            id="remember"
-            checked={remember}
+          <Checkbox 
+            id="remember" 
+            checked={remember} 
             onCheckedChange={setRemember}
+            disabled={isLoading}
+            className="transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <Label
-            htmlFor="remember"
-            className="text-sm text-muted-foreground cursor-pointer select-none"
-          >
+          <Label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
             Manter conectado
           </Label>
         </div>
-        <a
-          href="#"
-          className="text-sm text-blue-500 hover:text-blue-600 hover:underline underline-offset-4 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+        <a 
+          href="#" 
+          className="text-sm text-blue-500 hover:text-blue-600 hover:underline underline-offset-4 transition-all duration-300 font-medium"
+          onClick={(e) => e.preventDefault()}
         >
           Esqueci minha senha
         </a>
       </div>
 
-      {/* Botão de envio */}
+      {/* Submit button com estado de carregamento */}
       <Button
         type="submit"
         disabled={isLoading}
         className={cn(
-          "h-12 w-full rounded-xl bg-blue-500 hover:bg-blue-600 active:scale-[0.98] text-white font-semibold",
-          "shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-blue-500/40 hover:cursor-pointer",
-          "disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100"
+          "h-12 w-full rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium shadow-lg shadow-blue-500/30 transition-all duration-300 group animate-in fade-in slide-in-from-right-4 duration-700 delay-300",
+          isLoading && "opacity-75 cursor-not-allowed"
         )}
       >
         {isLoading ? (
-          <span className="flex items-center gap-2">
-            <svg
-              className="h-4 w-4 animate-spin"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              />
-            </svg>
-            Entrando…
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Entrando...
+          </div>
         ) : (
-          <span className="flex items-center gap-2">
-            <LogIn className="h-4 w-4" />
+          <div className="flex items-center gap-2">
+            <LogIn className="h-4 w-4 transition-transform duration-300 group-hover:-translate-x-1" />
             Entrar no Sistema
-          </span>
+            <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
+          </div>
         )}
       </Button>
 
-      {/* Rodapé de segurança */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
-        <ShieldCheck className="h-5 w-5 text-green-500 shrink-0" />
-        <p className="text-[11px] text-green-700 leading-relaxed font-medium">
-          Conexão segura&nbsp;•&nbsp;Dados criptografados&nbsp;•&nbsp;Acesso auditado
+      {/* Security footer com melhorias */}
+      <div className="flex items-center gap-2 rounded-lg border-2 border-green-200 bg-gradient-to-r from-green-50/80 to-emerald-50/80 p-4 backdrop-blur-sm animate-in fade-in slide-in-from-right-4 duration-700 delay-350 hover:shadow-lg hover:shadow-green-500/10 transition-all duration-300">
+        <ShieldCheck className="h-5 w-5 text-green-600 shrink-0 animate-pulse" />
+        <p className="text-[12px] text-green-700 leading-relaxed font-medium">
+          <span className="font-bold">Segurança garantida:</span> Conexão criptografada • Dados protegidos • Acesso auditado
         </p>
       </div>
+
+      {/* Divider com gradiente */}
+      <div className="relative flex items-center gap-3 my-2">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+        <span className="text-xs text-muted-foreground/60 font-medium">ou</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+      </div>
+
+      {/* Link para cadastro */}
+      <p className="text-center text-sm text-muted-foreground animate-in fade-in slide-in-from-right-4 duration-700 delay-400">
+        Não tem uma conta?{" "}
+        <a href="/registrarFuncionario" className="text-blue-500 hover:text-blue-600 font-medium transition-colors hover:underline underline-offset-2">
+          Solicite acesso
+        </a>
+      </p>
     </form>
   );
 }
