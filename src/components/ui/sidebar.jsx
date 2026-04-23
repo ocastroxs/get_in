@@ -67,7 +67,7 @@ export default function Sidebar() {
               Menu Principal
             </h3>
             <nav className="space-y-1.5">
-              <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={pathname === '/'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
               <NavItem href="/visitantes" icon={Users} label="Visitantes" active={pathname === '/visitantes'} onClick={() => setIsOpen(false)} />
               <NavItem href="/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/registrarFuncionario" icon={UserSquare2} label="Novo Funcionário" active={pathname === '/registrarFuncionario'} onClick={() => setIsOpen(false)} />
