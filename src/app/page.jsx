@@ -205,15 +205,6 @@ function StatItem({ value, suffix, label, icon: Icon }) {
    Página de Login
 ───────────────────────────────────────────── */
 export default function LoginPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem('getin_token');
-    if (token) {
-      router.push('/dashboard');
-    }
-  }, [router]);
-
   return (
     <div className="flex min-h-screen w-full">
 
