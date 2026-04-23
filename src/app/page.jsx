@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 
