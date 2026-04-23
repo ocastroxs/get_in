@@ -48,7 +48,7 @@ export function LoginForm({ className, ...props }) {
     try {
       const resultado = await authService.login(email, password);
       if (resultado.sucesso) {
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
       } else {
         setGeneralError(resultado.mensagem || 'Erro ao realizar login');
       }
