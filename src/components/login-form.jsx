@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,14 +9,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
+import { authService } from "@/services/api";
 
 export function LoginForm({ className, ...props }) {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [generalError, setGeneralError] = useState("");
 
   const validate = () => {
     const newErrors = {};
@@ -26,13 +30,11 @@ export function LoginForm({ className, ...props }) {
     }
     if (!password) {
       newErrors.password = "A senha é obrigatória.";
-    } else if (password.length < 6) {
-      newErrors.password = "A senha deve ter ao menos 6 caracteres.";
     }
     return newErrors;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -40,9 +42,22 @@ export function LoginForm({ className, ...props }) {
       return;
     }
     setErrors({});
+    setGeneralError("");
     setIsLoading(true);
-    // Simulação de chamada — substituir pela lógica real de autenticação
-    setTimeout(() => setIsLoading(false), 1500);
+    
+    try {
+      const resultado = await authService.login(email, password);
+      if (resultado.sucesso) {
+        router.push('/dashboard');
+      } else {
+        setGeneralError(resultado.mensagem || 'Erro ao realizar login');
+      }
+    } catch (err) {
+      setGeneralError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+      console.error('Erro de login:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -94,6 +109,7 @@ export function LoginForm({ className, ...props }) {
               setEmail(e.target.value);
               if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
             }}
+            disabled={isLoading}
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
             className={cn(
@@ -141,6 +157,7 @@ export function LoginForm({ className, ...props }) {
               setPassword(e.target.value);
               if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
             }}
+            disabled={isLoading}
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "password-error" : undefined}
             className={cn(
@@ -154,8 +171,9 @@ export function LoginForm({ className, ...props }) {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
+            disabled={isLoading}
             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded disabled:opacity-50"
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4" />
@@ -176,6 +194,16 @@ export function LoginForm({ className, ...props }) {
         )}
       </Field>
 
+      {/* Erro geral */}
+      {generalError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-in fade-in slide-in-from-top-2 duration-300" role="alert">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {generalError}
+          </div>
+        </div>
+      )}
+
       {/* Manter conectado + Esqueci senha */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -183,6 +211,7 @@ export function LoginForm({ className, ...props }) {
             id="remember"
             checked={remember}
             onCheckedChange={setRemember}
+            disabled={isLoading}
           />
           <Label
             htmlFor="remember"
