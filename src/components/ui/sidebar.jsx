@@ -15,7 +15,9 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  IdCard,
+  Building
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -68,21 +70,23 @@ export default function Sidebar() {
             </h3>
             <nav className="space-y-1.5">
               <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/visitantes" icon={Users} label="Visitantes" active={pathname === '/visitantes'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/funcionarios'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/crachas" icon={IdCard} label="Crachás" active={pathname === '/dashboard/crachas'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/dashboard/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/registrarFuncionario" icon={UserSquare2} label="Novo Funcionário" active={pathname === '/registrarFuncionario'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/setores" icon={LayoutGrid} label="Setores" active={pathname === '/setores'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/permissao" icon={Lock} label="Permissões" active={pathname === '/permissao'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/visitantes" icon={Users} label="Visitantes" active={pathname === '/dashboard/visitantes'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/empresas" icon={Building} label="Empresas" active={pathname === '/dashboard/empresas'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/setores" icon={LayoutGrid} label="Setores" active={pathname === '/dashboard/setores'} onClick={() => setIsOpen(false)} />
             </nav>
           </div>
 
           <div>
             <h3 className="px-4 text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase mb-4 opacity-50">
-              Relatórios & Logs
+              Gestão de Acesso
             </h3>
             <nav className="space-y-1.5">
               <NavItem href="/circulacao" icon={Activity} label="Circulação" active={pathname === '/circulacao'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/auditoria" icon={FileText} label="Auditoria" active={pathname === '/auditoria'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/permissao" icon={Lock} label="Permissões" active={pathname === '/permissao'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/relatorios" icon={FileText} label="Relatórios" active={pathname === '/dashboard/relatorios'} onClick={() => setIsOpen(false)} />
             </nav>
           </div>
         </div>

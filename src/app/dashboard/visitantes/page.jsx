@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Users, ArrowRightLeft, LogOut, AlertTriangle,
   Search, Filter, X, Download, Plus,
@@ -193,6 +193,31 @@ export default function VisitantesPage() {
   const [visitantes, setVisitantes]   = useState(VISITANTES_HOJE);
   const [alertas, setAlertas]         = useState(ALERTAS_VISITANTES);
   const [modalAberto, setModalAberto] = useState(false);
+
+  useEffect(() => {
+    async function fetchVisitantes() {
+      try {
+        const res = await fetch('http://localhost:3000/user/read');
+        const data = await res.json();
+        if (data.sucesso) {
+          const mapped = data.dados.map(user => ({
+            nome: user.nome,
+            empresa: 'Empresa Mock', // Ajustar
+            cpf: user.cpf,
+            setor: 'Adm', // Mock
+            entrada: '08:00', // Mock
+            saida: null,
+            status: 'ativo',
+            cracha: 'TAG-' + user.id
+          }));
+          setVisitantes(mapped);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar visitantes:', error);
+      }
+    }
+    fetchVisitantes();
+  }, []);
 
   // filtros
   const [empresa, setEmpresa]         = useState("Todas");
