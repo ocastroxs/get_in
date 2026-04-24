@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,9 +23,14 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <>
@@ -109,7 +115,10 @@ export default function Sidebar() {
             </button>
           </div>
           
-          <button className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group">
+          <button 
+            onClick={handleLogout}
+            className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group cursor-pointer active:scale-95 transition-transform"
+          >
             <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span>Sair do Sistema</span>
           </button>

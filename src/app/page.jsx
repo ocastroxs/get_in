@@ -1,9 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
+import { useAuth } from "@/lib/AuthContext"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 
+/* ─────────────────────────────────────────────
+   Componente de Título Animado (da branch castro)
+───────────────────────────────────────────── */
 const TITLES = [
   {
     text: "Controle de acesso inteligente para sua fábrica.",
@@ -92,6 +97,10 @@ function AnimatedTitle() {
   );
 }
 
+/* ─────────────────────────────────────────────
+   Canvas de partículas adaptado para o painel
+   escuro (azul marinho) do lado esquerdo
+───────────────────────────────────────────── */
 function PanelParticles() {
   const canvasRef = useRef(null)
 
@@ -175,6 +184,9 @@ function PanelParticles() {
   )
 }
 
+/* ─────────────────────────────────────────────
+   Componente de estatística individual
+───────────────────────────────────────────── */
 function StatItem({ value, suffix, label, icon: Icon }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -190,7 +202,28 @@ function StatItem({ value, suffix, label, icon: Icon }) {
   )
 }
 
+/* ─────────────────────────────────────────────
+   Página de Login
+───────────────────────────────────────────── */
 export default function LoginPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Se já estiver autenticado, redireciona para o dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen w-full">
 
