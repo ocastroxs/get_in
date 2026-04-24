@@ -81,7 +81,7 @@ const CadastroFuncionario = () => {
     const fetchDepartamentos = async () => {
       try {
         const response = await fetch(`https://get-in-ilp5.onrender.com/dep`,{
-        method: 'GET', headers: { 'Content-Type': 'application/json' }
+        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }
         } );
         const data = await response.json();
         if (data.sucesso) setDepartamentos(data.data);
@@ -133,7 +133,7 @@ const CadastroFuncionario = () => {
     };
     try {
       const response = await fetch('https://get-in-ilp5.onrender.com/auth', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payloadBackend)
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }, body: JSON.stringify(payloadBackend)
       });
       const data = await response.json();
       if (data.sucesso) setSucesso(true);
