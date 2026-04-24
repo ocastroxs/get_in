@@ -3,7 +3,7 @@ import Sidebar from "@/components/ui/sidebar";
 
 export default function DashboardLayout({ children }) {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen ">
       <ParticlesBackground/>
       <Sidebar/>
       
