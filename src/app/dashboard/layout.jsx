@@ -4,10 +4,11 @@ import Sidebar from "@/components/ui/sidebar";
 export default function DashboardLayout({ children }) {
   return (
     <div className="flex min-h-screen bg-background">
+      <ParticlesBackground/>
       <Sidebar/>
       
       <main className="flex-1 ml-[20px] p-6 overflow-auto">
-        <ParticlesBackground/>
+
         {children}
       </main>
     </div>
