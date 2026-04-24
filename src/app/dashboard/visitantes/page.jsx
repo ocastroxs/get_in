@@ -10,6 +10,7 @@ import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { VISITANTES_HOJE, ALERTAS_VISITANTES } from "@/lib/mockData";
+import { api } from "@/services/api";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -197,18 +198,19 @@ export default function VisitantesPage() {
   useEffect(() => {
     async function fetchVisitantes() {
       try {
-        const res = await fetch('http://localhost:3000/user/read');
-        const data = await res.json();
-        if (data.sucesso) {
+        // Usando o serviço de API centralizado que aponta para a URL correta
+        const data = await api.get('/user/read');
+        
+        if (data && data.sucesso && Array.isArray(data.dados)) {
           const mapped = data.dados.map(user => ({
-            nome: user.nome,
-            empresa: 'Empresa Mock', // Ajustar
-            cpf: user.cpf,
-            setor: 'Adm', // Mock
-            entrada: '08:00', // Mock
-            saida: null,
-            status: 'ativo',
-            cracha: 'TAG-' + user.id
+            nome: user.nome || "Sem nome",
+            empresa: user.empresa || 'Empresa Mock',
+            cpf: user.cpf || "000.000.000-00",
+            setor: user.setor || 'Adm',
+            entrada: user.entrada || '08:00',
+            saida: user.saida || null,
+            status: user.status || 'ativo',
+            cracha: user.cracha || ('TAG-' + (user.id || Math.floor(Math.random() * 1000)))
           }));
           setVisitantes(mapped);
         }
