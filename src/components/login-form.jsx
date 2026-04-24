@@ -35,33 +35,38 @@ export function LoginForm({ className, ...props }) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+  e.preventDefault();
+  
+  // 1. Validação básica (campos vazios)
+  const validationErrors = validate();
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return;
+  }
+
+  setIsLoading(true);
+  setGeneralError("");
+
+  try {
+    // 2. Chamada real para o serviço que criamos
+    // O back-end espera { email, senha }
+    const resultado = await authService.login(email, password);
+
+    // 3. Verifique se o back-end autorizou
+    if (resultado.sucesso && resultado.token) {
+      // 4. Salva no Contexto Global (isso dispara o redirecionamento)
+      updateAuthContext(resultado.data, resultado.token);
+    } else {
+      // 5. Exibe erro caso a senha/email estejam errados
+      setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");
     }
-    setErrors({});
-    setGeneralError("");
-    setIsLoading(true);
-    
-    try {
-      // Chamada real para o seu back-end
-      const resultado = await authService.login(email, password);
-      
-      if (resultado.sucesso && resultado.token) {
-        // Atualiza o contexto global com os dados reais
-        updateAuthContext(resultado.data, resultado.token);
-      } else {
-        setGeneralError(resultado.mensagem || 'Credenciais inválidas. Tente novamente.');
-      }
-    } catch (err) {
-      setGeneralError('Não foi possível conectar ao servidor. Verifique sua conexão.');
-      console.error('Erro de login:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  } catch (err) {
+    setGeneralError("Erro de conexão. O servidor está online?");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <form
