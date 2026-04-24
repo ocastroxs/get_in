@@ -6,11 +6,7 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "setup": "npm install && npm install --prefix backend && cd backend && npx prisma generate",
-    "backend": "cd backend && npx tsx watch server.js",
-    "frontend": "npm run dev",
-    "dev:all": "npx concurrently \"npm run backend\" \"npm run frontend\""
+    "lint": "eslint"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
