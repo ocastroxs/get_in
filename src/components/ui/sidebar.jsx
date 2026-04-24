@@ -2,7 +2,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Users, 
@@ -22,9 +22,30 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+
+  const handleLogout = async () => {
+    try {
+      // Limpar dados de sessão do localStorage
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userSession');
+      localStorage.removeItem('userData');
+      
+      // Limpar cookies se existirem
+      document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      
+      // Redirecionar para a página de login
+      router.push('/');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      // Mesmo com erro, tenta redirecionar
+      router.push('/');
+    }
+  };
 
   return (
     <>
@@ -109,7 +130,10 @@ export default function Sidebar() {
             </button>
           </div>
           
-          <button className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group">
+          <button 
+            onClick={handleLogout}
+            className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group cursor-pointer"
+          >
             <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span>Sair do Sistema</span>
           </button>
