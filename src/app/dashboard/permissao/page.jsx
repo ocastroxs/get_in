@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Sidebar from '@/components/ui/sidebar';
-import ParticlesBackground from '@/components/ui/ParticlesBackground';
 import { 
   Shield, 
   Eye, 
@@ -32,10 +30,7 @@ export default function PermissoesPage() {
 
   return (
     <div className="flex min-h-screen relative overflow-hidden">
-      {/* Background Animado */}
-      <ParticlesBackground />
-      
-      <Sidebar />
+
 
       <main className="flex-1 p-10 relative z-10 overflow-y-auto max-h-screen custom-scrollbar">
         <div className="max-w-6xl mx-auto space-y-2">

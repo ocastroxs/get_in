@@ -90,8 +90,8 @@ export default function Sidebar() {
               Gestão de Acesso
             </h3>
             <nav className="space-y-1.5">
-              <NavItem href="/circulacao" icon={Activity} label="Circulação" active={pathname === '/circulacao'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/permissao" icon={Lock} label="Permissões" active={pathname === '/permissao'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/circulacao" icon={Activity} label="Circulação" active={pathname === '/dashboard/circulacao'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/permissao" icon={Lock} label="Permissões" active={pathname === '/dashboard/permissao'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/relatorios" icon={FileText} label="Relatórios" active={pathname === '/dashboard/relatorios'} onClick={() => setIsOpen(false)} />
             </nav>
           </div>
