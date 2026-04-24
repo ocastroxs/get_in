@@ -181,10 +181,10 @@ export default function FuncionariosPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Colaboradores" value={stats.total} icon={<Users size={20} />} accentVar="--primary" />
-        <StatCard label="Gerentes" value={stats.gerentes} icon={<Star size={20} />} accentVar="--chart-4" />
-        <StatCard label="Supervisores" value={stats.supervisores} icon={<Eye size={20} />} accentVar="--chart-2" />
-        <StatCard label="Portaria" value={stats.portaria} icon={<Shield size={20} />} accentVar="--chart-1" />
+        <StatCard label="Total Colaboradores" value={stats.total} icon={<Users size={20} className="text-primary" />} accentVar="var(--primary)" />
+        <StatCard label="Gerentes" value={stats.gerentes} valueClassName="text-chart-4" icon={<Star size={20} className="text-chart-4" />} accentVar="var(--chart-4)" />
+        <StatCard label="Supervisores" value={stats.supervisores} valueClassName="text-chart-2" icon={<Eye size={20} className="text-chart-2" />} accentVar="var(--chart-2)" />
+        <StatCard label="Portaria" value={stats.portaria} valueClassName="text-chart-3" icon={<Shield size={20} className="text-chart-3" />} accentVar="var(--chart-3)" />
       </div>
 
       {/* Filtros */}
