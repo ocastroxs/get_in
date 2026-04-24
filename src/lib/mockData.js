@@ -226,3 +226,14 @@ export const OCUPACAO_SETORES = [
   { setor: "Administração", atual: 4, max: 20, color: "#8b5cf6" },
   { setor: "Refeitório", atual: 2, max: 30, color: "#ec4899" },
 ];
+
+export const FUNCIONARIOS_MOCK = [
+  { id: 101, nome: "Rafael Silva", cpf: "123.456.789-10", email: "rafael.silva@getin.com", celular: "(11) 98888-7777", departamento: "Segurança", tipo: "ger" },
+  { id: 102, nome: "Ana Carolina Lima", cpf: "234.567.890-11", email: "ana.lima@getin.com", celular: "(11) 97777-6666", departamento: "Administrativo", tipo: "sup" },
+  { id: 103, nome: "Ricardo Oliveira", cpf: "345.678.901-22", email: "ricardo.oliveira@getin.com", celular: "(11) 96666-5555", departamento: "Portaria", tipo: "port" },
+  { id: 104, nome: "Beatriz Santos", cpf: "456.789.012-33", email: "beatriz.santos@getin.com", celular: "(11) 95555-4444", departamento: "Produção", tipo: "func" },
+  { id: 105, nome: "Marcos Souza", cpf: "567.890.123-44", email: "marcos.souza@getin.com", celular: "(11) 94444-3333", departamento: "TI", tipo: "ger" },
+  { id: 106, nome: "Fernanda Costa", cpf: "678.901.234-55", email: "fernanda.costa@getin.com", celular: "(11) 93333-2222", departamento: "RH", tipo: "sup" },
+  { id: 107, nome: "João Pereira", cpf: "789.012.345-66", email: "joao.pereira@getin.com", celular: "(11) 92222-1111", departamento: "Portaria", tipo: "port" },
+  { id: 108, nome: "Juliana Mendes", cpf: "890.123.456-77", email: "juliana.mendes@getin.com", celular: "(11) 91111-0000", departamento: "Laboratório", tipo: "func" }
+];

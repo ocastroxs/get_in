@@ -11,6 +11,7 @@ import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
+import { FUNCIONARIOS_MOCK } from "@/lib/mockData";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -128,9 +129,14 @@ export default function FuncionariosPage() {
             departamento: u.departamento_nome || u.departamento || "Geral"
           }));
           setFuncionarios(lista);
+        } else {
+          // Fallback para dados de simulação
+          setFuncionarios(FUNCIONARIOS_MOCK);
         }
       } catch (error) {
         console.error('Erro ao buscar funcionários:', error);
+        // Fallback para dados de simulação em caso de erro
+        setFuncionarios(FUNCIONARIOS_MOCK);
       } finally {
         setLoading(false);
       }
