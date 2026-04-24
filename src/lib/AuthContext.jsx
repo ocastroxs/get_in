@@ -14,14 +14,17 @@ export function AuthProvider({ children }) {
 
   // Verificar se há sessão armazenada ao montar o componente
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    const storedUser = localStorage.getItem("getin_user");
+    const token = localStorage.getItem("getin_token");
+    
+    if (storedUser && token) {
       try {
         setUser(JSON.parse(storedUser));
         setIsAuthenticated(true);
       } catch (error) {
         console.error("Erro ao recuperar usuário:", error);
-        localStorage.removeItem("user");
+        localStorage.removeItem("getin_user");
+        localStorage.removeItem("getin_token");
       }
     }
     setIsLoading(false);
@@ -37,25 +40,18 @@ export function AuthProvider({ children }) {
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
-  const login = (email, password) => {
-    // Simulação de login - em produção, fazer uma requisição à API
-    const userData = {
-      email,
-      name: "Rafael Silva",
-      role: "gerente",
-      title: "Segurança Patrimonial",
-      initials: "RS",
-      loginTime: new Date().toISOString(),
-    };
-
-    localStorage.setItem("user", JSON.stringify(userData));
+  const login = (userData, token) => {
+    // Agora o login recebe os dados reais vindos da sua integração
+    localStorage.setItem("getin_token", token);
+    localStorage.setItem("getin_user", JSON.stringify(userData));
     setUser(userData);
     setIsAuthenticated(true);
     router.push("/dashboard");
   };
 
   const logout = () => {
-    localStorage.removeItem("user");
+    localStorage.removeItem("getin_token");
+    localStorage.removeItem("getin_user");
     setUser(null);
     setIsAuthenticated(false);
     router.push("/");

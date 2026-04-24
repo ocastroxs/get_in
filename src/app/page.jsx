@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
+import { useAuth } from "@/lib/AuthContext"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 
 /* ─────────────────────────────────────────────
@@ -205,6 +206,24 @@ function StatItem({ value, suffix, label, icon: Icon }) {
    Página de Login
 ───────────────────────────────────────────── */
 export default function LoginPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Se já estiver autenticado, redireciona para o dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen w-full">
 

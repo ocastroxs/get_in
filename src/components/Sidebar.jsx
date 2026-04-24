@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard, Users, Building2, CreditCard,
   ArrowLeftRight, Briefcase, FileBarChart,
-  UserCog, Settings, User, ChevronDown, LogOut,
+  UserCog, Settings, User, LogOut,
 } from "lucide-react";
 import { MENU_ITEMS } from "@/lib/mockData";
 
@@ -20,6 +20,18 @@ const SECTION_LABELS = {
   principal: "Principal",
   operacao: "Operação",
   admin: "Admin",
+};
+
+// Mapeamento de perfis do Back-end para o Front-end
+const mapRole = (backendRole) => {
+  const roles = {
+    'ger': 'gerente',
+    'adm': 'gerente',
+    'sup': 'supervisor',
+    'port': 'supervisor',
+    'func': 'supervisor'
+  };
+  return roles[backendRole] || 'supervisor';
 };
 
 function NavItem({ item, active }) {
@@ -47,13 +59,16 @@ function NavItem({ item, active }) {
 
 export default function Sidebar({ user }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { logout } = useAuth();
-  const menu = MENU_ITEMS[user?.role] ?? MENU_ITEMS["gerente"];
+  
+  // Mapeia o perfil vindo do back-end para o menu correspondente
+  const userRole = mapRole(user?.tipo || user?.role);
+  const menu = MENU_ITEMS[userRole] ?? MENU_ITEMS["gerente"];
 
-  const handleLogout = () => {
-    logout();
-    router.push("/");
+  // Gera iniciais do nome para o avatar
+  const getInitials = (name) => {
+    if (!name) return "??";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
   return (
@@ -97,16 +112,16 @@ export default function Sidebar({ user }) {
       {/* User footer */}
       <div className="px-3 pb-4 pt-3 border-t border-sidebar-border space-y-2">
         <button 
-          onClick={handleLogout}
+          onClick={logout}
           className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-red-500/10 hover:text-red-600 transition-all duration-200 group"
           title="Clique para sair"
         >
           <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-bold shrink-0 group-hover:bg-red-600 transition-colors">
-            {user?.initials ?? "??"}
+            {user?.initials || getInitials(user?.nome || user?.name)}
           </div>
           <div className="text-left flex-1 min-w-0">
-            <p className="text-sidebar-foreground text-xs font-semibold truncate">{user?.name}</p>
-            <p className="text-sidebar-foreground/40 text-[10px] truncate">{user?.title}</p>
+            <p className="text-sidebar-foreground text-xs font-semibold truncate">{user?.nome || user?.name || "Usuário"}</p>
+            <p className="text-sidebar-foreground/40 text-[10px] truncate">{user?.email || "Acesso Restrito"}</p>
           </div>
           <LogOut size={13} className="text-sidebar-foreground/30 group-hover:text-red-600 transition-colors" />
         </button>

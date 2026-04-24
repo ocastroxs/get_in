@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 import { authService } from "@/services/api";
+import { useAuth } from "@/lib/AuthContext";
 
 export function LoginForm({ className, ...props }) {
-  const router = useRouter();
+  const { login: updateAuthContext } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [email, setEmail] = useState("");
@@ -46,11 +46,14 @@ export function LoginForm({ className, ...props }) {
     setIsLoading(true);
     
     try {
+      // Chamada real para o seu back-end
       const resultado = await authService.login(email, password);
-      if (resultado.sucesso) {
-        window.location.href = '/dashboard';
+      
+      if (resultado.sucesso && resultado.token) {
+        // Atualiza o contexto global com os dados reais
+        updateAuthContext(resultado.data, resultado.token);
       } else {
-        setGeneralError(resultado.mensagem || 'Erro ao realizar login');
+        setGeneralError(resultado.mensagem || 'Credenciais inválidas. Tente novamente.');
       }
     } catch (err) {
       setGeneralError('Não foi possível conectar ao servidor. Verifique sua conexão.');
