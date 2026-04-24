@@ -1,5 +1,8 @@
+"use client";
+
 import ParticlesBackground from "@/components/ui/ParticlesBackground";
 import Sidebar from "@/components/ui/sidebar";
+import { useAuth } from "@/lib/AuthContext";
 
 export default function DashboardLayout({ children }) {
   const { user, isLoading } = useAuth();
