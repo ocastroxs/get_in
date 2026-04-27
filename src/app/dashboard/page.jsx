@@ -16,7 +16,7 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Dashboard Geral"
-        subtitle="Indústria Alimentos Puros · Turno 08h–18h · 29 de julho de 2025"
+        subtitle="Visão rápida do desempenho e atividades recentes"
       />
 
       {/* KPIs */}

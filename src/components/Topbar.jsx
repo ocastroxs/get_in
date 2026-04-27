@@ -3,9 +3,9 @@
 import { Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function Topbar({ title, subtitle }) {
+export default function Topbar({ title, subtitle, buttonText }) {
   return (
-    <header className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
+    <header className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-top-4 duration-700 border-b border-border pb-4 px-2">
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
         <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -27,7 +27,7 @@ export default function Topbar({ title, subtitle }) {
         {/* Novo Visitante */}
         <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
           <Plus size={13} />
-          Novo Visitante
+          {buttonText}
         </Button>
       </div>
     </header>

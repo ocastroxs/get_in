@@ -34,8 +34,9 @@ export default function RelatoriosPage() {
 
       {/* TOPBAR */}
       <Topbar
-        title="Relatórios e Analytics"
-        subtitle="Indústria Alimentos Puros • Visão Geral de Performance"
+        title="Relatórios"
+        subtitle="Relatório detalhado do período selecionado"
+        buttonText="Novo Relatório"
       />
 
       {/* STAT CARDS */}
