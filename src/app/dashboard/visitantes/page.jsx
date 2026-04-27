@@ -28,6 +28,13 @@ const STATUS_DOT = {
   finalizado: "bg-blue-500",
 };
 
+// ─── Mock de TAGs disponíveis (futuramente virá do backend) ─────────────────
+const TAGS_DISPONIVEIS = [
+  "TAG-001", "TAG-002", "TAG-003", "TAG-004", "TAG-005",
+  "TAG-006", "TAG-007", "TAG-008", "TAG-009", "TAG-010",
+  "TAG-011", "TAG-012", "TAG-013", "TAG-014", "TAG-015",
+];
+
 function toCSV(rows) {
   const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saída", "Status", "Crachá"];
   const lines = rows.map((r) =>
@@ -44,7 +51,7 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Modal Novo Visitante ────────────────────────────────────────────────────
+// ─── Modal Novo Visitante (Refatorado) ──────────────────────────────────────
 
 function ModalNovoVisitante({ onClose, onSave }) {
   const [form, setForm] = useState({
@@ -64,12 +71,17 @@ function ModalNovoVisitante({ onClose, onSave }) {
       alert("Preencha Nome, Empresa, CPF e Horário de Entrada.");
       return;
     }
+    
+    if (!form.cracha) {
+      alert("Selecione um crachá disponível.");
+      return;
+    }
+
     onSave({
       ...form,
       id: Date.now(),
       saida: null,
       status: "ativo",
-      cracha: form.cracha || `TAG-${String(Math.floor(Math.random() * 900) + 100)}`,
     });
     onClose();
   }
@@ -97,7 +109,6 @@ function ModalNovoVisitante({ onClose, onSave }) {
             { label: "Empresa *",       key: "empresa", type: "text",  placeholder: "Ex: Nutrilab" },
             { label: "CPF *",           key: "cpf",     type: "text",  placeholder: "000.000.000-00", mask: maskCPF },
             { label: "Horário de entrada *", key: "entrada", type: "time" },
-            { label: "Crachá (opcional)",    key: "cracha",  type: "text",  placeholder: "TAG-000" },
           ].map(({ label, key, type, placeholder, mask }) => (
             <div key={key}>
               <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
@@ -122,6 +133,23 @@ function ModalNovoVisitante({ onClose, onSave }) {
             >
               {["Adm", "Lab", "Prod", "Alm"].map((s) => <option key={s}>{s}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Crachá *</label>
+            <select
+              value={form.cracha}
+              onChange={set("cracha")}
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            >
+              <option value="">Selecione uma TAG disponível</option>
+              {TAGS_DISPONIVEIS.map((tag) => (
+                <option key={tag} value={tag}>{tag}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Selecione um crachá disponível. Para cadastrar uma nova TAG, acesse a tela de Crachás.
+            </p>
           </div>
         </div>
 
@@ -266,74 +294,72 @@ export default function VisitantesPage() {
         />
       )}
 
-      <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-        {/* Topbar reutilizado — mas com botões próprios */}
-        <header className="flex items-center justify-between animate-in fade-in slide-in-from-top-4 duration-700">
+      <div className="flex flex-col gap-5">
+        <Topbar />
+
+        {/* Alerta */}
+        {alertas.length > 0 && (
+          <AlertaBanner
+            alertas={alertas}
+            onDismiss={() => setAlertas([])}
+          />
+        )}
+
+        {/* Header */}
+        <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Visitantes</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Indústria Alimentos Puros · Ter 08h – 18h · 29 de julho de 2025
+            <h1 className="text-xl font-semibold text-foreground">Dashboard Visitantes</h1>
+            <p className="text-xs text-muted-foreground mt-1">
+              Controle de entrada e saída de visitantes
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadCSV(filtrados)}>
-              <Download size={13} />
-              Exportar
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setModalAberto(true)}>
-              <Plus size={13} />
-              Novo Visitante
-            </Button>
-          </div>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Novo visitante
+          </button>
         </header>
 
-        {/* Banner de alerta — só aparece quando há alertas */}
-        <AlertaBanner alertas={alertas} onDismiss={() => setAlertas([])} />
-
-        {/* KPI Cards — reutilizando StatCard */}
-        <div className="grid grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
-            label="Visitantes Hoje"
+            label="Total"
             value={stats.total}
+            valueClassName="text-primary"
             icon={<Users size={17} className="text-primary" />}
-            delta={12}
-            deltaDir="up"
-            sub="vs ontem"
+            sub="visitantes hoje"
             accentVar="var(--primary)"
           />
           <StatCard
-            label="Visitantes Ativos"
+            label="Ativos"
             value={stats.ativos}
-            valueClassName="text-chart-2"
-            icon={<ArrowRightLeft size={17} className="text-chart-2" />}
-            sub="100% credenciadas"
-            accentVar="var(--chart-2)"
+            valueClassName="text-chart-1"
+            icon={<ArrowRightLeft size={17} className="text-chart-1" />}
+            sub="dentro da fábrica"
+            accentVar="var(--chart-1)"
           />
           <StatCard
             label="Finalizados"
             value={stats.finalizados}
-            valueClassName="text-chart-3"
-            icon={<LogOut size={17} className="text-chart-3" />}
-            sub="✓ check-out confirmado"
-            accentVar="var(--chart-3)"
+            valueClassName="text-chart-2"
+            icon={<LogOut size={17} className="text-chart-2" />}
+            sub="com check-out"
+            accentVar="var(--chart-2)"
           />
           <StatCard
-            label="Sem Saída Registrada"
+            label="Sem Saída"
             value={stats.semsaida}
-            valueClassName="text-destructive"
-            icon={<AlertTriangle size={17} className="text-destructive" />}
-            sub={`${stats.semsaida} alerta${stats.semsaida !== 1 ? "s" : ""} pendente${stats.semsaida !== 1 ? "s" : ""}`}
-            accentVar="var(--destructive)"
+            valueClassName="text-red-600"
+            icon={<AlertTriangle size={17} className="text-red-600" />}
+            sub="requerem atenção"
+            accentVar="var(--red)"
           />
         </div>
 
-        {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Filter size={13} />
-            Filtros
-          </div>
-
+        {/* Barra de filtros */}
+        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
+          <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
           {/* Empresa */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Empresa</label>
@@ -348,7 +374,6 @@ export default function VisitantesPage() {
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </div>
-
           {/* Data */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Data</label>
@@ -360,7 +385,6 @@ export default function VisitantesPage() {
               placeholder="DD/MM/AAAA"
             />
           </div>
-
           {/* Status */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Status</label>
@@ -377,14 +401,12 @@ export default function VisitantesPage() {
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </div>
-
           <button
             onClick={limparFiltros}
             className="text-xs text-primary hover:text-primary/70 font-medium transition-colors underline underline-offset-2"
           >
             Limpar filtros
           </button>
-
           <span className="ml-auto text-xs text-muted-foreground">
             {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""} encontrado{filtrados.length !== 1 ? "s" : ""}
           </span>

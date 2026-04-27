@@ -85,39 +85,50 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Modal Novo Crachá ────────────────────────────────────────────────────────
+// ─── Modal Cadastrar Nova TAG (Refatorado) ────────────────────────────────────
+// Este modal agora é APENAS para cadastro de TAGs físicas, não para criar visitas.
 
-function ModalNovoCracha({ onClose, onSave }) {
+function ModalCadastrarTag({ onClose, onSave }) {
   const [form, setForm] = useState({
-    tagId: "", visitante: "", empresa: "", setor: "Produção", entrega: ""
+    tagId: ""
   });
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   function handleSubmit() {
-    if (!form.visitante || !form.empresa || !form.entrega) {
-      alert("Preencha Visitante, Empresa e Horário de Entrega.");
+    if (!form.tagId.trim()) {
+      alert("Preencha o ID da TAG.");
       return;
     }
+    
+    // Validar se a TAG já existe
+    const tagExistente = CRACHAS_MOCK.some(c => c.tagId.toUpperCase() === form.tagId.toUpperCase());
+    if (tagExistente) {
+      alert("Esta TAG já foi cadastrada no sistema.");
+      return;
+    }
+
     onSave({
-      ...form,
       id: Date.now(),
-      tagId: form.tagId || `TAG-${String(Math.floor(Math.random() * 900) + 100)}`,
+      tagId: form.tagId.toUpperCase(),
+      visitante: null,
+      empresa: null,
+      setor: null,
+      entrega: null,
       devolucao: null,
-      status: "ativo",
+      status: "disponivel"
     });
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Plus size={16} className="text-primary" />
+              <CreditCard size={16} className="text-primary" />
             </div>
-            <h2 className="font-semibold text-foreground">Novo Crachá</h2>
+            <h2 className="font-semibold text-foreground">Cadastrar Nova TAG</h2>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
@@ -126,33 +137,21 @@ function ModalNovoCracha({ onClose, onSave }) {
 
         {/* body */}
         <div className="px-6 py-5 space-y-4">
-          {[
-            { label: "Visitante *",         key: "visitante", type: "text", placeholder: "Ex: Marina Souza"   },
-            { label: "Empresa *",           key: "empresa",   type: "text", placeholder: "Ex: NutriFab"       },
-            { label: "Horário de entrega *",key: "entrega",   type: "time"                                    },
-            { label: "Tag ID (opcional)",   key: "tagId",     type: "text", placeholder: "TAG-000"            },
-          ].map(({ label, key, type, placeholder }) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
-              <input
-                type={type}
-                value={form[key]}
-                placeholder={placeholder}
-                onChange={set(key)}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-              />
-            </div>
-          ))}
-
+          <p className="text-xs text-muted-foreground">
+            Cadastre um novo crachá físico no sistema. Este será vinculado a um visitante quando necessário.
+          </p>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Setor</label>
-            <select
-              value={form.setor}
-              onChange={set("setor")}
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            >
-              {Object.keys(SETOR_STYLE).map((s) => <option key={s}>{s}</option>)}
-            </select>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">ID da TAG *</label>
+            <input
+              type="text"
+              value={form.tagId}
+              placeholder="Ex: TAG-011"
+              onChange={(e) => setForm({ tagId: e.target.value })}
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1.5">
+              Use o formato TAG-XXX (ex: TAG-011, TAG-100)
+            </p>
           </div>
         </div>
 
@@ -160,7 +159,7 @@ function ModalNovoCracha({ onClose, onSave }) {
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
           <Button size="sm" className="gap-1.5" onClick={handleSubmit}>
-            <Check size={13} /> Registrar crachá
+            <Check size={13} /> Cadastrar TAG
           </Button>
         </div>
       </div>
@@ -171,25 +170,41 @@ function ModalNovoCracha({ onClose, onSave }) {
 // ─── Linha da Tabela ──────────────────────────────────────────────────────────
 
 function LinhaCracha({ c }) {
+  const isDisponivel = c.status === "disponivel";
+  
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-colors">
       <td className="py-3 px-4">
         <span className="text-xs font-semibold font-mono text-primary">{c.tagId}</span>
       </td>
-      <td className="py-3 px-4 text-sm font-medium text-foreground whitespace-nowrap">{c.visitante}</td>
-      <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">{c.empresa}</td>
-      <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${SETOR_STYLE[c.setor] ?? "bg-muted text-muted-foreground"}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${SETOR_DOT[c.setor] ?? "bg-muted-foreground"}`} />
-          {c.setor}
-        </span>
+      <td className="py-3 px-4 text-sm font-medium text-foreground whitespace-nowrap">
+        {c.visitante || "—"}
       </td>
-      <td className="py-3 px-4 text-sm text-foreground whitespace-nowrap">{c.entrega}</td>
+      <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">
+        {c.empresa || "—"}
+      </td>
+      <td className="py-3 px-4">
+        {c.setor ? (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${SETOR_STYLE[c.setor] ?? "bg-muted text-muted-foreground"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${SETOR_DOT[c.setor] ?? "bg-muted-foreground"}`} />
+            {c.setor}
+          </span>
+        ) : "—"}
+      </td>
+      <td className="py-3 px-4 text-sm text-foreground whitespace-nowrap">{c.entrega || "—"}</td>
       <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.devolucao ?? "—"}</td>
       <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[c.status]}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[c.status]}`} />
-          {STATUS_LABEL[c.status]}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+          isDisponivel 
+            ? "bg-gray-100 text-gray-700" 
+            : STATUS_STYLE[c.status] ?? "bg-muted text-muted-foreground"
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            isDisponivel 
+              ? "bg-gray-500" 
+              : STATUS_DOT[c.status] ?? "bg-muted-foreground"
+          }`} />
+          {isDisponivel ? "Disponível" : STATUS_LABEL[c.status] ?? c.status}
         </span>
       </td>
       <td className="py-3 px-4">
@@ -215,9 +230,9 @@ export default function CrachasPage() {
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
         c.tagId.toLowerCase().includes(q) ||
-        c.visitante.toLowerCase().includes(q) ||
-        c.empresa.toLowerCase().includes(q) ||
-        c.setor.toLowerCase().includes(q);
+        (c.visitante && c.visitante.toLowerCase().includes(q)) ||
+        (c.empresa && c.empresa.toLowerCase().includes(q)) ||
+        (c.setor && c.setor.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });
   }, [crachas, statusFiltro, busca]);
@@ -237,7 +252,7 @@ export default function CrachasPage() {
   return (
     <>
       {modalAberto && (
-        <ModalNovoCracha
+        <ModalCadastrarTag
           onClose={() => setModalAberto(false)}
           onSave={handleSave}
         />
@@ -248,63 +263,65 @@ export default function CrachasPage() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard Crachás</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Indústria Alimentos Puros · Ter 09h00 – 18h · 29 de julho de 2025
+            <p className="text-xs text-muted-foreground mt-1">
+              Gestão de inventário de crachás e status de TAGs
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadCSV(filtrados)}>
-              <Download size={13} />
-              Exportar
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setModalAberto(true)}>
-              <Plus size={13} />
-              Novo Crachá
-            </Button>
-          </div>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Cadastrar TAG
+          </button>
         </header>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4">
+        {/* Cards de Estatísticas */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard
-            label="Total de Crachás"
+            label="Total de TAGs"
             value={stats.total}
+            valueClassName="text-primary"
             icon={<CreditCard size={17} className="text-primary" />}
-            sub="Cadastrados no sistema"
+            sub="crachás cadastrados"
             accentVar="var(--primary)"
           />
           <StatCard
-            label="Crachás Ativos"
+            label="Em Uso"
             value={stats.ativos}
+            valueClassName="text-chart-1"
+            icon={<ArrowRightLeft size={17} className="text-chart-1" />}
+            sub="visitantes ativos"
+            accentVar="var(--chart-1)"
+          />
+          <StatCard
+            label="Emprestados"
+            value={stats.emprestados}
             valueClassName="text-chart-2"
-            icon={<Check size={17} className="text-chart-2" />}
-            delta={37}
-            deltaDir="up"
-            sub="do total disponível"
+            icon={<AlertTriangle size={17} className="text-chart-2" />}
+            sub="pendentes de devolução"
             accentVar="var(--chart-2)"
           />
           <StatCard
-            label="Emprestados Hoje"
-            value={stats.emprestados}
-            valueClassName="text-amber-600"
-            icon={<ArrowRightLeft size={17} className="text-amber-500" />}
-            sub={`${stats.alertas} alerta${stats.alertas !== 1 ? "s" : ""} de permanência`}
-            accentVar="var(--chart-4)"
-          />
-          <StatCard
-            label="Devolvidos Hoje"
+            label="Devolvidos"
             value={stats.devolvidos}
             valueClassName="text-chart-3"
             icon={<Undo2 size={17} className="text-chart-3" />}
             sub="100% sem pendências"
             accentVar="var(--chart-3)"
           />
+          <StatCard
+            label="Alertas"
+            value={stats.alertas}
+            valueClassName="text-red-600"
+            icon={<AlertTriangle size={17} className="text-red-600" />}
+            sub="requerem atenção"
+            accentVar="var(--red)"
+          />
         </div>
 
         {/* Barra de filtros */}
         <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
           <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
-
           {STATUS_FILTER_OPTS.map((opt) => {
             const isAlerta = opt === "alerta";
             const isActive = statusFiltro === opt;
@@ -329,7 +346,6 @@ export default function CrachasPage() {
               </button>
             );
           })}
-
           {/* Busca */}
           <div className="ml-auto relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
