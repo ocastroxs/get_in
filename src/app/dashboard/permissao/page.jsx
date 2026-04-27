@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { 
   Shield, 
   Eye, 
@@ -89,8 +89,8 @@ export default function PermissoesPage() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       
       {/* Cabeçalho */}
-      <div className="flex flex-col gap-2 mb-2">
-        <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Permissões</h1>
             <p className="text-sm text-muted-foreground mt-1">Determine o que cada perfil e visitante pode acessar no sistema.</p>
@@ -127,7 +127,7 @@ export default function PermissoesPage() {
         </div>
 
         {/* Abas */}
-        <div className="flex gap-6 border-b border-border mt-4">
+        <div className="flex gap-6 border-b border-border">
           <TabButton 
             active={abaAtiva === 'funcionarios'} 
             onClick={() => { setAbaAtiva('funcionarios'); setBusca(''); }}
@@ -156,7 +156,7 @@ export default function PermissoesPage() {
             <div className="w-4 h-4 rounded-full bg-yellow-100 border border-yellow-300"></div>
             <span>Somente leitura</span>
           </div>
-          <span className="text-muted-foreground italic ml-auto">— Clique para alterar</span>
+          <span className="text-muted-foreground italic">— Clique para alterar</span>
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
@@ -181,11 +181,15 @@ export default function PermissoesPage() {
       </div>
 
       {/* Conteúdo Principal */}
-      {abaAtiva === 'funcionarios' ? (
-        <TabelaFuncionarios busca={busca} />
-      ) : (
-        <TabelaVisitantes busca={busca} />
-      )}
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          {abaAtiva === 'funcionarios' ? (
+            <TabelaFuncionarios busca={busca} />
+          ) : (
+            <TabelaVisitantes busca={busca} />
+          )}
+        </div>
+      </div>
 
     </div>
   );
@@ -219,54 +223,58 @@ function TabelaFuncionarios({ busca }) {
     })).filter(cat => cat.funcionalidades.length > 0);
   }, [busca]);
 
-  return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-      {/* Cabeçalho da Tabela */}
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-4">
-        <div className="grid grid-cols-4 gap-4 items-center">
-          <div className="text-sm font-semibold">Funcionalidade</div>
-          <div className="flex items-center justify-center gap-2">
-            <Shield size={16} />
-            <span className="text-xs font-semibold">Portaria</span>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <Eye size={16} />
-            <span className="text-xs font-semibold">Supervisor</span>
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <ShieldAlert size={16} />
-            <span className="text-xs font-semibold">Administrador</span>
-          </div>
-        </div>
+  if (categoriasFiltradas.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+        <p>Nenhuma funcionalidade encontrada</p>
       </div>
+    );
+  }
 
-      {/* Conteúdo */}
-      <div className="divide-y divide-border">
-        {categoriasFiltradas.map((categoria, catIdx) => (
-          <div key={catIdx}>
-            {/* Seção */}
-            <div className="bg-muted/40 px-6 py-2.5 border-b border-border">
-              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{categoria.categoria}</h3>
+  return (
+    <table className="w-full text-left border-collapse">
+      <thead>
+        <tr className="bg-slate-800 text-white">
+          <th className="py-4 px-6 text-sm font-semibold">Funcionalidade</th>
+          <th className="py-4 px-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Shield size={16} />
+              <span className="text-xs font-semibold">Portaria</span>
             </div>
-
-            {/* Linhas */}
+          </th>
+          <th className="py-4 px-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Eye size={16} />
+              <span className="text-xs font-semibold">Supervisor</span>
+            </div>
+          </th>
+          <th className="py-4 px-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <ShieldAlert size={16} />
+              <span className="text-xs font-semibold">Administrador</span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border">
+        {categoriasFiltradas.map((categoria, catIdx) => (
+          <Fragment key={catIdx}>
+            <tr className="bg-muted/40">
+              <td colSpan={4} className="px-6 py-2.5">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{categoria.categoria}</h3>
+              </td>
+            </tr>
             {categoria.funcionalidades.map((func, idx) => (
               <PermissionRowFuncionario 
-                key={idx}
+                key={`${catIdx}-${idx}`}
                 {...func}
               />
             ))}
-          </div>
+          </Fragment>
         ))}
-      </div>
-
-      {categoriasFiltradas.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-          <p>Nenhuma funcionalidade encontrada</p>
-        </div>
-      )}
-    </div>
+      </tbody>
+    </table>
   );
 }
 
@@ -278,42 +286,42 @@ function TabelaVisitantes({ busca }) {
     );
   }, [busca]);
 
-  return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
-      {/* Cabeçalho da Tabela */}
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-4">
-        <div className="grid grid-cols-2 gap-4 items-center">
-          <div className="text-sm font-semibold">Funcionalidade (App)</div>
-          <div className="flex items-center justify-center gap-2">
-            <Eye size={16} />
-            <span className="text-xs font-semibold">Comum</span>
-          </div>
-        </div>
+  if (funcionalidadesFiltradas.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+        <p>Nenhuma funcionalidade encontrada</p>
       </div>
+    );
+  }
 
-      {/* Conteúdo */}
-      <div className="divide-y divide-border">
-        {/* Seção */}
-        <div className="bg-muted/40 px-6 py-2.5 border-b border-border">
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">ACESSO PELO APLICATIVO</h3>
-        </div>
-
-        {/* Linhas */}
+  return (
+    <table className="w-full text-left border-collapse">
+      <thead>
+        <tr className="bg-slate-800 text-white">
+          <th className="py-4 px-6 text-sm font-semibold">Funcionalidade</th>
+          <th className="py-4 px-6 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Eye size={16} />
+              <span className="text-xs font-semibold">Comum</span>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-border">
+        <tr className="bg-muted/40">
+          <td colSpan={2} className="px-6 py-2.5">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">ACESSO PELO APLICATIVO</h3>
+          </td>
+        </tr>
         {funcionalidadesFiltradas.map((func, idx) => (
           <PermissionRowVisitante 
             key={idx}
             {...func}
           />
         ))}
-      </div>
-
-      {funcionalidadesFiltradas.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-          <p>Nenhuma funcionalidade encontrada</p>
-        </div>
-      )}
-    </div>
+      </tbody>
+    </table>
   );
 }
 
