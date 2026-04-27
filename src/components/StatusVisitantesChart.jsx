@@ -7,7 +7,7 @@ export default function StatusVisitantesChart() {
   const ativos = STATUS_VISITANTES.find((s) => s.name === "Dentro da fábrica")?.value ?? 0;
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
         <h3 className="text-sm font-semibold text-foreground">Status dos Visitantes</h3>
         <p className="text-xs text-muted-foreground">Situação atual — tempo real</p>

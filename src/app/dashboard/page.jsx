@@ -20,7 +20,7 @@ export default function DashboardPage() {
       />
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 animate-in fade-in duration-700 delay-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-700 delay-100">
         <StatCard
           label="Visitantes Hoje"
           value={STATS_TODAY.visitantes.value}
@@ -57,7 +57,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Gráficos — linha 1 */}
-      <div className="grid grid-cols-3 gap-4 animate-in fade-in duration-700 delay-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-in fade-in duration-700 delay-200">
         <div className="col-span-2">
           <EntradasChart />
         </div>
@@ -65,13 +65,13 @@ export default function DashboardPage() {
       </div>
 
       {/* Gráficos — linha 2 */}
-      <div className="grid grid-cols-2 gap-4 animate-in fade-in duration-700 delay-300">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in duration-700 delay-300">
         <TiposVisitanteChart />
         <StatusVisitantesChart />
       </div>
 
       {/* Tabelas */}
-      <div className="grid grid-cols-3 gap-4 animate-in fade-in duration-700 delay-400">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 animate-in fade-in duration-700 delay-400">
         <UltimosCheckins />
         <UltimosCheckouts />
         <NaEmpresaAgora />

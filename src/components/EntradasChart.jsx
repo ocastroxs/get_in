@@ -16,7 +16,7 @@ export default function EntradasChart({
   const [view, setView] = useState("hoje");
 
   return (
-    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+    <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
       <div className="flex items-start justify-between">
         <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
           <h3 className="text-sm font-bold text-foreground">{title}</h3>
@@ -40,12 +40,12 @@ export default function EntradasChart({
         </div>
       </div>
 
-      <div className="h-[180px] w-full mt-2" style={{ minWidth: '300px', minHeight: '180px' }}>
-        <ResponsiveContainer width={400} height={180}>
+      <div className="h-[200px] w-full mt-2">
+        <ResponsiveContainer width="100%" height={200}>
           <BarChart
             data={data}
             barSize={32}
-            margin={{ top: 10, right: 0, bottom: 0, left: -24 }}
+            margin={{ top: 10, right: 10, bottom: 10, left: 0 }}
           >
             <XAxis
               dataKey={nameKey}
