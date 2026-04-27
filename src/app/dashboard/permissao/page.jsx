@@ -11,10 +11,7 @@ import {
   RotateCcw, 
   Save,
   Search,
-  Filter,
-  ChevronRight,
-  Lock,
-  AlertCircle
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,32 +20,44 @@ import { Input } from '@/components/ui/input';
 
 const PERMISSOES_FUNCIONARIOS = [
   {
-    categoria: 'Visitantes',
-    icon: Eye,
-    cor: 'text-blue-600',
+    categoria: 'VISITANTES',
     funcionalidades: [
-      { titulo: 'Cadastrar visitante', desc: 'Registrar novo visitante no sistema', portaria: 'allow', supervisor: 'read', admin: 'allow' },
+      { titulo: 'Cadastrar visitante', desc: 'Registrar novo visitante no sistema', portaria: 'allow', supervisor: 'allow', admin: 'allow' },
       { titulo: 'Editar dados de visitante', desc: 'Alterar informações durante a visita', portaria: 'read', supervisor: 'allow', admin: 'allow' },
       { titulo: 'Check-out / encerrar visita', desc: 'Finalizar visita e devolver crachá', portaria: 'allow', supervisor: 'allow', admin: 'allow' },
       { titulo: 'Excluir visitante', desc: 'Remover registro permanentemente', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
     ]
   },
   {
-    categoria: 'Aprovações de Acesso',
-    icon: Lock,
-    cor: 'text-orange-600',
+    categoria: 'APROVAÇÕES DE ACESSO',
     funcionalidades: [
       { titulo: 'Solicitar aprovação', desc: 'Enviar pedido de entrada ao supervisor', portaria: 'allow', supervisor: 'deny', admin: 'allow' },
       { titulo: 'Aprovar / negar acesso', desc: 'Decisão de entrada em setor restrito', portaria: 'deny', supervisor: 'allow', admin: 'allow' },
+      { titulo: 'Verificar pendências', desc: 'Visualizar solicitações aguardando aprovação', portaria: 'read', supervisor: 'allow', admin: 'allow' },
     ]
   },
   {
-    categoria: 'Relatórios e Análises',
-    icon: AlertCircle,
-    cor: 'text-green-600',
+    categoria: 'CRACHÁS E RFID',
     funcionalidades: [
-      { titulo: 'Visualizar relatórios', desc: 'Acessar dados de circulação e movimentação', portaria: 'deny', supervisor: 'allow', admin: 'allow' },
-      { titulo: 'Exportar dados', desc: 'Baixar relatórios em CSV ou PDF', portaria: 'deny', supervisor: 'read', admin: 'allow' },
+      { titulo: 'Vincular crachá a visitante', desc: 'Associar tag RFID ao registro', portaria: 'allow', supervisor: 'deny', admin: 'allow' },
+      { titulo: 'Bloquear / desativar tag', desc: 'Revogar acesso de uma tag específica', portaria: 'deny', supervisor: 'allow', admin: 'allow' },
+      { titulo: 'Gerenciar estoque de tags', desc: 'Cadastrar e controlar tags disponíveis', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
+    ]
+  },
+  {
+    categoria: 'RELATÓRIOS E AUDITORIA',
+    funcionalidades: [
+      { titulo: 'Histórico de circulação', desc: 'Trilha de movimentação por setor', portaria: 'read', supervisor: 'allow', admin: 'allow' },
+      { titulo: 'Exportar relatório', desc: 'Baixar dados em PDF ou CSV', portaria: 'deny', supervisor: 'read', admin: 'allow' },
+      { titulo: 'Log de auditoria do sistema', desc: 'Acessar registros de ações do sistema', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
+    ]
+  },
+  {
+    categoria: 'CONFIGURAÇÕES',
+    funcionalidades: [
+      { titulo: 'Gerenciar funcionários', desc: 'Cadastrar, editar e remover usuários', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
+      { titulo: 'Gerenciar setores', desc: 'Criar e editar setores da empresa', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
+      { titulo: 'Editar permissões', desc: 'Alterar níveis de acesso de perfis', portaria: 'deny', supervisor: 'deny', admin: 'allow' },
     ]
   }
 ];
@@ -74,65 +83,80 @@ export default function PermissoesPage() {
 
   const handleDescartar = () => {
     setBusca('');
-    setAbaAtiva('funcionarios');
   };
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       
       {/* Cabeçalho */}
-      <header className="flex items-center justify-between">
-        <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
-          <h1 className="text-2xl font-bold text-foreground">Controle de Permissões</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gerencie os níveis de acesso para cada perfil do sistema</p>
+      <div className="flex flex-col gap-2 mb-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Permissões</h1>
+            <p className="text-sm text-muted-foreground mt-1">Determine o que cada perfil e visitante pode acessar no sistema.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="gap-1.5"
+              onClick={handleDescartar}
+            >
+              <RotateCcw size={14} />
+              Descartar
+            </Button>
+            <Button 
+              size="sm" 
+              className="gap-1.5"
+              onClick={handleSalvar}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <RotateCcw size={14} className="animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save size={14} />
+                  Salvar Alterações
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-700 delay-200">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-1.5"
-            onClick={handleDescartar}
-          >
-            <RotateCcw size={14} />
-            Descartar
-          </Button>
-          <Button 
-            size="sm" 
-            className="gap-1.5"
-            onClick={handleSalvar}
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <RotateCcw size={14} className="animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                Salvar Alterações
-              </>
-            )}
-          </Button>
-        </div>
-      </header>
-
-      {/* Abas e Filtros */}
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <div className="flex gap-2">
+        {/* Abas */}
+        <div className="flex gap-6 border-b border-border mt-4">
           <TabButton 
             active={abaAtiva === 'funcionarios'} 
             onClick={() => { setAbaAtiva('funcionarios'); setBusca(''); }}
-            label="Perfis Internos"
-            icon={Shield}
+            label="Funcionários"
           />
           <TabButton 
             active={abaAtiva === 'visitantes'} 
             onClick={() => { setAbaAtiva('visitantes'); setBusca(''); }}
-            label="Acesso de Visitantes"
-            icon={Eye}
+            label="Visitantes"
           />
+        </div>
+      </div>
+
+      {/* Legenda e Busca */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-green-100 border border-green-300"></div>
+            <span>Permitida</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-red-100 border border-red-300"></div>
+            <span>Bloqueado</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full bg-yellow-100 border border-yellow-300"></div>
+            <span>Somente leitura</span>
+          </div>
+          <span className="text-muted-foreground italic ml-auto">— Clique para alterar</span>
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto">
@@ -169,17 +193,16 @@ export default function PermissoesPage() {
 
 // ─── Componentes Auxiliares ─────────────────────────────────────────────────
 
-function TabButton({ active, onClick, label, icon: Icon }) {
+function TabButton({ active, onClick, label }) {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all duration-200 ${
+      className={`pb-3 px-1 font-semibold text-sm transition-all duration-200 ${
         active 
-          ? 'bg-primary text-primary-foreground shadow-md' 
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+          ? 'text-foreground border-b-2 border-primary' 
+          : 'text-muted-foreground hover:text-foreground border-b-2 border-transparent'
       }`}
     >
-      <Icon size={16} />
       {label}
     </button>
   );
@@ -197,39 +220,50 @@ function TabelaFuncionarios({ busca }) {
   }, [busca]);
 
   return (
-    <div className="space-y-4">
-      {categoriasFiltradas.map((categoria, catIdx) => (
-        <div key={catIdx} className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ animationDelay: `${catIdx * 100}ms` }}>
-          {/* Header da Categoria */}
-          <div className="flex items-center gap-3 mb-3 px-1">
-            <div className={`w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center ${categoria.cor}`}>
-              <categoria.icon size={18} />
-            </div>
-            <div>
-              <h3 className="font-bold text-foreground">{categoria.categoria}</h3>
-              <p className="text-xs text-muted-foreground">{categoria.funcionalidades.length} funcionalidade(s)</p>
-            </div>
+    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+      {/* Cabeçalho da Tabela */}
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-4">
+        <div className="grid grid-cols-4 gap-4 items-center">
+          <div className="text-sm font-semibold">Funcionalidade</div>
+          <div className="flex items-center justify-center gap-2">
+            <Shield size={16} />
+            <span className="text-xs font-semibold">Portaria</span>
           </div>
-
-          {/* Card da Categoria */}
-          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="divide-y divide-border">
-              {categoria.funcionalidades.map((func, idx) => (
-                <PermissionRowFuncionario 
-                  key={idx}
-                  {...func}
-                  index={idx}
-                />
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-2">
+            <Eye size={16} />
+            <span className="text-xs font-semibold">Supervisor</span>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <ShieldAlert size={16} />
+            <span className="text-xs font-semibold">Administrador</span>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* Conteúdo */}
+      <div className="divide-y divide-border">
+        {categoriasFiltradas.map((categoria, catIdx) => (
+          <div key={catIdx}>
+            {/* Seção */}
+            <div className="bg-muted/40 px-6 py-2.5 border-b border-border">
+              <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{categoria.categoria}</h3>
+            </div>
+
+            {/* Linhas */}
+            {categoria.funcionalidades.map((func, idx) => (
+              <PermissionRowFuncionario 
+                key={idx}
+                {...func}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
 
       {categoriasFiltradas.length === 0 && (
-        <div className="text-center py-12">
-          <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">Nenhuma funcionalidade encontrada</p>
+        <div className="text-center py-12 text-muted-foreground">
+          <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+          <p>Nenhuma funcionalidade encontrada</p>
         </div>
       )}
     </div>
@@ -245,22 +279,23 @@ function TabelaVisitantes({ busca }) {
   }, [busca]);
 
   return (
-    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+      {/* Cabeçalho da Tabela */}
+      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-6 py-4">
+        <div className="grid grid-cols-2 gap-4 items-center">
+          <div className="text-sm font-semibold">Funcionalidade (App)</div>
+          <div className="flex items-center justify-center gap-2">
+            <Eye size={16} />
+            <span className="text-xs font-semibold">Comum</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Conteúdo */}
       <div className="divide-y divide-border">
-        {/* Header */}
-        <div className="px-6 py-4 bg-muted/30 border-b border-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-              <Eye size={18} />
-            </div>
-            <div>
-              <h3 className="font-bold text-foreground">Acesso pelo Aplicativo</h3>
-              <p className="text-xs text-muted-foreground">{funcionalidadesFiltradas.length} permissão(ões)</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Visitante</span>
-          </div>
+        {/* Seção */}
+        <div className="bg-muted/40 px-6 py-2.5 border-b border-border">
+          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">ACESSO PELO APLICATIVO</h3>
         </div>
 
         {/* Linhas */}
@@ -268,22 +303,21 @@ function TabelaVisitantes({ busca }) {
           <PermissionRowVisitante 
             key={idx}
             {...func}
-            index={idx}
           />
         ))}
       </div>
 
       {funcionalidadesFiltradas.length === 0 && (
-        <div className="text-center py-12">
-          <Search className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground">Nenhuma funcionalidade encontrada</p>
+        <div className="text-center py-12 text-muted-foreground">
+          <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
+          <p>Nenhuma funcionalidade encontrada</p>
         </div>
       )}
     </div>
   );
 }
 
-function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin, index }) {
+function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin }) {
   const [p, setP] = useState(portaria);
   const [s, setS] = useState(supervisor);
   const [a, setA] = useState(admin);
@@ -295,14 +329,11 @@ function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin, i
   };
 
   return (
-    <tr className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
+    <tr className="hover:bg-muted/30 transition-colors">
       <td className="py-4 px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{titulo}</p>
-            <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0 ml-4" />
+        <div>
+          <p className="font-semibold text-sm text-foreground">{titulo}</p>
+          <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
         </div>
       </td>
       
@@ -339,7 +370,7 @@ function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin, i
   );
 }
 
-function PermissionRowVisitante({ titulo, desc, visitante, index }) {
+function PermissionRowVisitante({ titulo, desc, visitante }) {
   const [status, setStatus] = useState(visitante);
 
   const alternarStatus = (statusAtual) => {
@@ -349,14 +380,11 @@ function PermissionRowVisitante({ titulo, desc, visitante, index }) {
   };
 
   return (
-    <tr className="hover:bg-muted/20 transition-colors group animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
+    <tr className="hover:bg-muted/30 transition-colors">
       <td className="py-4 px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{titulo}</p>
-            <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0 ml-4" />
+        <div>
+          <p className="font-semibold text-sm text-foreground">{titulo}</p>
+          <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
         </div>
       </td>
       
@@ -375,27 +403,20 @@ function PermissionRowVisitante({ titulo, desc, visitante, index }) {
 
 function Badge({ status }) {
   const styles = {
-    allow: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800",
-    deny: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-200 dark:border-red-800",
-    read: "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+    allow: "bg-green-100 border-green-200 text-green-700",
+    deny: "bg-red-100 border-red-200 text-red-700",
+    read: "bg-yellow-100 border-yellow-200 text-yellow-700"
   };
 
   const icons = {
-    allow: <Check className="w-4 h-4" strokeWidth={3} />,
-    deny: <X className="w-4 h-4" strokeWidth={3} />,
-    read: <Minus className="w-4 h-4" strokeWidth={3} />
-  };
-
-  const labels = {
-    allow: "Permitida",
-    deny: "Bloqueada",
-    read: "Leitura"
+    allow: <Check className="w-3.5 h-3.5" strokeWidth={3} />,
+    deny: <X className="w-3.5 h-3.5" strokeWidth={3} />,
+    read: <Minus className="w-3.5 h-3.5" strokeWidth={3} />
   };
 
   return (
-    <div className={`inline-flex flex-col items-center gap-1 px-3 py-2 rounded-lg border font-semibold text-xs transition-all ${styles[status] || styles.deny}`}>
+    <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full border ${styles[status] || styles.deny}`}>
       {icons[status] || icons.deny}
-      <span className="text-[10px] font-medium">{labels[status]}</span>
     </div>
   );
 }
