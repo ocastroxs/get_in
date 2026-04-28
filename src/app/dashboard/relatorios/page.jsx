@@ -54,8 +54,8 @@ export default function RelatoriosPage() {
         <StatCard
           label="Check-outs Realizados"
           value={STATS_RELATORIOS.checkouts.value}
-          valueClassName="text-chart-2"
-          icon={<ArrowRightLeft size={17} className="text-chart-2" />}
+          valueClassName="text-emerald-700 dark:text-emerald-300"
+          icon={<ArrowRightLeft size={17} className="text-emerald-700 dark:text-emerald-300" />}
           delta={STATS_RELATORIOS.checkouts.delta}
           deltaDir={STATS_RELATORIOS.checkouts.deltaDir}
           sub={STATS_RELATORIOS.checkouts.sub}
@@ -64,8 +64,8 @@ export default function RelatoriosPage() {
         <StatCard
           label="Permanência Média"
           value={STATS_RELATORIOS.permanencia.value}
-          valueClassName="text-chart-3"
-          icon={<Clock size={17} className="text-chart-3" />}
+          valueClassName="text-sky-700 dark:text-sky-300"
+          icon={<Clock size={17} className="text-sky-700 dark:text-sky-300" />}
           delta={STATS_RELATORIOS.permanencia.delta}
           deltaDir={STATS_RELATORIOS.permanencia.deltaDir}
           sub={STATS_RELATORIOS.permanencia.sub}

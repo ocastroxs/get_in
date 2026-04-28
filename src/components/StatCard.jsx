@@ -35,7 +35,7 @@ export default function StatCard({
           {value}
         </span>
         {delta !== undefined && (
-          <span className={`flex items-center gap-0.5 font-semibold ${compact ? "mb-0 text-[10px]" : "mb-0.5 text-xs"} ${deltaDir === "up" ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
+          <span className={`flex items-center gap-0.5 font-semibold ${compact ? "mb-0 text-[10px]" : "mb-0.5 text-xs"} ${deltaDir === "up" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
             {deltaDir === "up" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {delta}%
           </span>

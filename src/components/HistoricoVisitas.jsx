@@ -9,7 +9,7 @@ export default function HistoricoVisitas({
   return (
     <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow duration-300">
       <div className="p-6 border-b border-border flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-muted/20">
-        <h3 className="font-bold text-lg text-foreground">{title}</h3>
+        <h2 className="font-bold text-lg text-foreground">{title}</h2>
         <div className="flex gap-3">
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -44,9 +44,9 @@ export default function HistoricoVisitas({
                 <td className="px-6 py-4 text-muted-foreground font-medium">{item.empresa}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                    item.tipo === 'Técnico' || item.tipo === 'Manutenção' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
-                    item.tipo === 'Auditor' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400' :
-                    'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                    item.tipo === 'Técnico' || item.tipo === 'Manutenção' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' :
+                    item.tipo === 'Auditor' ? 'bg-violet-500/10 text-violet-700 dark:text-violet-300' :
+                    'bg-slate-500/10 text-slate-700 dark:text-slate-300'
                   }`}>
                     {item.tipo}
                   </span>
@@ -70,7 +70,7 @@ export default function HistoricoVisitas({
                 </td>
                 <td className="px-6 py-4 text-right">
                   <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
-                    item.status === 'CONCLUÍDO' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                    item.status === 'CONCLUÍDO' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
                   }`}>
                     {item.status}
                   </span>

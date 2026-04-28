@@ -38,7 +38,7 @@ export default function TiposVisitantesChart({
   return (
     <div className={`bg-card text-card-foreground rounded-xl border border-border flex flex-col shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-3 p-4" : "gap-3 p-4 min-h-[280px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
-        <h3 className={`${mobileLayout ? "text-base" : "text-sm"} font-bold text-foreground`}>{title}</h3>
+        <h2 className={`${mobileLayout ? "text-base" : "text-sm"} font-bold text-foreground`}>{title}</h2>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
 

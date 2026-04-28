@@ -22,7 +22,7 @@ export default function EntradasChart({
     <div className={`bg-card text-card-foreground rounded-xl border border-border flex flex-col shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 ${mobileLayout ? "gap-3 p-4" : "gap-3 p-4"}`}>
       <div className={`flex items-start justify-between ${mobileLayout ? "gap-3" : ""}`}>
         <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
-          <h3 className={`${mobileLayout ? "text-base" : "text-sm"} font-bold text-foreground`}>{title}</h3>
+          <h2 className={`${mobileLayout ? "text-base" : "text-sm"} font-bold text-foreground`}>{title}</h2>
           <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
         <div className={`flex shrink-0 rounded-lg bg-muted p-0.5 font-bold uppercase tracking-wider ${mobileLayout ? "text-[11px]" : "text-[10px]"}`}>
