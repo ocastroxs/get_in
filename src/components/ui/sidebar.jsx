@@ -98,22 +98,22 @@ export default function Sidebar() {
         </div>
 
         {/* Rodapé da Sidebar */}
-        <div className="p-4 mt-auto border-t border-white/5">
-          <div className="bg-white/5 rounded-2xl p-4 mb-4">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4DA8EA] to-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
-                ADM
+          <div className="p-4 mt-auto border-t border-white/5">
+            <div className="bg-white/5 rounded-2xl p-4 mb-4">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4DA8EA] to-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
+                  ADM
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-xs font-bold text-white truncate">Administrador</p>
+                  <p className="text-[10px] text-gray-400 truncate">admin@getin.com</p>
+                </div>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-xs font-bold text-white truncate">Administrador</p>
-                <p className="text-[10px] text-gray-400 truncate">admin@getin.com</p>
-              </div>
+              <Link href="/dashboard/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
+                <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
+                <span>Configurações</span>
+              </Link>
             </div>
-            <button className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
-              <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
-              <span>Configurações</span>
-            </button>
-          </div>
           
           <button 
             onClick={handleLogout}
