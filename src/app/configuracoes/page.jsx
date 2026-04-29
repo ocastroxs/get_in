@@ -27,7 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function ConfiguracoesPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState('perfil');
   const [loading, setLoading] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -146,18 +146,6 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  const handleLogout = () => {
-    if (confirm('Tem certeza que deseja sair do sistema?')) {
-      logout();
-    }
-  };
-
-  const handleExcluirConta = () => {
-    if (confirm('ATENÇÃO: Esta ação é irreversível! Deseja realmente excluir sua conta?')) {
-      alert('Solicitação de exclusão enviada. Você será contatado em breve.');
-    }
-  };
-
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
       {/* Cabeçalho */}
@@ -215,7 +203,6 @@ export default function ConfiguracoesPage() {
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-foreground">{perfil.nome}</h2>
                 <p className="text-sm text-muted-foreground">{perfil.funcao}</p>
-                <p className="text-xs text-muted-foreground mt-1">ID: {user?.id || 'ADM-001'}</p>
               </div>
               <Button variant="outline" size="sm">
                 Alterar Foto
