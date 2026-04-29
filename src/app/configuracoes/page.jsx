@@ -372,7 +372,7 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Botões de Ação */}
             <div className="flex items-center justify-between pt-6 border-t border-border">
               <div className="flex gap-2">
@@ -638,37 +638,6 @@ export default function ConfiguracoesPage() {
                     <option value="24h">24 horas (14:30)</option>
                     <option value="12h">12 horas (2:30 PM)</option>
                   </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Som e Desktop */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground">Experiência</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Som em Notificações</p>
-                    <p className="text-xs text-muted-foreground">Reproduzir som ao receber notificações</p>
-                  </div>
-                  <Checkbox
-                    checked={preferencias.notificacoesAudio}
-                    onCheckedChange={(checked) =>
-                      setPreferencias({ ...preferencias, notificacoesAudio: checked })
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Notificações Desktop</p>
-                    <p className="text-xs text-muted-foreground">Mostrar notificações na área de trabalho</p>
-                  </div>
-                  <Checkbox
-                    checked={preferencias.notificacoesDesktop}
-                    onCheckedChange={(checked) =>
-                      setPreferencias({ ...preferencias, notificacoesDesktop: checked })
-                    }
-                  />
                 </div>
               </div>
             </div>
