@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   User,
   Lock,
@@ -12,12 +12,7 @@ import {
   EyeOff,
   Mail,
   Phone,
-  MapPin,
   Calendar,
-  Shield,
-  LogOut,
-  Trash2,
-  AlertCircle,
   Check,
   Loader2
 } from 'lucide-react';
@@ -27,7 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/lib/AuthContext';
 
 export default function ConfiguracoesPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState('perfil');
   const [loading, setLoading] = useState(false);
   const [sucesso, setSucesso] = useState(false);
@@ -49,8 +44,6 @@ export default function ConfiguracoesPage() {
     senhaAtual: '',
     novaSenha: '',
     confirmarSenha: '',
-    autenticacaoDois: true,
-    sessoesCodigo: false,
   });
 
   // Estado de Notificações
@@ -107,8 +100,6 @@ export default function ConfiguracoesPage() {
         senhaAtual: '',
         novaSenha: '',
         confirmarSenha: '',
-        autenticacaoDois: seguranca.autenticacaoDois,
-        sessoesCodigo: seguranca.sessoesCodigo,
       });
       setTimeout(() => setSucesso(false), 3000);
     } catch (error) {
@@ -143,18 +134,6 @@ export default function ConfiguracoesPage() {
       console.error('Erro ao salvar preferências:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleLogout = () => {
-    if (confirm('Tem certeza que deseja sair do sistema?')) {
-      logout();
-    }
-  };
-
-  const handleExcluirConta = () => {
-    if (confirm('ATENÇÃO: Esta ação é irreversível! Deseja realmente excluir sua conta?')) {
-      alert('Solicitação de exclusão enviada. Você será contatado em breve.');
     }
   };
 
@@ -215,7 +194,6 @@ export default function ConfiguracoesPage() {
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-foreground">{perfil.nome}</h2>
                 <p className="text-sm text-muted-foreground">{perfil.funcao}</p>
-                <p className="text-xs text-muted-foreground mt-1">ID: {user?.id || 'ADM-001'}</p>
               </div>
               <Button variant="outline" size="sm">
                 Alterar Foto
@@ -386,73 +364,6 @@ export default function ConfiguracoesPage() {
               </div>
             </div>
 
-            {/* Autenticação em Dois Fatores */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Shield size={18} />
-                Autenticação em Dois Fatores
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={seguranca.autenticacaoDois}
-                      onCheckedChange={(checked) =>
-                        setSeguranca({ ...seguranca, autenticacaoDois: checked })
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Autenticação por Código</p>
-                      <p className="text-xs text-muted-foreground">Receba códigos por email ou SMS</p>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${seguranca.autenticacaoDois ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {seguranca.autenticacaoDois ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={seguranca.sessoesCodigo}
-                      onCheckedChange={(checked) =>
-                        setSeguranca({ ...seguranca, sessoesCodigo: checked })
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Gerar Códigos de Backup</p>
-                      <p className="text-xs text-muted-foreground">Salve códigos para recuperação de conta</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Gerar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Sessões Ativas */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground">Sessões Ativas</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Chrome • Windows</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.100 • Última atividade: agora</p>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700">Atual</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Safari • iPhone</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.50 • Última atividade: há 2 horas</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Encerrar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
             {/* Botões de Ação */}
             <div className="flex items-center justify-between pt-6 border-t border-border">
               <div className="flex gap-2">
@@ -464,8 +375,6 @@ export default function ConfiguracoesPage() {
                     senhaAtual: '',
                     novaSenha: '',
                     confirmarSenha: '',
-                    autenticacaoDois: true,
-                    sessoesCodigo: false,
                   })}
                 >
                   <RotateCcw size={14} />
@@ -724,7 +633,6 @@ export default function ConfiguracoesPage() {
 
             {/* Som e Desktop */}
             <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground">Experiência</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
@@ -794,37 +702,6 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Zona de Perigo */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-red-900 mb-2">Zona de Perigo</h3>
-            <p className="text-sm text-red-700 mb-4">Estas ações são irreversíveis. Use com cautela.</p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleLogout}
-              >
-                <LogOut size={14} />
-                Sair do Sistema
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleExcluirConta}
-              >
-                <Trash2 size={14} />
-                Excluir Conta
-              </Button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
