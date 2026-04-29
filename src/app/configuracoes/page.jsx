@@ -372,74 +372,7 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
             </div>
-
-            {/* Autenticação em Dois Fatores */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Shield size={18} />
-                Autenticação em Dois Fatores
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={seguranca.autenticacaoDois}
-                      onCheckedChange={(checked) =>
-                        setSeguranca({ ...seguranca, autenticacaoDois: checked })
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Autenticação por Código</p>
-                      <p className="text-xs text-muted-foreground">Receba códigos por email ou SMS</p>
-                    </div>
-                  </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded ${seguranca.autenticacaoDois ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                    {seguranca.autenticacaoDois ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      checked={seguranca.sessoesCodigo}
-                      onCheckedChange={(checked) =>
-                        setSeguranca({ ...seguranca, sessoesCodigo: checked })
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Gerar Códigos de Backup</p>
-                      <p className="text-xs text-muted-foreground">Salve códigos para recuperação de conta</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Gerar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            {/* Sessões Ativas */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground">Sessões Ativas</h3>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Chrome • Windows</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.100 • Última atividade: agora</p>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700">Atual</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Safari • iPhone</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.50 • Última atividade: há 2 horas</p>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Encerrar
-                  </Button>
-                </div>
-              </div>
-            </div>
-
+            
             {/* Botões de Ação */}
             <div className="flex items-center justify-between pt-6 border-t border-border">
               <div className="flex gap-2">
