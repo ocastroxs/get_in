@@ -317,7 +317,7 @@ export default function ConfiguracoesPage() {
         {abaAtiva === 'seguranca' && (
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Alterar Senha */}
-            <div className="space-y-4 pb-6">
+            <div className="space-y-4 pb-6 border-b border-border">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Lock size={18} />
                 Alterar Senha
@@ -610,7 +610,7 @@ export default function ConfiguracoesPage() {
             </div>
 
             {/* Data e Hora */}
-            <div className="space-y-4 pb-6">
+            <div className="space-y-4 pb-6 border-b border-border">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Calendar size={18} />
                 Data e Hora
