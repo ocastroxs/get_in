@@ -81,11 +81,11 @@ export default function Sidebar() {
             <nav className="space-y-1.5">
               <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/crachas" icon={IdCard} label="Crachás" active={pathname === '/dashboard/crachas'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/dashboard/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/dashboard/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/visitantes" icon={Users} label="Visitantes" active={pathname === '/dashboard/visitantes'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/dashboard/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/checkin" icon={Check} label="Check-In / Out" active={pathname === '/dashboard/checkin'} onClick={() => setIsOpen(false)}/>
-              <NavItem href="/dashboard/empresas" icon={Building} label="Empresas" active={pathname === '/dashboard/empresas'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/setores" icon={LayoutGrid} label="Setores" active={pathname === '/dashboard/setores'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/empresas" icon={Building} label="Empresas" active={pathname === '/dashboard/empresas'} onClick={() => setIsOpen(false)} />
             </nav>
           </div>
 
