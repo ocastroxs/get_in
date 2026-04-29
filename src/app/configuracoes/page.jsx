@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/lib/AuthContext';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 export default function ConfiguracoesPage() {
   const { user } = useAuth();
@@ -197,9 +198,11 @@ export default function ConfiguracoesPage() {
           <div className="space-y-6 animate-in fade-in duration-300">
             {/* Avatar e Info Rápida */}
             <div className="flex items-start gap-6 pb-6 border-b border-border">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-primary to-blue-600 flex items-center justify-center text-2xl font-bold text-white">
-                {perfil.nome.charAt(0).toUpperCase()}
-              </div>
+              <UserAvatar 
+                name={perfil.nome} 
+                email={perfil.email} 
+                className="w-20 h-20 text-2xl" 
+              />
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-foreground">{perfil.nome}</h2>
                 <p className="text-sm text-muted-foreground">{perfil.funcao}</p>
