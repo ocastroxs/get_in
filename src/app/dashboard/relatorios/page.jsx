@@ -14,21 +14,21 @@ import { STATS_RELATORIOS, HISTORICO_VISITAS, SETORES_MAIS_VISITADOS, EMPRESAS_M
 export default function RelatoriosPage() {
   const [stats, setStats] = useState(STATS_RELATORIOS); // Fallback para mock
 
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        // const res = await fetch('http://localhost:8080/relatorios/stats');
-        const res = await fetch('');
-        const data = await res.json();
-        if (data.sucesso) {
-          setStats(data.data);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar stats:', error);
-      }
-    }
-    fetchStats();
-  }, []);
+  // useEffect(() => {
+  //   async function fetchStats() {
+  //     try {
+  //       // const res = await fetch('http://localhost:8080/relatorios/stats');
+  //       const res = await fetch('');
+  //       const data = await res.json();
+  //       if (data.sucesso) {
+  //         setStats(data.data);
+  //       }
+  //     } catch (error) {
+  //       console.error('Erro ao buscar stats:', error);
+  //     }
+  //   }
+  //   fetchStats();
+  // }, []);
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-x-hidden pb-10">
