@@ -37,21 +37,6 @@ export default function EmpresasPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Empresas Terceirizadas</h1>
-          <p className="text-sm text-muted-foreground">Indústria Alimentos Puros • Ter 08h00 - 18h • 29 de julho de 2025</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Download size={14} /> Exportar
-          </Button>
-          <Button size="sm" className="gap-2 bg-sidebar-primary text-sidebar-primary-foreground">
-            <Plus size={14} /> Cadastrar Empresa
-          </Button>
-        </div>
-      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

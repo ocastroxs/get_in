@@ -1,4 +1,3 @@
-import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
 import PicoMovimentoChart from "@/components/PicoMovimentoChart";
@@ -92,11 +91,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
-        <Topbar
-          title="Dashboard Geral"
-          subtitle="Visao rapida do desempenho e atividades recentes"
-        />
-
         <div className="grid grid-cols-4 gap-4 animate-in fade-in duration-700 delay-100">
           <StatCard
             label="Visitantes Hoje"

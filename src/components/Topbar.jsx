@@ -3,9 +3,18 @@
 import { Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function Topbar({ title, subtitle, buttonText }) {
+export default function Topbar({
+  title,
+  subtitle,
+  primaryActionLabel,
+  onPrimaryAction,
+  onExport,
+}) {
   return (
-    <header className="mb-6 flex flex-col gap-4 border-b border-border px-2 pb-4 animate-in fade-in slide-in-from-top-4 duration-700 md:flex-row md:items-center md:justify-between">
+    <header
+      className="mb-6 flex flex-col gap-4 border-b border-border px-2 pb-4 animate-in fade-in slide-in-from-top-4 duration-700 md:flex-row md:items-center md:justify-between"
+      data-no-print="true"
+    >
       <div className="min-w-0 animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
         <h1 className="text-xl font-semibold text-foreground">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
@@ -19,16 +28,18 @@ export default function Topbar({ title, subtitle, buttonText }) {
         </div>
 
         {/* Exportar */}
-        <Button variant="outline" size="sm" className="gap-1.5 transition-all hover:shadow-md">
-          <Download size={13} />
-          Exportar
-        </Button>
+        {onExport && (
+          <Button variant="outline" size="sm" className="gap-1.5 transition-all hover:shadow-md" onClick={onExport}>
+            <Download size={13} />
+            Exportar PDF
+          </Button>
+        )}
 
         {/* Novo Visitante */}
-        {buttonText && (
-          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
+        {primaryActionLabel && onPrimaryAction && (
+          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md" onClick={onPrimaryAction}>
             <Plus size={13} />
-            {buttonText}
+            {primaryActionLabel}
           </Button>
         )}
       </div>

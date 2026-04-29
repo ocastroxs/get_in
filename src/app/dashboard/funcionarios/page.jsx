@@ -7,7 +7,6 @@ import {
   Mail, Phone, CreditCard, Building2, Briefcase,
   Trash2, Edit, MoreVertical, Loader2
 } from "lucide-react";
-import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
@@ -164,20 +163,6 @@ export default function FuncionariosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Funcionários</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os colaboradores e níveis de acesso do sistema.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => downloadCSV(filtrados)}>
-            <Download size={16} /> Exportar
-          </Button>
-          <Button size="sm" className="gap-2" onClick={() => window.location.href = '/registrarFuncionario'}>
-            <Plus size={16} /> Novo Funcionário
-          </Button>
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
