@@ -113,7 +113,7 @@ export default function Sidebar() {
                   <p className="text-[10px] text-gray-400 truncate">admin@getin.com</p>
                 </div>
               </div>
-              <Link href="/dashboard/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
+              <Link href="/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
                 <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
                 <span>Configurações</span>
               </Link>
