@@ -7,7 +7,7 @@ export default function EmpresasMaisVisitas({
   return (
     <div className="bg-card text-card-foreground p-0 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col">
       <div className="p-6 border-b border-border bg-muted/10">
-        <h3 className="font-bold text-foreground">{title}</h3>
+        <h2 className="font-bold text-foreground">{title}</h2>
       </div>
       <div className="overflow-x-auto flex-1">
         <table className="w-full text-sm text-left h-full">
@@ -27,7 +27,7 @@ export default function EmpresasMaisVisitas({
                   <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
                     item.alertas > 0 
                       ? 'bg-destructive/10 text-destructive' 
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                   }`}>
                     {item.alertas}
                   </span>

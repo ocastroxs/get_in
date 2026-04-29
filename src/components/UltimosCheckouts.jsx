@@ -5,8 +5,8 @@ export default function UltimosCheckouts() {
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-700">
       <div className="flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-700 delay-800">
-        <h3 className="text-sm font-semibold text-foreground">Últimos Check-outs</h3>
-        <Link href="/checkin" className="text-xs text-primary hover:text-primary/80 font-medium transition-all hover:translate-x-1">
+        <h2 className="text-sm font-semibold text-foreground">Últimos Check-outs</h2>
+        <Link href="/checkin" className="text-xs text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200 font-medium transition-all hover:translate-x-1">
           Ver todos →
         </Link>
       </div>
@@ -28,7 +28,7 @@ export default function UltimosCheckouts() {
               <p className="text-[10px] text-muted-foreground">{item.empresa}</p>
             </div>
             <div className="flex justify-center">
-              <span className="text-[10px] font-semibold text-accent-foreground bg-accent px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-semibold text-foreground bg-accent px-2 py-0.5 rounded-md">
                 {item.setor}
               </span>
             </div>

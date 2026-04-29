@@ -37,7 +37,10 @@ export default function Sidebar() {
       {/* Botão Hambúrguer (Visível apenas em telas pequenas) */}
       <button 
         onClick={toggleSidebar}
-        className="lg:hidden fixed top-6 left-6 z-[60] p-2 bg-[#0A254052] rounded-2xl  text-white  active:scale-90 transition-all border border-white/10"
+        aria-label={isOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
+        aria-expanded={isOpen}
+        aria-controls="app-sidebar"
+        className="lg:hidden fixed top-8 left-6 z-[60] p-2 bg-[#0A254052] rounded-2xl text-white active:scale-90 transition-all border border-white/10"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
@@ -51,7 +54,7 @@ export default function Sidebar() {
       )}
 
       {/* Sidebar Principal */}
-      <aside className={`
+      <aside id="app-sidebar" className={`
         fixed lg:sticky top-0 left-0 h-screen w-72 bg-[#0A2540] flex flex-col shadow-2xl z-[55] transition-all duration-500 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -71,9 +74,9 @@ export default function Sidebar() {
         {/* Navegação Principal */}
         <div className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
           <div>
-            <h3 className="px-4 text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase mb-4 opacity-50">
+            <p className="px-4 text-[10px] font-bold text-gray-300 tracking-[0.2em] uppercase mb-4 opacity-70">
               Menu Principal
-            </h3>
+            </p>
             <nav className="space-y-1.5">
               <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/crachas" icon={IdCard} label="Crachás" active={pathname === '/dashboard/crachas'} onClick={() => setIsOpen(false)} />
@@ -86,9 +89,9 @@ export default function Sidebar() {
           </div>
 
           <div>
-            <h3 className="px-4 text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase mb-4 opacity-50">
+            <p className="px-4 text-[10px] font-bold text-gray-300 tracking-[0.2em] uppercase mb-4 opacity-70">
               Gestão de Acesso
-            </h3>
+            </p>
             <nav className="space-y-1.5">
               <NavItem href="/dashboard/circulacao" icon={Activity} label="Circulação" active={pathname === '/dashboard/circulacao'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/permissao" icon={Lock} label="Permissões" active={pathname === '/dashboard/permissao'} onClick={() => setIsOpen(false)} />

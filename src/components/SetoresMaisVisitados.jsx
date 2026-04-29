@@ -9,7 +9,7 @@ export default function SetoresMaisVisitados({
 
   return (
     <div className="bg-card text-card-foreground p-6 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300">
-      <h3 className="font-bold mb-5 text-foreground">{title}</h3>
+      <h2 className="font-bold mb-5 text-foreground">{title}</h2>
       <div className="space-y-5">
         {data.map((item, i) => {
           const percentage = (item.visitas / maxVisitas) * 100;

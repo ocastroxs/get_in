@@ -26,7 +26,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-br" className="h-full antialiased">
-      <body className={cn(leagueSpartan.variable, inter.variable, "min-h-full")}> 
+      <body className={cn(leagueSpartan.variable, inter.variable, "min-h-full")}
+      suppressHydrationWarning> 
         <AuthProvider>
           <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
         </AuthProvider>
