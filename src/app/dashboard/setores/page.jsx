@@ -16,7 +16,7 @@
  *   DELETE /api/setores/:id        → exclui setor
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Layers, CheckSquare, Activity, Lock,
   Filter, ChevronDown, Search, X,
@@ -27,6 +27,7 @@ import {
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { SETORES_MOCK } from "@/lib/setoresData";
+import { api } from "@/services/api";
 
 // ─── Constantes de domínio ───────────────────────────────────────────────────
 
@@ -70,50 +71,66 @@ const SETOR_VAZIO = {
 // ─── API STUBS (substitua por chamadas reais) ─────────────────────────────────
 
 /**
- * 🔌 API — busca lista de setores
+ * 🔌 API — busca lista de setores via /dep/
  */
 async function apiListarSetores() {
   try {
-    const res = await fetch('http://localhost:3000/dep');
-    if (!res.ok) throw new Error('Erro ao buscar setores');
-    const data = await res.json();
-    if (!data.sucesso) return SETORES_MOCK; // Fallback
-    return data.data.map(dep => ({
-      id: dep.id,
+    const data = await api.get('/dep/');
+    // Suporta { sucesso, data: [...] } ou array direto
+    const lista = Array.isArray(data) ? data : (data?.data ?? data?.dados ?? null);
+    if (!lista) return SETORES_MOCK;
+    return lista.map(dep => ({
+      id: String(dep.id),
       nome: dep.nome,
-      responsavel: dep.idGestor ? `Gestor ${dep.idGestor}` : 'N/A',
+      responsavel: dep.idGestor ? `Gestor #${dep.idGestor}` : 'N/A',
       acesso: 'liberado',
       status: 'ativo',
       epiObrig: false,
       visitantes: 0,
       fluxo: 0,
-      ultimaAtualizacao: { data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }
+      ultimaAtualizacao: {
+        data: new Date().toLocaleDateString('pt-BR'),
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      }
     }));
   } catch (error) {
-    console.error(error);
-    return SETORES_MOCK; // Fallback
+    console.error('Erro ao buscar setores:', error);
+    return SETORES_MOCK;
   }
 }
 
 /**
- * 🔌 API — cria novo setor
+ * 🔌 API — cria novo setor via POST /dep/
  */
 async function apiCriarSetor(payload) {
   try {
-    const res = await fetch('http://localhost:3000/dep', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: payload.nome, idGestor: null })
-    });
-    if (!res.ok) throw new Error('Erro ao criar setor');
-    const data = await res.json();
-    if (!data.sucesso) throw new Error(data.mensagem);
-    return { ...payload, id: Math.random(), visitantes: 0, fluxo: 0, ultimaAtualizacao: { data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() } };
+    const data = await api.post('/dep/', { nome: payload.nome, idGestor: null });
+    if (data && data.sucesso) {
+      return {
+        ...payload,
+        id: String(data.data?.id ?? Math.random()),
+        visitantes: 0,
+        fluxo: 0,
+        ultimaAtualizacao: {
+          data: new Date().toLocaleDateString('pt-BR'),
+          hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        }
+      };
+    }
+    throw new Error(data?.mensagem || 'Erro ao criar setor');
   } catch (error) {
-    console.error(error);
-    // Fallback mock
-    const nextNum = String(Math.floor(Math.random() * 900) + 100).padStart(3, "0");
-    return { ...payload, id: `SET-${nextNum}`, visitantes: 0, fluxo: 0, ultimaAtualizacao: { data: "29/07", hora: "agora" } };
+    console.error('Erro ao criar setor:', error);
+    const nextNum = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
+    return {
+      ...payload,
+      id: `SET-${nextNum}`,
+      visitantes: 0,
+      fluxo: 0,
+      ultimaAtualizacao: {
+        data: new Date().toLocaleDateString('pt-BR'),
+        hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      }
+    };
   }
 }
 
@@ -448,6 +465,18 @@ function LinhaSetor({ setor, fluxoMax, onEditar, onExcluir }) {
 
 export default function SetoresPage() {
   const [setores, setSetores]           = useState(SETORES_MOCK);
+  const [loadingSetores, setLoadingSetores] = useState(true);
+
+  // Carrega setores do backend ao montar
+  useEffect(() => {
+    async function carregarSetores() {
+      setLoadingSetores(true);
+      const lista = await apiListarSetores();
+      setSetores(lista);
+      setLoadingSetores(false);
+    }
+    carregarSetores();
+  }, []);
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [acessoFiltro, setAcessoFiltro] = useState("Todos");
   const [busca, setBusca]               = useState("");

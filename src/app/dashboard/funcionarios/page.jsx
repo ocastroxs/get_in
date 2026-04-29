@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Users, Search, Filter, X, Download, Plus,
-  ChevronDown, Check, Shield, User, Eye, Star,
-  Mail, Phone, CreditCard, Building2, Briefcase,
-  Trash2, Edit, MoreVertical, Loader2
+  Mail, Phone, Building2,
+  User, Eye, Star, Shield,
+  Trash2, Edit, Loader2
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
@@ -19,7 +19,8 @@ const TIPO_LABEL = {
   func: "Funcionário",
   port: "Portaria",
   sup: "Supervisor",
-  ger: "Gerente"
+  ger: "Gerente",
+  adm: "Administrador",
 };
 
 const TIPO_STYLE = {
@@ -27,6 +28,7 @@ const TIPO_STYLE = {
   port: "bg-blue-100 text-blue-700",
   sup: "bg-green-100 text-green-700",
   ger: "bg-orange-100 text-orange-700",
+  adm: "bg-red-100 text-red-700",
 };
 
 const TIPO_ICON = {
@@ -34,6 +36,7 @@ const TIPO_ICON = {
   port: <Shield size={14} />,
   sup: <Eye size={14} />,
   ger: <Star size={14} />,
+  adm: <Shield size={14} />,
 };
 
 function toCSV(rows) {
@@ -60,7 +63,7 @@ function LinhaFuncionario({ f, index }) {
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {f.nome.charAt(0).toUpperCase()}
+            {f.nome?.charAt(0).toUpperCase() || "?"}
           </div>
           <div>
             <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome}</div>
@@ -73,9 +76,9 @@ function LinhaFuncionario({ f, index }) {
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Mail size={12} /> {f.email}
           </div>
-          {f.celular && (
+          {(f.celular || f.telefone) && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Phone size={12} /> {f.celular}
+              <Phone size={12} /> {f.celular || f.telefone}
             </div>
           )}
         </div>
@@ -118,24 +121,35 @@ export default function FuncionariosPage() {
     async function fetchFuncionarios() {
       try {
         setLoading(true);
-        // O endpoint /user/read retorna todos os usuários (incluindo funcionários)
-        const data = await api.get('/user/read');
-        
-        if (data && data.sucesso && Array.isArray(data.dados)) {
-          // Filtrar apenas quem não é visitante (ou mostrar todos se preferir)
-          // No contexto de "Funcionários", geralmente queremos quem tem acesso ao sistema
-          const lista = data.dados.map(u => ({
+
+        // Busca todos os usuários via GET /user/
+        const data = await api.get('/user/');
+
+        if (Array.isArray(data)) {
+          // A rota /user/ retorna array direto
+          setFuncionarios(data.map(u => ({
             ...u,
-            departamento: u.departamento_nome || u.departamento || "Geral"
-          }));
-          setFuncionarios(lista);
+            departamento: u.departamento_nome || u.departamento || "Geral",
+            tipo: u.tipo || "func",
+          })));
+        } else if (data && data.sucesso && Array.isArray(data.data)) {
+          setFuncionarios(data.data.map(u => ({
+            ...u,
+            departamento: u.departamento_nome || u.departamento || "Geral",
+            tipo: u.tipo || "func",
+          })));
+        } else if (data && Array.isArray(data.dados)) {
+          setFuncionarios(data.dados.map(u => ({
+            ...u,
+            departamento: u.departamento_nome || u.departamento || "Geral",
+            tipo: u.tipo || "func",
+          })));
         } else {
           // Fallback para dados de simulação
           setFuncionarios(FUNCIONARIOS_MOCK);
         }
       } catch (error) {
         console.error('Erro ao buscar funcionários:', error);
-        // Fallback para dados de simulação em caso de erro
         setFuncionarios(FUNCIONARIOS_MOCK);
       } finally {
         setLoading(false);
@@ -148,9 +162,9 @@ export default function FuncionariosPage() {
     return funcionarios.filter((f) => {
       const matchTipo = filtroTipo === "Todos" || f.tipo === filtroTipo;
       const matchBusca = busca.trim() === "" ||
-        f.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        f.cpf.includes(busca) ||
-        f.email.toLowerCase().includes(busca.toLowerCase());
+        (f.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
+        (f.cpf || "").includes(busca) ||
+        (f.email || "").toLowerCase().includes(busca.toLowerCase());
       return matchTipo && matchBusca;
     });
   }, [funcionarios, filtroTipo, busca]);
@@ -218,7 +232,7 @@ export default function FuncionariosPage() {
                 {tipo === "Todos" ? "Todos" : TIPO_LABEL[tipo]}
               </button>
             ))}
-            { (busca || filtroTipo !== "Todos") && (
+            {(busca || filtroTipo !== "Todos") && (
               <button 
                 onClick={() => { setBusca(""); setFiltroTipo("Todos"); }}
                 className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"

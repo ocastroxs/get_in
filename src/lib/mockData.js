@@ -162,8 +162,8 @@ export const VISITANTES_HOJE = [
 ];
 
 export const ALERTAS_VISITANTES = [
-  { nome: "Carlos Mendes", setor: "Almox" },
-  { nome: "Pedro Rocha",   setor: "Prod" },
+  { mensagem: "Carlos Mendes (Almox) está há mais de 4h sem saída registrada." },
+  { mensagem: "Pedro Rocha (Prod) está há mais de 4h sem saída registrada." },
 ];
 export const STATS_EMPRESAS = {
   total: { value: 24, delta: 2, deltaDir: "up", sub: "novas este mês" },

@@ -1,5 +1,6 @@
-'use client';
+"use client";
 import React, { useState, useEffect } from 'react';
+import { api } from '@/services/api';
 import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2, AlertCircle } from 'lucide-react';
 import Sidebar from '@/components/ui/sidebar';
 import ParticlesBackground from '@/components/ui/ParticlesBackground';
@@ -80,12 +81,13 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch(`https://get-in-ilp5.onrender.com/dep`,{
-        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }
-        } );
-        const data = await response.json();
-        if (data.sucesso) setDepartamentos(data.data);
-      } catch (err) { return; }
+        const data = await api.get('/dep/');
+        // Suporta { sucesso, data: [...] } ou array direto
+        const lista = Array.isArray(data) ? data : (data?.data ?? data?.dados ?? []);
+        setDepartamentos(lista);
+      } catch (err) {
+        console.error('Erro ao buscar departamentos:', err);
+      }
     };
     fetchDepartamentos();
   }, []);
@@ -132,10 +134,7 @@ const CadastroFuncionario = () => {
       senha: formData.senha, imagem: null, dataDeNascimento: null
     };
     try {
-      const response = await fetch('https://get-in-ilp5.onrender.com/auth', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }, body: JSON.stringify(payloadBackend)
-      });
-      const data = await response.json();
+      const data = await api.post('/auth/', payloadBackend);
       if (data.sucesso) setSucesso(true);
       else setErro(data.mensagem || 'Erro ao realizar o cadastro.');
     } catch (err) { setErro('Não foi possível conectar ao servidor.'); }
