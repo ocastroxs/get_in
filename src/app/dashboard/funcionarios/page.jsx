@@ -173,7 +173,7 @@ export default function FuncionariosPage() {
           <Button variant="outline" size="sm" className="gap-2" onClick={() => downloadCSV(filtrados)}>
             <Download size={16} /> Exportar
           </Button>
-          <Button size="sm" className="gap-2" onClick={() => window.location.href = '/registrarFuncionario'}>
+          <Button size="sm" className="gap-2" onClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}>
             <Plus size={16} /> Novo Funcionário
           </Button>
         </div>
