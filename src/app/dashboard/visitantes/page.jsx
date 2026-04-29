@@ -295,7 +295,10 @@ export default function VisitantesPage() {
       )}
 
       <div className="flex flex-col gap-5">
-        <Topbar />
+        <Topbar
+        title="Visitantes"
+        subtitle="Visão geral de visitantes"
+        buttonText="Novo Visitante"/>
 
         {/* Alerta */}
         {alertas.length > 0 && (

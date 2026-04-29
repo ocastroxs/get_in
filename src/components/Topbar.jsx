@@ -25,10 +25,12 @@ export default function Topbar({ title, subtitle, buttonText }) {
         </Button>
 
         {/* Novo Visitante */}
-        <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
-          <Plus size={13} />
-          {buttonText}
-        </Button>
+        {buttonText && (
+          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
+            <Plus size={13} />
+            {buttonText}
+          </Button>
+        )}
       </div>
     </header>
   );

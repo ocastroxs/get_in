@@ -146,8 +146,6 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-4 animate-in fade-in duration-700 delay-400 xl:grid-cols-3">
-          <UltimosCheckins />
-          <UltimosCheckouts />
           <NaEmpresaAgora />
         </div>
       </div>
