@@ -795,37 +795,6 @@ export default function ConfiguracoesPage() {
           </div>
         )}
       </div>
-
-      {/* Zona de Perigo */}
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-red-900 mb-2">Zona de Perigo</h3>
-            <p className="text-sm text-red-700 mb-4">Estas ações são irreversíveis. Use com cautela.</p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleLogout}
-              >
-                <LogOut size={14} />
-                Sair do Sistema
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleExcluirConta}
-              >
-                <Trash2 size={14} />
-                Excluir Conta
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
