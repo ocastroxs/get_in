@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
 import { useAuth } from "@/lib/AuthContext"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
+import { publicService } from "@/services/api"
 
 /* ─────────────────────────────────────────────
    Componente de Título Animado (da branch castro)
@@ -206,17 +207,43 @@ function StatItem({ value, suffix, label, icon: Icon }) {
    Página de Login
 ───────────────────────────────────────────── */
 export default function LoginPage() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  
+  // Estados para estatísticas reais
+  const [stats, setStats] = useState({
+    visitasHoje: "38", // Valor inicial (mock)
+    setoresAtivos: "6",
+    rastreabilidade: "100"
+  });
 
   // Se já estiver autenticado, redireciona para o dashboard
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, authLoading, router]);
 
-  if (isLoading) {
+  // Busca estatísticas reais do back-end
+  useEffect(() => {
+    const fetchStats = async () => {
+      const response = await publicService.getStats();
+      if (response.sucesso && response.data) {
+        setStats({
+          visitasHoje: response.data.visitasHoje.toString(),
+          setoresAtivos: response.data.setoresAtivos.toString(),
+          rastreabilidade: response.data.rastreabilidade.toString()
+        });
+      }
+    };
+
+    fetchStats();
+    // Opcional: Atualizar a cada 5 minutos
+    const interval = setInterval(fetchStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -301,12 +328,12 @@ export default function LoginPage() {
                         animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500"
           >
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
-              <StatItem value="38" label="Visitas hoje" icon={Users} />
+              <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
               <div className="pl-4">
-                <StatItem value="6" label="Setores ativos" icon={Activity} />
+                <StatItem value={stats.setoresAtivos} label="Setores ativos" icon={Activity} />
               </div>
               <div className="pl-4">
-                <StatItem value="100" suffix="%" label="Rastreabilidade" icon={ShieldCheck} />
+                <StatItem value={stats.rastreabilidade} suffix="%" label="Rastreabilidade" icon={ShieldCheck} />
               </div>
             </div>
           </div>
