@@ -3,13 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Users, ArrowRightLeft, LogOut, AlertTriangle,
-  Search, X, Plus, CreditCard, ChevronDown, Check, Loader2,
+  Search, X, Plus, CreditCard, Check, Loader2,
   MoreHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
-import { VISITANTES_HOJE, ALERTAS_VISITANTES } from "@/lib/mockData";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
@@ -36,43 +35,29 @@ const STATUS_DOT = {
 
 const SETORES = ["Adm", "Lab", "Prod", "Alm", "Recepção", "Diretoria"];
 
-// ─── STUBS DE API (PRONTO PARA INTEGRAR) ──────────────────────────────────────
-
-async function apiListarVisitantes() {
-  try {
-    const response = await api.get("/requisicao-visitante");
-    if (response.sucesso) return response.data;
-    return VISITANTES_HOJE;
-  } catch (error) {
-    console.error("Erro ao listar visitantes:", error);
-    return VISITANTES_HOJE;
-  }
+function toCSV(rows) {
+  const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saída", "Status"];
+  const lines = rows.map((r) =>
+    [r.nome, r.empresa, r.cpf, r.setor, r.entrada, r.saida ?? "—", STATUS_LABEL[r.status]].join(";")
+  );
+  return [cols.join(";"), ...lines].join("\n");
 }
 
-async function apiRegistrarEntrada(dados) {
-  try {
-    const payload = {
-      idUsuario: dados.idUsuario || 1, 
-      idDepartamento: dados.idDepartamento || 1,
-      motivo: dados.motivo || "Visita Técnica",
-      validade: new Date().toISOString()
-    };
-    
-    const response = await api.post("/requisicao-visitante", payload);
-    return response;
-  } catch (error) {
-    console.error("Erro ao registrar entrada:", error);
-    return { sucesso: false, mensagem: "Erro de conexão com o servidor." };
-  }
+function downloadCSV(data) {
+  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "visitantes.csv"; a.click();
+  URL.revokeObjectURL(url);
 }
 
-// ─── COMPONENTES DE APOIO ────────────────────────────────────────────────────
+// ─── MODAL NOVO VISITANTE ───────────────────────────────────────────────────
 
 function ModalNovoVisitante({ onClose, onSave }) {
-  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    nome: "", empresa: "", cpf: "", setor: "Adm", entrada: "", cracha: ""
+    nome: "", empresa: "", cpf: "", setor: "Adm", motivo: ""
   });
+  const [loading, setLoading] = useState(false);
 
   const maskCPF = (v) =>
     v.replace(/\D/g, "")
@@ -88,19 +73,28 @@ function ModalNovoVisitante({ onClose, onSave }) {
     }
     
     setLoading(true);
-    await apiRegistrarEntrada(form);
-    
-    setTimeout(() => {
-      onSave({
-        ...form,
-        id: Date.now(),
-        entrada: form.entrada || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        status: "ativo",
-        cracha: form.cracha || "TAG-NOVA"
-      });
+    try {
+      const payload = {
+        idUsuario: 1,
+        idDepartamento: 1,
+        motivo: form.motivo || "Visita",
+        validade: new Date().toISOString()
+      };
+      
+      const response = await api.post('/requisicao-visitante', payload);
+      
+      if (response.sucesso) {
+        onSave();
+        onClose();
+      } else {
+        alert(response.mensagem || "Erro ao registrar visitante.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão com o servidor.");
+    } finally {
       setLoading(false);
-      onClose();
-    }, 800);
+    }
   }
 
   return (
@@ -119,54 +113,58 @@ function ModalNovoVisitante({ onClose, onSave }) {
         </div>
 
         <div className="px-6 py-5 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Nome completo *</label>
-              <input
-                type="text"
-                value={form.nome}
-                onChange={(e) => setForm({...form, nome: e.target.value})}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">CPF *</label>
-              <input
-                type="text"
-                value={form.cpf}
-                onChange={(e) => setForm({...form, cpf: maskCPF(e.target.value)})}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Empresa *</label>
-              <input
-                type="text"
-                value={form.empresa}
-                onChange={(e) => setForm({...form, empresa: e.target.value})}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Setor</label>
-              <select
-                value={form.setor}
-                onChange={(e) => setForm({...form, setor: e.target.value})}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-              >
-                {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Crachá (TAG)</label>
-              <input
-                type="text"
-                placeholder="Ex: TAG-001"
-                value={form.cracha}
-                onChange={(e) => setForm({...form, cracha: e.target.value})}
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-              />
-            </div>
+          <p className="text-xs text-muted-foreground">
+            Registre um novo visitante no sistema. Todos os campos marcados com * são obrigatórios.
+          </p>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Nome completo *</label>
+            <input
+              type="text"
+              value={form.nome}
+              onChange={(e) => setForm({...form, nome: e.target.value})}
+              placeholder="Ex: Marina Souza"
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Empresa *</label>
+            <input
+              type="text"
+              value={form.empresa}
+              onChange={(e) => setForm({...form, empresa: e.target.value})}
+              placeholder="Ex: Nutrilab"
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">CPF *</label>
+            <input
+              type="text"
+              value={form.cpf}
+              onChange={(e) => setForm({...form, cpf: maskCPF(e.target.value)})}
+              placeholder="000.000.000-00"
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Setor</label>
+            <select
+              value={form.setor}
+              onChange={(e) => setForm({...form, setor: e.target.value})}
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            >
+              {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Motivo da Visita</label>
+            <input
+              type="text"
+              value={form.motivo}
+              onChange={(e) => setForm({...form, motivo: e.target.value})}
+              placeholder="Ex: Visita Técnica"
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            />
           </div>
         </div>
 
@@ -174,7 +172,7 @@ function ModalNovoVisitante({ onClose, onSave }) {
           <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancelar</Button>
           <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
             {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-            Registrar Entrada
+            Registrar Visitante
           </Button>
         </div>
       </div>
@@ -182,7 +180,9 @@ function ModalNovoVisitante({ onClose, onSave }) {
   );
 }
 
-function LinhaVisitante({ v, index }) {
+// ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
+
+function LinhaVisitante({ v }) {
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-colors">
       <td className="py-3 px-4">
@@ -191,20 +191,14 @@ function LinhaVisitante({ v, index }) {
       </td>
       <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">{v.empresa}</td>
       <td className="py-3 px-4">
-        <div className="text-xs font-semibold text-foreground">{v.setor}</div>
+        <div className="text-xs font-semibold text-foreground">{v.setor || "—"}</div>
       </td>
-      <td className="py-3 px-4 text-sm text-foreground">{v.entrada}</td>
+      <td className="py-3 px-4 text-sm text-foreground">{v.entrada || "—"}</td>
       <td className="py-3 px-4 text-sm text-muted-foreground">{v.saida ?? "—"}</td>
       <td className="py-3 px-4">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[v.status] ?? "bg-muted text-muted-foreground"}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[v.status] ?? "bg-muted-foreground"}`} />
           {STATUS_LABEL[v.status] || v.status}
-        </span>
-      </td>
-      <td className="py-3 px-4">
-        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted text-[10px] font-mono text-muted-foreground border border-border">
-          <CreditCard size={10} />
-          {v.cracha || "—"}
         </span>
       </td>
       <td className="py-3 px-4">
@@ -216,24 +210,31 @@ function LinhaVisitante({ v, index }) {
   );
 }
 
+// ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
+
 export default function VisitantesPage() {
   const [visitantes, setVisitantes]   = useState([]);
   const [loading, setLoading]         = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
-  const [alertas, setAlertas]         = useState(ALERTAS_VISITANTES);
-  
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [busca, setBusca]             = useState("");
 
-  const carregarDados = async () => {
+  const carregarVisitantes = async () => {
     setLoading(true);
-    const dados = await apiListarVisitantes();
-    setVisitantes(dados);
-    setLoading(false);
+    try {
+      const response = await api.get('/requisicao-visitante');
+      if (response.sucesso) {
+        setVisitantes(response.data || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar visitantes:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    carregarDados();
+    carregarVisitantes();
   }, []);
 
   const filtrados = useMemo(() => {
@@ -249,10 +250,10 @@ export default function VisitantesPage() {
   }, [visitantes, statusFiltro, busca]);
 
   const stats = useMemo(() => ({
-    total:      visitantes.length,
-    ativos:     visitantes.filter((v) => v.status === "ativo").length,
+    total:       visitantes.length,
+    ativos:      visitantes.filter((v) => v.status === "ativo").length,
     finalizados: visitantes.filter((v) => v.status === "finalizado").length,
-    alertas:    visitantes.filter((v) => v.status === "semsaida").length,
+    alertas:     visitantes.filter((v) => v.status === "semsaida").length,
   }), [visitantes]);
 
   return (
@@ -260,7 +261,7 @@ export default function VisitantesPage() {
       {modalAberto && (
         <ModalNovoVisitante
           onClose={() => setModalAberto(false)}
-          onSave={(novo) => setVisitantes(p => [novo, ...p])}
+          onSave={carregarVisitantes}
         />
       )}
 
@@ -269,47 +270,48 @@ export default function VisitantesPage() {
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard Visitantes</h1>
             <p className="text-xs text-muted-foreground mt-1">
-              Controle de acesso e monitoramento de visitantes em tempo real
+              Gestão de acesso e monitoramento de visitantes
             </p>
           </div>
-          <button
-            onClick={() => setModalAberto(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
-          >
-            <Plus size={16} /> Registrar Visitante
-          </button>
-        </header>
-
-        {alertas.length > 0 && (
-          <div className="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800 animate-in fade-in slide-in-from-top-2 duration-500">
-            <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p><strong>{alertas.length} visitantes com tempo de permanência excedido.</strong> Favor verificar a saída ou renovar a autorização.</p>
-            </div>
-            <button onClick={() => setAlertas([])} className="text-red-400 hover:text-red-600">
-              <X size={14} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => downloadCSV(filtrados)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            >
+              Download
+            </button>
+            <button
+              onClick={() => setModalAberto(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <Plus size={16} /> Novo Visitante
             </button>
           </div>
-        )}
+        </header>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
-            label="Total Hoje"
+            label="Total"
             value={stats.total}
+            valueClassName="text-primary"
             icon={<Users size={17} className="text-primary" />}
+            sub="visitantes"
             accentVar="var(--primary)"
           />
           <StatCard
-            label="Na Empresa"
+            label="Ativos"
             value={stats.ativos}
             valueClassName="text-green-600"
             icon={<ArrowRightLeft size={17} className="text-green-600" />}
+            sub="na empresa"
             accentVar="var(--green-500)"
           />
           <StatCard
-            label="Check-outs"
+            label="Finalizados"
             value={stats.finalizados}
+            valueClassName="text-blue-600"
             icon={<LogOut size={17} className="text-blue-600" />}
+            sub="check-outs"
             accentVar="var(--blue-500)"
           />
           <StatCard
@@ -317,27 +319,34 @@ export default function VisitantesPage() {
             value={stats.alertas}
             valueClassName="text-red-600"
             icon={<AlertTriangle size={17} className="text-red-600" />}
+            sub="requerem atenção"
             accentVar="var(--red-500)"
           />
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-border bg-muted/20">
-            <div className="flex items-center gap-3">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
+            <div className="flex items-center gap-2">
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Buscar visitante..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="h-9 pl-9 pr-4 w-full md:w-64 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                  placeholder="Buscar visitante..."
+                  className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
                 />
+                {busca && (
+                  <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X size={11} />
+                  </button>
+                )}
               </div>
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value)}
-                className="h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                className="h-8 px-3 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
               >
                 <option value="Todos">Todos Status</option>
                 <option value="ativo">Ativos</option>
@@ -345,29 +354,23 @@ export default function VisitantesPage() {
                 <option value="semsaida">Alertas</option>
               </select>
             </div>
-            <div className="text-xs text-muted-foreground font-medium">
-              {filtrados.length} registro(s) encontrado(s)
-            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left">
               <thead>
-                <tr className="bg-muted/40 border-b border-border">
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Visitante</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Empresa</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entrada</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saída</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Crachá</th>
-                  <th className="py-3 px-4 w-10"></th>
+                <tr className="border-b border-border bg-muted/40">
+                  {["Visitante", "Empresa", "Setor", "Entrada", "Saída", "Status", "Ações"].map((col) => (
+                    <th key={col} className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                      {col}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-20 text-center">
+                    <td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
                         <span className="text-sm">Carregando visitantes...</span>
@@ -376,14 +379,12 @@ export default function VisitantesPage() {
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-20 text-center text-sm text-muted-foreground">
-                      Nenhum registro encontrado.
+                    <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                      Nenhum visitante encontrado com os filtros aplicados.
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((v, i) => (
-                    <LinhaVisitante key={v.id || i} v={v} index={i} />
-                  ))
+                  filtrados.map((v) => <LinhaVisitante key={v.id} v={v} />)
                 )}
               </tbody>
             </table>
@@ -392,4 +393,4 @@ export default function VisitantesPage() {
       </div>
     </>
   );
-}"
+}
