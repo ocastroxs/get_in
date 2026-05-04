@@ -3,61 +3,76 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Users, ArrowRightLeft, LogOut, AlertTriangle,
-  Search, Filter, X, Download, Plus,
-  CreditCard, ChevronDown, Check, Clock
+  Search, X, Plus, CreditCard, ChevronDown, Check, Loader2,
+  MoreHorizontal
 } from "lucide-react";
-import Topbar from "@/components/Topbar";
-import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
-import { VISITANTES_HOJE, ALERTAS_VISITANTES } from "@/lib/mockData";
+import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
+import { VISITANTES_HOJE, ALERTAS_VISITANTES } from "@/lib/mockData";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
-const EMPRESAS = ["Todas", ...Array.from(new Set(VISITANTES_HOJE.map((v) => v.empresa))).sort()];
-const STATUS_OPTS = ["Todos", "ativo", "semsaida", "finalizado"];
-const STATUS_LABEL = { ativo: "Ativo", semsaida: "Sem saída", finalizado: "Finalizado" };
+const STATUS_LABEL = {
+  ativo:      "Ativo",
+  semsaida:   "Sem saída",
+  finalizado: "Finalizado",
+  pendente:   "Pendente"
+};
+
 const STATUS_STYLE = {
   ativo:      "bg-green-100 text-green-700",
   semsaida:   "bg-red-100   text-red-600",
   finalizado: "bg-blue-100  text-blue-700",
+  pendente:   "bg-amber-100 text-amber-700",
 };
+
 const STATUS_DOT = {
   ativo:      "bg-green-500",
   semsaida:   "bg-red-500",
   finalizado: "bg-blue-500",
+  pendente:   "bg-amber-500",
 };
 
-// ─── Mock de TAGs disponíveis (futuramente virá do backend) ─────────────────
-const TAGS_DISPONIVEIS = [
-  "TAG-001", "TAG-002", "TAG-003", "TAG-004", "TAG-005",
-  "TAG-006", "TAG-007", "TAG-008", "TAG-009", "TAG-010",
-  "TAG-011", "TAG-012", "TAG-013", "TAG-014", "TAG-015",
-];
+const SETORES = ["Adm", "Lab", "Prod", "Alm", "Recepção", "Diretoria"];
 
-function toCSV(rows) {
-  const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saída", "Status", "Crachá"];
-  const lines = rows.map((r) =>
-    [r.nome, r.empresa, r.cpf, r.setor, r.entrada, r.saida ?? "—", STATUS_LABEL[r.status], r.cracha].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
+// ─── STUBS DE API (PRONTO PARA INTEGRAR) ──────────────────────────────────────
+
+async function apiListarVisitantes() {
+  try {
+    const response = await api.get("/requisicao-visitante");
+    if (response.sucesso) return response.data;
+    return VISITANTES_HOJE;
+  } catch (error) {
+    console.error("Erro ao listar visitantes:", error);
+    return VISITANTES_HOJE;
+  }
 }
 
-function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = "visitantes.csv"; a.click();
-  URL.revokeObjectURL(url);
+async function apiRegistrarEntrada(dados) {
+  try {
+    const payload = {
+      idUsuario: dados.idUsuario || 1, 
+      idDepartamento: dados.idDepartamento || 1,
+      motivo: dados.motivo || "Visita Técnica",
+      validade: new Date().toISOString()
+    };
+    
+    const response = await api.post("/requisicao-visitante", payload);
+    return response;
+  } catch (error) {
+    console.error("Erro ao registrar entrada:", error);
+    return { sucesso: false, mensagem: "Erro de conexão com o servidor." };
+  }
 }
 
-// ─── Modal Novo Visitante (Refatorado) ──────────────────────────────────────
+// ─── COMPONENTES DE APOIO ────────────────────────────────────────────────────
 
 function ModalNovoVisitante({ onClose, onSave }) {
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     nome: "", empresa: "", cpf: "", setor: "Adm", entrada: "", cracha: ""
   });
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   const maskCPF = (v) =>
     v.replace(/\D/g, "")
@@ -66,30 +81,31 @@ function ModalNovoVisitante({ onClose, onSave }) {
      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
      .replace(/(-\d{2})\d+?$/, "$1");
 
-  function handleSubmit() {
-    if (!form.nome || !form.empresa || !form.cpf || !form.entrada) {
-      alert("Preencha Nome, Empresa, CPF e Horário de Entrada.");
+  async function handleSubmit() {
+    if (!form.nome || !form.empresa || !form.cpf) {
+      alert("Preencha os campos obrigatórios.");
       return;
     }
     
-    if (!form.cracha) {
-      alert("Selecione um crachá disponível.");
-      return;
-    }
-
-    onSave({
-      ...form,
-      id: Date.now(),
-      saida: null,
-      status: "ativo",
-    });
-    onClose();
+    setLoading(true);
+    await apiRegistrarEntrada(form);
+    
+    setTimeout(() => {
+      onSave({
+        ...form,
+        id: Date.now(),
+        entrada: form.entrada || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "ativo",
+        cracha: form.cracha || "TAG-NOVA"
+      });
+      setLoading(false);
+      onClose();
+    }, 800);
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-        {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -102,62 +118,63 @@ function ModalNovoVisitante({ onClose, onSave }) {
           </button>
         </div>
 
-        {/* body */}
         <div className="px-6 py-5 space-y-4">
-          {[
-            { label: "Nome completo *", key: "nome",    type: "text",  placeholder: "Ex: Marina Souza" },
-            { label: "Empresa *",       key: "empresa", type: "text",  placeholder: "Ex: Nutrilab" },
-            { label: "CPF *",           key: "cpf",     type: "text",  placeholder: "000.000.000-00", mask: maskCPF },
-            { label: "Horário de entrada *", key: "entrada", type: "time" },
-          ].map(({ label, key, type, placeholder, mask }) => (
-            <div key={key}>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Nome completo *</label>
               <input
-                type={type}
-                value={form[key]}
-                placeholder={placeholder}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, [key]: mask ? mask(e.target.value) : e.target.value }))
-                }
-                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                type="text"
+                value={form.nome}
+                onChange={(e) => setForm({...form, nome: e.target.value})}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
               />
             </div>
-          ))}
-
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Setor</label>
-            <select
-              value={form.setor}
-              onChange={set("setor")}
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            >
-              {["Adm", "Lab", "Prod", "Alm"].map((s) => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Crachá *</label>
-            <select
-              value={form.cracha}
-              onChange={set("cracha")}
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            >
-              <option value="">Selecione uma TAG disponível</option>
-              {TAGS_DISPONIVEIS.map((tag) => (
-                <option key={tag} value={tag}>{tag}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-muted-foreground mt-1.5">
-              Selecione um crachá disponível. Para cadastrar uma nova TAG, acesse a tela de Crachás.
-            </p>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">CPF *</label>
+              <input
+                type="text"
+                value={form.cpf}
+                onChange={(e) => setForm({...form, cpf: maskCPF(e.target.value)})}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Empresa *</label>
+              <input
+                type="text"
+                value={form.empresa}
+                onChange={(e) => setForm({...form, empresa: e.target.value})}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Setor</label>
+              <select
+                value={form.setor}
+                onChange={(e) => setForm({...form, setor: e.target.value})}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+              >
+                {SETORES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Crachá (TAG)</label>
+              <input
+                type="text"
+                placeholder="Ex: TAG-001"
+                value={form.cracha}
+                onChange={(e) => setForm({...form, cracha: e.target.value})}
+                className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+              />
+            </div>
           </div>
         </div>
 
-        {/* footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" className="gap-1.5" onClick={handleSubmit}>
-            <Check size={13} /> Registrar entrada
+          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+            Registrar Entrada
           </Button>
         </div>
       </div>
@@ -165,296 +182,208 @@ function ModalNovoVisitante({ onClose, onSave }) {
   );
 }
 
-// ─── Alerta Banner ───────────────────────────────────────────────────────────
-
-function AlertaBanner({ alertas, onDismiss }) {
-  if (!alertas.length) return null;
-  const nomes = alertas.map((a) => `${a.nome} [${a.setor}]`).join(" e ");
-  return (
-    <div className="flex items-start gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 relative animate-in fade-in slide-in-from-top-2 duration-500">
-      <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
-      <span>
-        <strong>{alertas.length} visitante{alertas.length > 1 ? "s" : ""} sem saída registrada</strong> com turno encerrado.{" "}
-        Verificar {nomes}.
-      </span>
-      <button
-        onClick={onDismiss}
-        className="ml-auto shrink-0 text-yellow-400 hover:text-yellow-600 transition-colors"
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
-}
-
-// ─── Linha da Tabela ─────────────────────────────────────────────────────────
-
 function LinhaVisitante({ v, index }) {
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-all animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
-      <td className="py-3 px-4 font-medium text-sm text-foreground whitespace-nowrap">{v.nome}</td>
+    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
+      <td className="py-3 px-4">
+        <div className="text-sm font-medium text-foreground">{v.nome}</div>
+        <div className="text-[10px] text-muted-foreground font-mono">{v.cpf}</div>
+      </td>
       <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">{v.empresa}</td>
-      <td className="py-3 px-4 text-sm text-muted-foreground font-mono">{v.cpf}</td>
       <td className="py-3 px-4">
-        <div className="text-sm font-semibold text-foreground">{v.entrada}</div>
-        <div className="text-[11px] text-muted-foreground">Setor: {v.setor}</div>
+        <div className="text-xs font-semibold text-foreground">{v.setor}</div>
       </td>
-      <td className="py-3 px-4 text-sm text-foreground">{v.saida ?? "—"}</td>
+      <td className="py-3 px-4 text-sm text-foreground">{v.entrada}</td>
+      <td className="py-3 px-4 text-sm text-muted-foreground">{v.saida ?? "—"}</td>
       <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[v.status]}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[v.status]}`} />
-          {STATUS_LABEL[v.status]}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[v.status] ?? "bg-muted text-muted-foreground"}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[v.status] ?? "bg-muted-foreground"}`} />
+          {STATUS_LABEL[v.status] || v.status}
         </span>
       </td>
       <td className="py-3 px-4">
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted text-xs font-mono text-muted-foreground border border-border">
-          <CreditCard size={11} />
-          {v.cracha}
+        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-muted text-[10px] font-mono text-muted-foreground border border-border">
+          <CreditCard size={10} />
+          {v.cracha || "—"}
         </span>
+      </td>
+      <td className="py-3 px-4">
+        <button className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+          <MoreHorizontal size={14} />
+        </button>
       </td>
     </tr>
   );
 }
 
-// ─── Página principal ────────────────────────────────────────────────────────
-
 export default function VisitantesPage() {
-  const [visitantes, setVisitantes]   = useState(VISITANTES_HOJE);
-  const [alertas, setAlertas]         = useState(ALERTAS_VISITANTES);
+  const [visitantes, setVisitantes]   = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
-
-  useEffect(() => {
-    async function fetchVisitantes() {
-      try {
-        // Usando o serviço de API centralizado que aponta para a URL correta
-        const data = await api.get('/user/read');
-        
-        if (data && data.sucesso && Array.isArray(data.dados)) {
-          const mapped = data.dados.map(user => ({
-            nome: user.nome || "Sem nome",
-            empresa: user.empresa || 'Empresa Mock',
-            cpf: user.cpf || "000.000.000-00",
-            setor: user.setor || 'Adm',
-            entrada: user.entrada || '08:00',
-            saida: user.saida || null,
-            status: user.status || 'ativo',
-            cracha: user.cracha || ('TAG-' + (user.id || Math.floor(Math.random() * 1000)))
-          }));
-          setVisitantes(mapped);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar visitantes:', error);
-      }
-    }
-    fetchVisitantes();
-  }, []);
-
-  // filtros
-  const [empresa, setEmpresa]         = useState("Todas");
-  const [data, setData]               = useState("29/07/2025");
+  const [alertas, setAlertas]         = useState(ALERTAS_VISITANTES);
+  
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [busca, setBusca]             = useState("");
 
+  const carregarDados = async () => {
+    setLoading(true);
+    const dados = await apiListarVisitantes();
+    setVisitantes(dados);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
   const filtrados = useMemo(() => {
     return visitantes.filter((v) => {
-      const matchEmpresa = empresa === "Todas" || v.empresa === empresa;
-      const matchStatus  = statusFiltro === "Todos" || v.status === statusFiltro;
-      const matchBusca   = busca.trim() === "" ||
-        v.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        v.cpf.includes(busca) ||
-        v.empresa.toLowerCase().includes(busca.toLowerCase()) ||
-        v.cracha.toLowerCase().includes(busca.toLowerCase());
-      return matchEmpresa && matchStatus && matchBusca;
+      const matchStatus = statusFiltro === "Todos" || v.status === statusFiltro;
+      const q = busca.trim().toLowerCase();
+      const matchBusca = !q ||
+        v.nome.toLowerCase().includes(q) ||
+        v.empresa.toLowerCase().includes(q) ||
+        v.cpf.includes(q);
+      return matchStatus && matchBusca;
     });
-  }, [visitantes, empresa, statusFiltro, busca]);
+  }, [visitantes, statusFiltro, busca]);
 
   const stats = useMemo(() => ({
     total:      visitantes.length,
     ativos:     visitantes.filter((v) => v.status === "ativo").length,
     finalizados: visitantes.filter((v) => v.status === "finalizado").length,
-    semsaida:   visitantes.filter((v) => v.status === "semsaida").length,
+    alertas:    visitantes.filter((v) => v.status === "semsaida").length,
   }), [visitantes]);
-
-  function limparFiltros() {
-    setEmpresa("Todas");
-    setStatusFiltro("Todos");
-    setBusca("");
-  }
-
-  function handleSave(novo) {
-    setVisitantes((p) => [novo, ...p]);
-  }
 
   return (
     <>
       {modalAberto && (
         <ModalNovoVisitante
           onClose={() => setModalAberto(false)}
-          onSave={handleSave}
+          onSave={(novo) => setVisitantes(p => [novo, ...p])}
         />
       )}
 
       <div className="flex flex-col gap-5">
-        <Topbar />
-
-        {/* Alerta */}
-        {alertas.length > 0 && (
-          <AlertaBanner
-            alertas={alertas}
-            onDismiss={() => setAlertas([])}
-          />
-        )}
-
-        {/* Header */}
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard Visitantes</h1>
             <p className="text-xs text-muted-foreground mt-1">
-              Controle de entrada e saída de visitantes
+              Controle de acesso e monitoramento de visitantes em tempo real
             </p>
           </div>
           <button
             onClick={() => setModalAberto(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm"
           >
-            <Plus size={16} /> Novo visitante
+            <Plus size={16} /> Registrar Visitante
           </button>
         </header>
 
-        {/* Cards de Estatísticas */}
+        {alertas.length > 0 && (
+          <div className="flex items-start gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-800 animate-in fade-in slide-in-from-top-2 duration-500">
+            <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+            <div className="flex-1">
+              <p><strong>{alertas.length} visitantes com tempo de permanência excedido.</strong> Favor verificar a saída ou renovar a autorização.</p>
+            </div>
+            <button onClick={() => setAlertas([])} className="text-red-400 hover:text-red-600">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
-            label="Total"
+            label="Total Hoje"
             value={stats.total}
-            valueClassName="text-primary"
             icon={<Users size={17} className="text-primary" />}
-            sub="visitantes hoje"
             accentVar="var(--primary)"
           />
           <StatCard
-            label="Ativos"
+            label="Na Empresa"
             value={stats.ativos}
-            valueClassName="text-chart-1"
-            icon={<ArrowRightLeft size={17} className="text-chart-1" />}
-            sub="dentro da fábrica"
-            accentVar="var(--chart-1)"
+            valueClassName="text-green-600"
+            icon={<ArrowRightLeft size={17} className="text-green-600" />}
+            accentVar="var(--green-500)"
           />
           <StatCard
-            label="Finalizados"
+            label="Check-outs"
             value={stats.finalizados}
-            valueClassName="text-chart-2"
-            icon={<LogOut size={17} className="text-chart-2" />}
-            sub="com check-out"
-            accentVar="var(--chart-2)"
+            icon={<LogOut size={17} className="text-blue-600" />}
+            accentVar="var(--blue-500)"
           />
           <StatCard
-            label="Sem Saída"
-            value={stats.semsaida}
+            label="Alertas"
+            value={stats.alertas}
             valueClassName="text-red-600"
             icon={<AlertTriangle size={17} className="text-red-600" />}
-            sub="requerem atenção"
-            accentVar="var(--red)"
+            accentVar="var(--red-500)"
           />
         </div>
 
-        {/* Barra de filtros */}
-        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-          <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
-          {/* Empresa */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Empresa</label>
-            <div className="relative">
-              <select
-                value={empresa}
-                onChange={(e) => setEmpresa(e.target.value)}
-                className="h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-xs text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-              >
-                {EMPRESAS.map((e) => <option key={e}>{e}</option>)}
-              </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </div>
-          {/* Data */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Data</label>
-            <input
-              type="text"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="h-8 px-3 w-28 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              placeholder="DD/MM/AAAA"
-            />
-          </div>
-          {/* Status */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Status</label>
-            <div className="relative">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4 border-b border-border bg-muted/20">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar visitante..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  className="h-9 pl-9 pr-4 w-full md:w-64 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
+                />
+              </div>
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value)}
-                className="h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-xs text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+                className="h-9 px-3 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
               >
-                {STATUS_OPTS.map((s) => (
-                  <option key={s} value={s}>{s === "Todos" ? "Todos" : STATUS_LABEL[s]}</option>
-                ))}
+                <option value="Todos">Todos Status</option>
+                <option value="ativo">Ativos</option>
+                <option value="finalizado">Finalizados</option>
+                <option value="semsaida">Alertas</option>
               </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
-          </div>
-          <button
-            onClick={limparFiltros}
-            className="text-xs text-primary hover:text-primary/70 font-medium transition-colors underline underline-offset-2"
-          >
-            Limpar filtros
-          </button>
-          <span className="ml-auto text-xs text-muted-foreground">
-            {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""} encontrado{filtrados.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        {/* Tabela */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
-          {/* header da tabela */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar visitante..."
-                className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-              />
-              {busca && (
-                <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={11} />
-                </button>
-              )}
+            <div className="text-xs text-muted-foreground font-medium">
+              {filtrados.length} registro(s) encontrado(s)
             </div>
           </div>
 
-          {/* tabela */}
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  {["Nome", "Empresa", "CPF", "Entrada", "Saída", "Status", "Crachá"].map((col) => (
-                    <th key={col} className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
+                <tr className="bg-muted/40 border-b border-border">
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Visitante</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Empresa</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entrada</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saída</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                  <th className="py-3 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Crachá</th>
+                  <th className="py-3 px-4 w-10"></th>
                 </tr>
               </thead>
               <tbody>
-                {filtrados.length === 0 ? (
+                {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                      Nenhum visitante encontrado com os filtros aplicados.
+                    <td colSpan={8} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="animate-spin" size={24} />
+                        <span className="text-sm">Carregando visitantes...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-20 text-center text-sm text-muted-foreground">
+                      Nenhum registro encontrado.
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((v, i) => <LinhaVisitante key={v.id} v={v} index={i} />)
+                  filtrados.map((v, i) => (
+                    <LinhaVisitante key={v.id || i} v={v} index={i} />
+                  ))
                 )}
               </tbody>
             </table>
@@ -463,4 +392,4 @@ export default function VisitantesPage() {
       </div>
     </>
   );
-}
+}"
