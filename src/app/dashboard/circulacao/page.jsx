@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Search, 
-  Filter, 
   Download, 
   Printer, 
   Clock, 
@@ -15,75 +14,191 @@ import {
   AlertTriangle,
   RefreshCw,
   Building2,
-  Navigation
+  Navigation,
+  Loader2,
+  X
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
-import { STATS_CIRCULACAO, CIRCULACAO_LISTA, OCUPACAO_SETORES } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/services/api";
 
-export default function CirculacaoPage() {
-  const [busca, setBusca] = useState("");
+// ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
-  const registrosFiltrados = CIRCULACAO_LISTA.filter(reg => {
-    const matchesBusca = reg.pessoa.toLowerCase().includes(busca.toLowerCase()) || 
-                         reg.origem.toLowerCase().includes(busca.toLowerCase()) ||
-                         reg.destino.toLowerCase().includes(busca.toLowerCase());
-    return matchesBusca;
-  });
+const STATUS_LABEL = {
+  "Ativo": "Ativo",
+  "Concluído": "Concluído",
+  "Alerta": "Alerta"
+};
+
+const STATUS_STYLE = {
+  "Ativo": "bg-green-100 text-green-700",
+  "Concluído": "bg-blue-100 text-blue-700",
+  "Alerta": "bg-red-100 text-red-700"
+};
+
+const STATUS_DOT = {
+  "Ativo": "bg-green-500",
+  "Concluído": "bg-blue-500",
+  "Alerta": "bg-red-500"
+};
+
+function toCSV(rows) {
+  const cols = ["Pessoa", "Origem", "Destino", "Horário", "Status"];
+  const lines = rows.map((r) =>
+    [r.pessoa || "—", r.origem || "—", r.destino || "—", r.horario || "—", r.status || "—"].join(";")
+  );
+  return [cols.join(";"), ...lines].join("\n");
+}
+
+function downloadCSV(data) {
+  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "circulacao.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
+
+function LinhaCirculacao({ reg }) {
+  if (!reg) return null;
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
+      <td className="px-4 py-3">
+        <p className="text-xs font-bold leading-none">{reg.pessoa || "—"}</p>
+        <p className="text-[10px] text-muted-foreground mt-1">{reg.tipo || "—"}</p>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 text-[11px] font-medium">
+          <span className="text-muted-foreground">{reg.origem || "—"}</span>
+          <ArrowRight size={12} className="text-muted-foreground" />
+          <span className="text-foreground">{reg.destino || "—"}</span>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-[11px] font-bold">
+        {reg.horario || "—"}
+      </td>
+      <td className="px-4 py-3">
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[reg.status] ?? "bg-gray-100 text-gray-700"}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[reg.status] ?? "bg-gray-400"}`} />
+          {reg.status || "—"}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Button variant="ghost" size="icon" className="h-7 w-7">
+          <MoreHorizontal size={12} className="text-muted-foreground" />
+        </Button>
+      </td>
+    </tr>
+  );
+}
+
+// ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
+
+export default function CirculacaoPage() {
+  const [circulacao, setCirculacao] = useState([]);
+  const [setores, setSetores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState("");
+
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      // Carregando logs de circulação
+      const responseLogs = await api.get('/logs');
+      if (responseLogs.sucesso) {
+        setCirculacao(responseLogs.data || []);
+      }
+      
+      // Carregando setores para ocupação
+      const responseSetores = await api.get('/dep');
+      if (responseSetores.sucesso) {
+        setSetores(responseSetores.data || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados de circulação:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+  const registrosFiltrados = useMemo(() => {
+    return circulacao.filter(reg => {
+      const matchesBusca = !busca.trim() ||
+        (reg.pessoa || "").toLowerCase().includes(busca.toLowerCase()) || 
+        (reg.origem || "").toLowerCase().includes(busca.toLowerCase()) ||
+        (reg.destino || "").toLowerCase().includes(busca.toLowerCase());
+      return matchesBusca;
+    });
+  }, [circulacao, busca]);
+
+  const stats = useMemo(() => ({
+    totalMovimentos: circulacao.length,
+    ocupacaoAtual: circulacao.filter(r => r.dataDeEntrada && !r.dataDeSaida).length,
+    setorMaisAtivo: circulacao.reduce((a, b) => (b.visitantes || 0) > (a.visitantes || 0) ? b : a, circulacao[0]) || {},
+    tempoMedio: "—",
+  }), [circulacao]);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Circulação Interna</h1>
-          <p className="text-sm text-muted-foreground">
-            Monitoramento de fluxo e ocupação em tempo real • 29 de julho de 2025
+          <h1 className="text-xl font-semibold text-foreground">Circulação Interna</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Monitoramento de fluxo e ocupação em tempo real
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="gap-2">
-            <RefreshCw size={14} /> Atualizar
-          </Button>
-          <Button size="sm" className="gap-2 bg-sidebar-primary text-sidebar-primary-foreground">
-            <Map size={14} /> Ver Mapa de Calor
-          </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={carregarDados}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+          >
+            <RefreshCw size={16} /> Atualizar
+          </button>
+          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
+            <Map size={16} /> Ver Mapa de Calor
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
-          label="Movimentações Hoje"
-          value={STATS_CIRCULACAO.totalMovimentos.value}
-          icon={<Activity size={18} className="text-blue-500" />}
-          sub={STATS_CIRCULACAO.totalMovimentos.sub}
-          delta={STATS_CIRCULACAO.totalMovimentos.delta}
-          deltaDir={STATS_CIRCULACAO.totalMovimentos.deltaDir}
-          accentVar="#3b82f6"
+          label="Movimentações"
+          value={stats.totalMovimentos}
+          valueClassName="text-blue-600"
+          icon={<Activity size={17} className="text-blue-600" />}
+          sub="hoje"
+          accentVar="var(--blue-500)"
         />
         <StatCard
           label="Ocupação Atual"
-          value={`${STATS_CIRCULACAO.ocupacaoAtual.value}%`}
-          icon={<Users size={18} className="text-green-500" />}
-          sub={STATS_CIRCULACAO.ocupacaoAtual.sub}
-          accentVar="#10b981"
+          value={stats.ocupacaoAtual}
+          valueClassName="text-green-600"
+          icon={<Users size={17} className="text-green-600" />}
+          sub="pessoas dentro"
+          accentVar="var(--green-500)"
         />
         <StatCard
           label="Setor Mais Ativo"
-          value={STATS_CIRCULACAO.setorMaisAtivo.nome}
-          valueClassName="text-xl"
-          icon={<Navigation size={18} className="text-purple-500" />}
-          sub={`${STATS_CIRCULACAO.setorMaisAtivo.movimentos} movimentos registrados`}
-          accentVar="#8b5cf6"
+          value={stats.setorMaisAtivo?.nome || "—"}
+          valueClassName="text-purple-600 font-bold text-sm"
+          icon={<Navigation size={17} className="text-purple-600" />}
+          sub="maior fluxo"
+          accentVar="var(--purple-500)"
         />
         <StatCard
-          label="Tempo Médio / Setor"
-          value={STATS_CIRCULACAO.tempoMedio.value}
-          icon={<Clock size={18} className="text-yellow-500" />}
-          sub={STATS_CIRCULACAO.tempoMedio.sub}
-          accentVar="#f59e0b"
+          label="Tempo Médio"
+          value={stats.tempoMedio}
+          valueClassName="text-yellow-600"
+          icon={<Clock size={17} className="text-yellow-600" />}
+          sub="por setor"
+          accentVar="var(--yellow-500)"
         />
       </div>
 
@@ -94,25 +209,36 @@ export default function CirculacaoPage() {
             <h3 className="font-bold text-sm">Ocupação por Setor</h3>
             <Building2 size={16} className="text-muted-foreground" />
           </div>
-          <div className="space-y-4">
-            {OCUPACAO_SETORES.map((setor) => (
-              <div key={setor.setor} className="space-y-1.5">
-                <div className="flex justify-between text-[11px] font-medium">
-                  <span>{setor.setor}</span>
-                  <span className="text-muted-foreground">{setor.atual}/{setor.max} pessoas</span>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Loader2 className="animate-spin" size={20} />
+              <span className="text-xs text-muted-foreground">Carregando...</span>
+            </div>
+          ) : setores.length === 0 ? (
+            <div className="text-xs text-muted-foreground text-center py-8">
+              Nenhum setor encontrado
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {setores.map((setor, i) => (
+                <div key={setor.id || i} className="space-y-1.5">
+                  <div className="flex justify-between text-[11px] font-medium">
+                    <span>{setor.nome || "—"}</span>
+                    <span className="text-muted-foreground">0/{0} pessoas</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ 
+                        width: "0%",
+                        backgroundColor: "#3b82f6"
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${(setor.atual / setor.max) * 100}%`,
-                      backgroundColor: setor.color
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <div className="pt-2">
             <Button variant="ghost" className="w-full text-xs text-muted-foreground hover:text-foreground">
               Ver detalhes de todos os setores
@@ -137,13 +263,21 @@ export default function CirculacaoPage() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
+              {busca && (
+                <button 
+                  onClick={() => setBusca("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/50 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Pessoa</th>
                   <th className="px-4 py-3">Fluxo</th>
                   <th className="px-4 py-3">Horário</th>
@@ -152,37 +286,26 @@ export default function CirculacaoPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {registrosFiltrados.map((reg) => (
-                  <tr key={reg.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-bold leading-none">{reg.pessoa}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">{reg.tipo}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 text-[11px] font-medium">
-                        <span className="text-muted-foreground">{reg.origem}</span>
-                        <ArrowRight size={12} className="text-muted-foreground" />
-                        <span className="text-foreground">{reg.destino}</span>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="animate-spin" size={24} />
+                        <span className="text-sm">Carregando registros...</span>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-[11px] font-bold">
-                      {reg.horario}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${reg.statusBg}`} />
-                        <span className={`text-[10px] font-bold ${reg.statusColor} uppercase tracking-wider`}>
-                          {reg.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <MoreHorizontal size={12} className="text-muted-foreground" />
-                      </Button>
                     </td>
                   </tr>
-                ))}
+                ) : registrosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-20 text-center text-sm text-muted-foreground">
+                      Nenhum registro encontrado.
+                    </td>
+                  </tr>
+                ) : (
+                  registrosFiltrados.map((reg) => (
+                    <LinhaCirculacao key={reg.id} reg={reg} />
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -195,13 +318,13 @@ export default function CirculacaoPage() {
           <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
         </div>
         <div className="flex-1">
-          <h4 className="text-sm font-bold text-red-800 dark:text-red-300">Alerta de Permanência Excedida</h4>
+          <h4 className="text-sm font-bold text-red-800 dark:text-red-300">Sem alertas no momento</h4>
           <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-            O visitante <strong>Ricardo Pereira</strong> está no setor de <strong>Manutenção</strong> há mais de 2 horas. O tempo previsto era de 45 minutos.
+            Todos os visitantes estão dentro do tempo previsto de permanência.
           </p>
         </div>
         <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/50">
-          Verificar Local
+          Verificar
         </Button>
       </div>
     </div>
