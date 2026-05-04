@@ -14,14 +14,12 @@ import {
   TrendingUp,
   TrendingDown,
   Briefcase,
-  Users,
   Loader2,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/services/api";
-import { EMPRESAS_LISTA } from "@/lib/mockData";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
@@ -43,10 +41,12 @@ const STATUS_DOT = {
   "Suspensa": "bg-red-500"
 };
 
+const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
+
 function toCSV(rows) {
   const cols = ["Empresa", "CNPJ", "Responsável", "Contato", "Visitantes", "Última Visita", "Status"];
   const lines = rows.map((r) =>
-    [r.nome, r.cnpj, r.responsavel, r.contato || "—", r.visitantes, r.ultimaVisita || "—", r.status].join(";")
+    [r.nome || "—", r.cnpj || "—", r.responsavel || "—", r.contato || "—", r.visitantes || 0, r.ultimaVisita || "—", r.status || "—"].join(";")
   );
   return [cols.join(";"), ...lines].join("\n");
 }
@@ -61,8 +61,10 @@ function downloadCSV(data) {
 
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
-function LinhaEmpresa({ emp, maxVisitantes }) {
+function LinhaEmpresa({ emp, maxVisitantes, index }) {
   if (!emp) return null;
+
+  const color = emp.color || COLORS[index % COLORS.length];
 
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
@@ -70,7 +72,7 @@ function LinhaEmpresa({ emp, maxVisitantes }) {
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-            style={{ backgroundColor: emp.color || "#3b82f6" }}
+            style={{ backgroundColor: color }}
           >
             {(emp.nome || "?").substring(0, 1).toUpperCase()}
           </div>
@@ -93,8 +95,8 @@ function LinhaEmpresa({ emp, maxVisitantes }) {
             <div
               className="h-full rounded-full"
               style={{
-                width: maxVisitantes > 0 ? `${(emp.visitantes / maxVisitantes) * 100}%` : "0%",
-                backgroundColor: emp.color || "#3b82f6",
+                width: maxVisitantes > 0 ? `${((emp.visitantes || 0) / maxVisitantes) * 100}%` : "0%",
+                backgroundColor: color,
               }}
             />
           </div>
@@ -135,19 +137,12 @@ export default function EmpresasPage() {
   const carregarEmpresas = async () => {
     setLoading(true);
     try {
-      // 🔌 Endpoint futuro: /empresas ou /terceirizadas
-      // Por enquanto, usamos dados mockados pois o back-end ainda não possui este modelo
       const response = await api.get('/empresas');
       if (response.sucesso) {
         setEmpresas(response.data || []);
-      } else {
-        // Fallback para dados mockados enquanto o back-end não implementa
-        setEmpresas(EMPRESAS_LISTA);
       }
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
-      // Fallback para dados mockados
-      setEmpresas(EMPRESAS_LISTA);
     } finally {
       setLoading(false);
     }
@@ -325,8 +320,8 @@ export default function EmpresasPage() {
                   </td>
                 </tr>
               ) : (
-                empresasFiltradas.map((emp) => (
-                  <LinhaEmpresa key={emp.id} emp={emp} maxVisitantes={maxVisitantes} />
+                empresasFiltradas.map((emp, i) => (
+                  <LinhaEmpresa key={emp.id || i} emp={emp} maxVisitantes={maxVisitantes} index={i} />
                 ))
               )}
             </tbody>
