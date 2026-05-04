@@ -56,23 +56,25 @@ function downloadCSV(data) {
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
 function LinhaFuncionario({ f }) {
+  if (!f || !f.nome) return null;
+  
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-colors">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {f.nome.charAt(0).toUpperCase()}
+            {(f.nome || "?").charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome}</div>
-            <div className="text-[11px] text-muted-foreground font-mono">{f.cpf}</div>
+            <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome || "Sem nome"}</div>
+            <div className="text-[11px] text-muted-foreground font-mono">{f.cpf || "—"}</div>
           </div>
         </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Mail size={12} /> {f.email}
+            <Mail size={12} /> {f.email || "—"}
           </div>
           {f.celular && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -90,7 +92,7 @@ function LinhaFuncionario({ f }) {
       <td className="py-3 px-4">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIPO_STYLE[f.tipo] || "bg-gray-100 text-gray-700"}`}>
           {TIPO_ICON[f.tipo] || <User size={14} />}
-          {TIPO_LABEL[f.tipo] || f.tipo}
+          {TIPO_LABEL[f.tipo] || f.tipo || "Sem tipo"}
         </span>
       </td>
       <td className="py-3 px-4 text-right">
