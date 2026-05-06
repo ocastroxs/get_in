@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Check, Upload, Camera, User, Building2, MapPin, Phone, Calendar, FileText, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,103 +57,118 @@ export default function NovoCadastroPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header com Navegação */}
-      <div className="border-b border-border p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/portaria" className="p-2 hover:bg-muted rounded-lg transition-colors">
+      <div className="border-b border-border/50 p-6 flex items-center justify-between backdrop-blur-sm">
+        <div className="flex items-center gap-4">
+          <Link href="/portaria" className="p-2 hover:bg-muted/60 rounded-lg transition-all duration-200 hover:scale-110">
             <ArrowLeft size={20} className="text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Novo Cadastro</h1>
-            <p className="text-xs text-muted-foreground">Passo {step} de 2</p>
+            <h1 className="text-xl font-bold text-foreground">Novo Cadastro de Visitante</h1>
+            <p className="text-xs text-muted-foreground mt-1">Passo {step} de 2 — {step === 1 ? "Identificação" : "Autorização"}</p>
           </div>
         </div>
       </div>
 
-      {/* Breadcrumb de Steps */}
-      <div className="border-b border-border px-6 py-4 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step >= 1 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
-            1
+      {/* Breadcrumb de Steps - Melhorado */}
+      <div className="border-b border-border/50 px-6 py-6 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto flex items-center gap-6">
+          {/* Step 1 */}
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+              step >= 1 
+                ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/30" 
+                : "bg-muted/60 text-muted-foreground"
+            }`}>
+              {step > 1 ? <Check size={20} /> : "1"}
+            </div>
+            <span className={`text-sm font-semibold transition-colors duration-300 ${step >= 1 ? "text-foreground" : "text-muted-foreground"}`}>
+              Identificação
+            </span>
           </div>
-          <span className={`text-sm font-medium ${step >= 1 ? "text-foreground" : "text-muted-foreground"}`}>
-            Identificação
-          </span>
-        </div>
 
-        <div className={`h-0.5 flex-1 ${step >= 2 ? "bg-primary" : "bg-muted"}`} />
+          {/* Conector */}
+          <div className={`h-1 flex-1 rounded-full transition-all duration-500 ${step >= 2 ? "bg-gradient-to-r from-primary to-primary/60" : "bg-muted/40"}`} />
 
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm ${step >= 2 ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
-            2
+          {/* Step 2 */}
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+              step >= 2 
+                ? "bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/30" 
+                : "bg-muted/60 text-muted-foreground"
+            }`}>
+              2
+            </div>
+            <span className={`text-sm font-semibold transition-colors duration-300 ${step >= 2 ? "text-foreground" : "text-muted-foreground"}`}>
+              Autorização
+            </span>
           </div>
-          <span className={`text-sm font-medium ${step >= 2 ? "text-foreground" : "text-muted-foreground"}`}>
-            Autorização
-          </span>
         </div>
       </div>
 
       {/* STEP 1: IDENTIFICAÇÃO DO VISITANTE */}
       {step === 1 && (
-        <div className="p-6 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="p-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Coluna Esquerda: Formulário */}
             <div className="lg:col-span-2 space-y-6">
               {/* Seção: Dados Pessoais */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <User size={18} className="text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Dados Pessoais</h2>
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <User size={20} className="text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground">Dados Pessoais</h2>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Nome Completo *
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                      Nome Completo <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="text"
                       placeholder="Digite o nome completo"
                       value={form.nome}
                       onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                      className="h-10"
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                        CPF *
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                        CPF <span className="text-red-500">*</span>
                       </label>
                       <Input
                         type="text"
                         placeholder="000.000.000-00"
                         value={form.cpf}
                         onChange={handleCPFChange}
-                        className="h-10"
+                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                         maxLength="14"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                         Data de Nascimento
                       </label>
                       <Input
                         type="date"
                         value={form.dataNascimento}
                         onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
-                        className="h-10"
+                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       Sexo
                     </label>
                     <select
                       value={form.sexo}
                       onChange={(e) => setForm({ ...form, sexo: e.target.value })}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+                      className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
                     >
                       <option value="">Selecione...</option>
                       <option value="M">Masculino</option>
@@ -165,75 +180,80 @@ export default function NovoCadastroPage() {
               </div>
 
               {/* Seção: Dados da Empresa */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 size={18} className="text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Dados da Empresa</h2>
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <Building2 size={20} className="text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground">Dados da Empresa</h2>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Empresa *
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                      Empresa <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="text"
                       placeholder="Nome da empresa"
                       value={form.empresa}
                       onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-                      className="h-10"
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Setor de Destino
-                    </label>
-                    <select
-                      value={form.setor}
-                      onChange={(e) => setForm({ ...form, setor: e.target.value })}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="Recepção">Recepção</option>
-                      <option value="Administrativo">Administrativo</option>
-                      <option value="Produção">Produção</option>
-                      <option value="Laboratório">Laboratório</option>
-                      <option value="Almoxarifado">Almoxarifado</option>
-                      <option value="Diretoria">Diretoria</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Motivo da Visita
-                    </label>
-                    <select
-                      value={form.motivo}
-                      onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="Visita">Visita</option>
-                      <option value="Entrega">Entrega</option>
-                      <option value="Manutenção">Manutenção</option>
-                      <option value="Reunião">Reunião</option>
-                      <option value="Outro">Outro</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                        Setor de Destino
+                      </label>
+                      <select
+                        value={form.setor}
+                        onChange={(e) => setForm({ ...form, setor: e.target.value })}
+                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Recepção">Recepção</option>
+                        <option value="Administrativo">Administrativo</option>
+                        <option value="Produção">Produção</option>
+                        <option value="Laboratório">Laboratório</option>
+                        <option value="Almoxarifado">Almoxarifado</option>
+                        <option value="Diretoria">Diretoria</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                        Motivo da Visita
+                      </label>
+                      <select
+                        value={form.motivo}
+                        onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="Visita">Visita</option>
+                        <option value="Entrega">Entrega</option>
+                        <option value="Manutenção">Manutenção</option>
+                        <option value="Reunião">Reunião</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Seção: Contato */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Phone size={18} className="text-primary" />
-                  <h2 className="text-lg font-semibold text-foreground">Contato</h2>
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <Phone size={20} className="text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground">Contato</h2>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       Telefone
                     </label>
                     <Input
@@ -241,12 +261,12 @@ export default function NovoCadastroPage() {
                       placeholder="(11) 99999-9999"
                       value={form.telefone}
                       onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-                      className="h-10"
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       E-mail
                     </label>
                     <Input
@@ -254,7 +274,7 @@ export default function NovoCadastroPage() {
                       placeholder="email@exemplo.com"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="h-10"
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
                     />
                   </div>
                 </div>
@@ -264,112 +284,95 @@ export default function NovoCadastroPage() {
             {/* Coluna Direita: Prévia de Crachá + Checklist */}
             <div className="lg:col-span-1 space-y-6">
               {/* Prévia de Crachá */}
-              <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-6 text-white shadow-lg">
-                <div className="text-xs font-semibold uppercase tracking-wider mb-4 opacity-80">
-                  Prévia de Crachá
+              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-2xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
+                {/* Efeito de fundo */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
                 </div>
 
-                <div className="bg-white/10 rounded-lg p-4 mb-4 text-center">
-                  <div className="w-20 h-20 bg-gray-400 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                    <Camera size={32} className="text-gray-600" />
+                <div className="relative z-10">
+                  <div className="text-xs font-bold uppercase tracking-widest mb-5 opacity-90">
+                    Prévia de Crachá
                   </div>
-                  <p className="text-xs opacity-75">Foto não capturada</p>
-                </div>
 
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="opacity-75">Nome:</span>
-                    <span className="font-semibold">{form.nome || "—"}</span>
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-5 mb-5 text-center border border-white/20">
+                    <div className="w-24 h-24 bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg mx-auto mb-4 flex items-center justify-center shadow-lg">
+                      <Camera size={40} className="text-gray-600" />
+                    </div>
+                    <p className="text-xs opacity-80 font-medium">Foto não capturada</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="opacity-75">Empresa:</span>
-                    <span className="font-semibold text-xs">{form.empresa || "—"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="opacity-75">Setor:</span>
-                    <span className="font-semibold text-xs">{form.setor || "—"}</span>
+
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Nome:</span>
+                      <span className="font-bold text-right text-sm">{form.nome || "—"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Empresa:</span>
+                      <span className="font-bold text-right text-xs">{form.empresa || "—"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Setor:</span>
+                      <span className="font-bold text-right text-xs">{form.setor || "—"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Checklist de Requisitos */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Check size={18} className="text-primary" />
-                  <h3 className="font-semibold text-foreground">Checklist de Requisitos</h3>
+              <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border/40">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <Check size={20} className="text-primary" />
+                  </div>
+                  <h3 className="font-bold text-foreground">Requisitos</h3>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={checklist.tipoCartaIdentificacao}
-                      onChange={() => handleChecklistChange("tipoCartaIdentificacao")}
-                      className="mt-1 w-4 h-4 rounded border-border"
-                    />
-                    <span className="text-sm text-foreground">Tipo de carta identificação</span>
-                  </label>
-
-                  <label className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={checklist.testeCompleto}
-                      onChange={() => handleChecklistChange("testeCompleto")}
-                      className="mt-1 w-4 h-4 rounded border-border"
-                    />
-                    <span className="text-sm text-foreground">Teste completo</span>
-                  </label>
-
-                  <label className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={checklist.documentoCPFRG}
-                      onChange={() => handleChecklistChange("documentoCPFRG")}
-                      className="mt-1 w-4 h-4 rounded border-border"
-                    />
-                    <span className="text-sm text-foreground">Documento CPF/RG</span>
-                  </label>
-
-                  <label className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={checklist.empresaAcessivel}
-                      onChange={() => handleChecklistChange("empresaAcessivel")}
-                      className="mt-1 w-4 h-4 rounded border-border"
-                    />
-                    <span className="text-sm text-foreground">Empresa acessível</span>
-                  </label>
-
-                  <label className="flex items-start gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-lg transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={checklist.telefoneContato}
-                      onChange={() => handleChecklistChange("telefoneContato")}
-                      className="mt-1 w-4 h-4 rounded border-border"
-                    />
-                    <span className="text-sm text-foreground">Telefone de contato</span>
-                  </label>
+                  {[
+                    { key: "tipoCartaIdentificacao", label: "Tipo de carta identificação" },
+                    { key: "testeCompleto", label: "Teste completo" },
+                    { key: "documentoCPFRG", label: "Documento CPF/RG" },
+                    { key: "empresaAcessivel", label: "Empresa acessível" },
+                    { key: "telefoneContato", label: "Telefone de contato" }
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center gap-3 cursor-pointer group p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200">
+                      <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                        checklist[key]
+                          ? "bg-primary border-primary shadow-md shadow-primary/30"
+                          : "border-border/60 group-hover:border-primary/50"
+                      }`}>
+                        {checklist[key] && <Check size={14} className="text-white" />}
+                      </div>
+                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors duration-200">
+                        {label}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
               {/* Info Box */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/60 rounded-2xl p-4 flex gap-3 backdrop-blur-sm">
                 <AlertCircle size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-800">
-                  <p className="font-semibold mb-1">Informações Importantes</p>
-                  <p>Preencha todos os campos obrigatórios antes de prosseguir para a próxima etapa.</p>
+                <div className="text-xs text-blue-900">
+                  <p className="font-bold mb-1">Informações Importantes</p>
+                  <p className="opacity-90">Preencha todos os campos obrigatórios antes de prosseguir.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Botões de Ação */}
-          <div className="flex gap-3 justify-end mt-8 pt-6 border-t border-border">
+          <div className="flex gap-3 justify-end mt-10 pt-8 border-t border-border/40">
             <Link href="/portaria">
-              <Button variant="outline">Cancelar</Button>
+              <Button variant="outline" className="rounded-xl px-6 h-11 font-semibold">
+                Cancelar
+              </Button>
             </Link>
-            <Button onClick={handleProximoStep} className="bg-primary hover:bg-primary/90">
-              Próximo Passo →
+            <Button onClick={handleProximoStep} className="rounded-xl px-6 h-11 font-semibold bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 flex items-center gap-2">
+              Próximo Passo
+              <ChevronRight size={16} />
             </Button>
           </div>
         </div>
@@ -377,32 +380,34 @@ export default function NovoCadastroPage() {
 
       {/* STEP 2: AGUARDANDO AUTORIZAÇÃO (Placeholder) */}
       {step === 2 && (
-        <div className="p-6 max-w-4xl mx-auto">
-          <div className="bg-card border border-border rounded-xl p-12 text-center">
-            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle size={32} className="text-amber-600" />
+        <div className="p-8 max-w-4xl mx-auto">
+          <div className="bg-card border border-border/60 rounded-2xl p-12 text-center shadow-sm backdrop-blur-sm">
+            <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
+              <AlertCircle size={40} className="text-amber-600" />
             </div>
-            <h2 className="text-2xl font-semibold text-foreground mb-2">Aguardando Autorização</h2>
-            <p className="text-muted-foreground mb-6">
+            <h2 className="text-3xl font-bold text-foreground mb-3">Aguardando Autorização</h2>
+            <p className="text-muted-foreground mb-8 text-lg">
               O cadastro foi enviado para análise do supervisor. Você será notificado quando for aprovado ou recusado.
             </p>
 
-            <div className="bg-muted/50 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm font-semibold text-foreground mb-2">Dados Enviados:</p>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p><strong>Nome:</strong> {form.nome}</p>
-                <p><strong>CPF:</strong> {form.cpf}</p>
-                <p><strong>Empresa:</strong> {form.empresa}</p>
-                <p><strong>Setor:</strong> {form.setor}</p>
+            <div className="bg-muted/40 rounded-xl p-6 mb-8 text-left border border-border/40">
+              <p className="text-sm font-bold text-foreground mb-4">Dados Enviados:</p>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p><strong className="text-foreground">Nome:</strong> {form.nome}</p>
+                <p><strong className="text-foreground">CPF:</strong> {form.cpf}</p>
+                <p><strong className="text-foreground">Empresa:</strong> {form.empresa}</p>
+                <p><strong className="text-foreground">Setor:</strong> {form.setor}</p>
               </div>
             </div>
 
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={handleVoltarStep}>
+              <Button variant="outline" onClick={handleVoltarStep} className="rounded-xl px-6 h-11 font-semibold">
                 ← Voltar
               </Button>
               <Link href="/portaria">
-                <Button>Voltar para Operação</Button>
+                <Button className="rounded-xl px-6 h-11 font-semibold bg-gradient-to-r from-primary to-primary/90">
+                  Voltar para Operação
+                </Button>
               </Link>
             </div>
           </div>
