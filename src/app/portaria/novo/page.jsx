@@ -55,9 +55,9 @@ export default function NovoCadastroPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Header com Navegação */}
-      <div className="border-b border-border/50 p-6 flex items-center justify-between backdrop-blur-sm">
+      <div className="p-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/portaria" className="p-2 hover:bg-muted/60 rounded-lg transition-all duration-200 hover:scale-110">
             <ArrowLeft size={20} className="text-muted-foreground" />
@@ -70,7 +70,7 @@ export default function NovoCadastroPage() {
       </div>
 
       {/* Breadcrumb de Steps - Melhorado */}
-      <div className="border-b border-border/50 px-6 py-6 backdrop-blur-sm">
+      <div className="px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center gap-6">
           {/* Step 1 */}
           <div className="flex items-center gap-3">
