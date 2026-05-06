@@ -1,6 +1,5 @@
 "use client";
 
-import { DashboardTopbarProvider } from "@/components/dashboard/DashboardTopbarContext";
 import ParticlesBackground from "@/components/ui/ParticlesBackground";
 import Sidebar from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/AuthContext";
@@ -20,11 +19,7 @@ export default function DashboardLayout({ children }) {
     <div className="flex min-h-screen">
       <ParticlesBackground />
       <Sidebar />
-      <main className="ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">
-        <DashboardTopbarProvider>
-          <div data-dashboard-export-root="true">{children}</div>
-        </DashboardTopbarProvider>
-      </main>
+      <main className="ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">{children}</main>
     </div>
   );
 }

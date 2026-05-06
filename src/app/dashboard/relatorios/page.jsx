@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
 import TiposVisitantesChart from "@/components/TiposVisitantesChart";
@@ -8,98 +9,105 @@ import HistoricoVisitas from "@/components/HistoricoVisitas";
 import SetoresMaisVisitados from "@/components/SetoresMaisVisitados";
 import EmpresasMaisVisitas from "@/components/EmpresasMaisVisitas";
 import { Users, ArrowRightLeft, Clock, AlertTriangle } from "lucide-react";
-import { useDashboardTopbar } from "@/components/dashboard/DashboardTopbarContext";
 import { STATS_RELATORIOS, HISTORICO_VISITAS, SETORES_MAIS_VISITADOS, EMPRESAS_MAIS_VISITAS } from "@/lib/mockData";
-import { title } from "@/components/checkbox-standard-6";
 
 export default function RelatoriosPage() {
-  useDashboardTopbar({
-    primaryActionLabel: "Exportar PDF",
-    onPrimaryAction: () => alert("Criar novo relatório"),
-  });
-  const [stats, setStats] = useState(STATS_RELATORIOS);
+  const [stats, setStats] = useState(STATS_RELATORIOS); // Fallback para mock
 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch("");
+        // const res = await fetch('http://localhost:8080/relatorios/stats');
+        const res = await fetch('');
         const data = await res.json();
         if (data.sucesso) {
           setStats(data.data);
         }
       } catch (error) {
-        console.error("Erro ao buscar stats:", error);
+        console.error('Erro ao buscar stats:', error);
       }
     }
-
     fetchStats();
   }, []);
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-x-hidden pb-10">
+
+      {/* TOPBAR */}
+      <Topbar
+        title="Relatórios"
+        subtitle="Relatório detalhado do período selecionado"
+        buttonText="Novo Relatório"
+      />
+
+      {/* STAT CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
         <StatCard
           label="Total de Visitas"
-          value={stats.visitas.value}
+          value={STATS_RELATORIOS.visitas.value}
           icon={<Users size={17} className="text-primary" />}
-          delta={stats.visitas.delta}
-          deltaDir={stats.visitas.deltaDir}
-          sub={stats.visitas.sub}
+          delta={STATS_RELATORIOS.visitas.delta}
+          deltaDir={STATS_RELATORIOS.visitas.deltaDir}
+          sub={STATS_RELATORIOS.visitas.sub}
           accentVar="var(--primary)"
         />
         <StatCard
           label="Check-outs Realizados"
-          value={stats.checkouts.value}
+          value={STATS_RELATORIOS.checkouts.value}
           valueClassName="text-emerald-700 dark:text-emerald-300"
           icon={<ArrowRightLeft size={17} className="text-emerald-700 dark:text-emerald-300" />}
-          delta={stats.checkouts.delta}
-          deltaDir={stats.checkouts.deltaDir}
-          sub={stats.checkouts.sub}
+          delta={STATS_RELATORIOS.checkouts.delta}
+          deltaDir={STATS_RELATORIOS.checkouts.deltaDir}
+          sub={STATS_RELATORIOS.checkouts.sub}
           accentVar="var(--chart-2)"
         />
         <StatCard
-          label="Permanencia Media"
-          value={stats.permanencia.value}
+          label="Permanência Média"
+          value={STATS_RELATORIOS.permanencia.value}
           valueClassName="text-sky-700 dark:text-sky-300"
           icon={<Clock size={17} className="text-sky-700 dark:text-sky-300" />}
-          delta={stats.permanencia.delta}
-          deltaDir={stats.permanencia.deltaDir}
-          sub={stats.permanencia.sub}
+          delta={STATS_RELATORIOS.permanencia.delta}
+          deltaDir={STATS_RELATORIOS.permanencia.deltaDir}
+          sub={STATS_RELATORIOS.permanencia.sub}
           accentVar="var(--chart-3)"
         />
         <StatCard
           label="Alertas Gerados"
-          value={stats.alertas.value}
+          value={STATS_RELATORIOS.alertas.value}
           valueClassName="text-destructive"
           icon={<AlertTriangle size={17} className="text-destructive" />}
-          delta={stats.alertas.delta}
-          deltaDir={stats.alertas.deltaDir}
-          sub={stats.alertas.sub}
+          delta={STATS_RELATORIOS.alertas.delta}
+          deltaDir={STATS_RELATORIOS.alertas.deltaDir}
+          sub={STATS_RELATORIOS.alertas.sub}
           accentVar="var(--destructive)"
         />
       </div>
 
+      {/* GRÃFICOS */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
           <EntradasChart
             title="Volume de Entradas"
-            subtitle="Analise do periodo selecionado"
+            subtitle="Análise do período selecionado"
           />
         </div>
         <div>
           <TiposVisitantesChart
-            title="Distribuicao por Tipo"
-            subtitle="Proporcao de visitantes"
+            title="Distribuição por Tipo"
+            subtitle="Proporção de visitantes"
           />
         </div>
       </div>
 
+      {/* TABELA DE HISTÃ“RICO */}
       <HistoricoVisitas data={HISTORICO_VISITAS} />
 
+      {/* GRID INFERIOR */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <SetoresMaisVisitados data={SETORES_MAIS_VISITADOS} />
         <EmpresasMaisVisitas data={EMPRESAS_MAIS_VISITAS} />
       </div>
+
     </div>
   );
 }

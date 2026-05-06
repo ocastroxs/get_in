@@ -1,36 +1,57 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Users, ArrowRightLeft, LogOut, AlertTriangle,
-  Search, X, Plus,
-  CreditCard, ChevronDown, Check
+  Search, Filter, X, Download, Plus,
+  CreditCard, ChevronDown, Check, Clock
 } from "lucide-react";
+import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
-import { useDashboardTopbar } from "@/components/dashboard/DashboardTopbarContext";
 import { VISITANTES_HOJE, ALERTAS_VISITANTES } from "@/lib/mockData";
 import { api } from "@/services/api";
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+
 const EMPRESAS = ["Todas", ...Array.from(new Set(VISITANTES_HOJE.map((v) => v.empresa))).sort()];
 const STATUS_OPTS = ["Todos", "ativo", "semsaida", "finalizado"];
-const STATUS_LABEL = { ativo: "Ativo", semsaida: "Sem saida", finalizado: "Finalizado" };
+const STATUS_LABEL = { ativo: "Ativo", semsaida: "Sem saída", finalizado: "Finalizado" };
 const STATUS_STYLE = {
-  ativo: "bg-green-100 text-green-700",
-  semsaida: "bg-red-100 text-red-600",
-  finalizado: "bg-blue-100 text-blue-700",
+  ativo:      "bg-green-100 text-green-700",
+  semsaida:   "bg-red-100   text-red-600",
+  finalizado: "bg-blue-100  text-blue-700",
 };
 const STATUS_DOT = {
-  ativo: "bg-green-500",
-  semsaida: "bg-red-500",
+  ativo:      "bg-green-500",
+  semsaida:   "bg-red-500",
   finalizado: "bg-blue-500",
 };
 
+// ─── Mock de TAGs disponíveis (futuramente virá do backend) ─────────────────
 const TAGS_DISPONIVEIS = [
   "TAG-001", "TAG-002", "TAG-003", "TAG-004", "TAG-005",
   "TAG-006", "TAG-007", "TAG-008", "TAG-009", "TAG-010",
   "TAG-011", "TAG-012", "TAG-013", "TAG-014", "TAG-015",
 ];
+
+function toCSV(rows) {
+  const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saída", "Status", "Crachá"];
+  const lines = rows.map((r) =>
+    [r.nome, r.empresa, r.cpf, r.setor, r.entrada, r.saida ?? "—", STATUS_LABEL[r.status], r.cracha].join(";")
+  );
+  return [cols.join(";"), ...lines].join("\n");
+}
+
+function downloadCSV(data) {
+  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "visitantes.csv"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Modal Novo Visitante (Refatorado) ──────────────────────────────────────
 
 function ModalNovoVisitante({ onClose, onSave }) {
   const [form, setForm] = useState({
@@ -40,19 +61,19 @@ function ModalNovoVisitante({ onClose, onSave }) {
 
   const maskCPF = (v) =>
     v.replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
-      .replace(/(-\d{2})\d+?$/, "$1");
+     .replace(/(\d{3})(\d)/, "$1.$2")
+     .replace(/(\d{3})(\d)/, "$1.$2")
+     .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+     .replace(/(-\d{2})\d+?$/, "$1");
 
   function handleSubmit() {
     if (!form.nome || !form.empresa || !form.cpf || !form.entrada) {
-      alert("Preencha Nome, Empresa, CPF e Horario de Entrada.");
+      alert("Preencha Nome, Empresa, CPF e Horário de Entrada.");
       return;
     }
-
+    
     if (!form.cracha) {
-      alert("Selecione um cracha disponivel.");
+      alert("Selecione um crachá disponível.");
       return;
     }
 
@@ -68,6 +89,7 @@ function ModalNovoVisitante({ onClose, onSave }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+        {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -80,12 +102,13 @@ function ModalNovoVisitante({ onClose, onSave }) {
           </button>
         </div>
 
+        {/* body */}
         <div className="px-6 py-5 space-y-4">
           {[
-            { label: "Nome completo *", key: "nome", type: "text", placeholder: "Ex: Marina Souza" },
-            { label: "Empresa *", key: "empresa", type: "text", placeholder: "Ex: Nutrilab" },
-            { label: "CPF *", key: "cpf", type: "text", placeholder: "000.000.000-00", mask: maskCPF },
-            { label: "Horario de entrada *", key: "entrada", type: "time" },
+            { label: "Nome completo *", key: "nome",    type: "text",  placeholder: "Ex: Marina Souza" },
+            { label: "Empresa *",       key: "empresa", type: "text",  placeholder: "Ex: Nutrilab" },
+            { label: "CPF *",           key: "cpf",     type: "text",  placeholder: "000.000.000-00", mask: maskCPF },
+            { label: "Horário de entrada *", key: "entrada", type: "time" },
           ].map(({ label, key, type, placeholder, mask }) => (
             <div key={key}>
               <label className="block text-xs font-medium text-muted-foreground mb-1">{label}</label>
@@ -113,23 +136,24 @@ function ModalNovoVisitante({ onClose, onSave }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Cracha *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Crachá *</label>
             <select
               value={form.cracha}
               onChange={set("cracha")}
               className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             >
-              <option value="">Selecione uma TAG disponivel</option>
+              <option value="">Selecione uma TAG disponível</option>
               {TAGS_DISPONIVEIS.map((tag) => (
                 <option key={tag} value={tag}>{tag}</option>
               ))}
             </select>
             <p className="text-[10px] text-muted-foreground mt-1.5">
-              Selecione um cracha disponivel. Para cadastrar uma nova TAG, acesse a tela de Crachas.
+              Selecione um crachá disponível. Para cadastrar uma nova TAG, acesse a tela de Crachás.
             </p>
           </div>
         </div>
 
+        {/* footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
           <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
           <Button size="sm" className="gap-1.5" onClick={handleSubmit}>
@@ -141,15 +165,16 @@ function ModalNovoVisitante({ onClose, onSave }) {
   );
 }
 
+// ─── Alerta Banner ───────────────────────────────────────────────────────────
+
 function AlertaBanner({ alertas, onDismiss }) {
   if (!alertas.length) return null;
   const nomes = alertas.map((a) => `${a.nome} [${a.setor}]`).join(" e ");
-
   return (
     <div className="flex items-start gap-3 px-4 py-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 relative animate-in fade-in slide-in-from-top-2 duration-500">
       <AlertTriangle size={16} className="text-yellow-500 mt-0.5 shrink-0" />
       <span>
-        <strong>{alertas.length} visitante{alertas.length > 1 ? "s" : ""} sem saida registrada</strong> com turno encerrado.{" "}
+        <strong>{alertas.length} visitante{alertas.length > 1 ? "s" : ""} sem saída registrada</strong> com turno encerrado.{" "}
         Verificar {nomes}.
       </span>
       <button
@@ -162,6 +187,8 @@ function AlertaBanner({ alertas, onDismiss }) {
   );
 }
 
+// ─── Linha da Tabela ─────────────────────────────────────────────────────────
+
 function LinhaVisitante({ v, index }) {
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-all animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
@@ -172,7 +199,7 @@ function LinhaVisitante({ v, index }) {
         <div className="text-sm font-semibold text-foreground">{v.entrada}</div>
         <div className="text-[11px] text-muted-foreground">Setor: {v.setor}</div>
       </td>
-      <td className="py-3 px-4 text-sm text-foreground">{v.saida ?? "-"}</td>
+      <td className="py-3 px-4 text-sm text-foreground">{v.saida ?? "—"}</td>
       <td className="py-3 px-4">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[v.status]}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[v.status]}`} />
@@ -189,50 +216,50 @@ function LinhaVisitante({ v, index }) {
   );
 }
 
-export default function VisitantesPage() {
-  const [visitantes, setVisitantes] = useState(VISITANTES_HOJE);
-  const [alertas, setAlertas] = useState(ALERTAS_VISITANTES);
-  const [modalAberto, setModalAberto] = useState(false);
-  const [empresa, setEmpresa] = useState("Todas");
-  const [data, setData] = useState("29/07/2025");
-  const [statusFiltro, setStatusFiltro] = useState("Todos");
-  const [busca, setBusca] = useState("");
+// ─── Página principal ────────────────────────────────────────────────────────
 
-  const handleOpenModal = useCallback(() => setModalAberto(true), []);
+export default function VisitantesPage() {
+  const [visitantes, setVisitantes]   = useState(VISITANTES_HOJE);
+  const [alertas, setAlertas]         = useState(ALERTAS_VISITANTES);
+  const [modalAberto, setModalAberto] = useState(false);
 
   useEffect(() => {
     async function fetchVisitantes() {
       try {
-        const data = await api.get("/user/read");
-
+        // Usando o serviço de API centralizado que aponta para a URL correta
+        const data = await api.get('/user/read');
+        
         if (data && data.sucesso && Array.isArray(data.dados)) {
-          const mapped = data.dados.map((user) => ({
-            id: user.id || Date.now() + Math.random(),
+          const mapped = data.dados.map(user => ({
             nome: user.nome || "Sem nome",
-            empresa: user.empresa || "Empresa Mock",
+            empresa: user.empresa || 'Empresa Mock',
             cpf: user.cpf || "000.000.000-00",
-            setor: user.setor || "Adm",
-            entrada: user.entrada || "08:00",
+            setor: user.setor || 'Adm',
+            entrada: user.entrada || '08:00',
             saida: user.saida || null,
-            status: user.status || "ativo",
-            cracha: user.cracha || `TAG-${user.id || Math.floor(Math.random() * 1000)}`,
+            status: user.status || 'ativo',
+            cracha: user.cracha || ('TAG-' + (user.id || Math.floor(Math.random() * 1000)))
           }));
           setVisitantes(mapped);
         }
       } catch (error) {
-        console.error("Erro ao buscar visitantes:", error);
+        console.error('Erro ao buscar visitantes:', error);
       }
     }
-
     fetchVisitantes();
   }, []);
+
+  // filtros
+  const [empresa, setEmpresa]         = useState("Todas");
+  const [data, setData]               = useState("29/07/2025");
+  const [statusFiltro, setStatusFiltro] = useState("Todos");
+  const [busca, setBusca]             = useState("");
 
   const filtrados = useMemo(() => {
     return visitantes.filter((v) => {
       const matchEmpresa = empresa === "Todas" || v.empresa === empresa;
-      const matchStatus = statusFiltro === "Todos" || v.status === statusFiltro;
-      const matchBusca =
-        busca.trim() === "" ||
+      const matchStatus  = statusFiltro === "Todos" || v.status === statusFiltro;
+      const matchBusca   = busca.trim() === "" ||
         v.nome.toLowerCase().includes(busca.toLowerCase()) ||
         v.cpf.includes(busca) ||
         v.empresa.toLowerCase().includes(busca.toLowerCase()) ||
@@ -242,23 +269,11 @@ export default function VisitantesPage() {
   }, [visitantes, empresa, statusFiltro, busca]);
 
   const stats = useMemo(() => ({
-    total: visitantes.length,
-    ativos: visitantes.filter((v) => v.status === "ativo").length,
+    total:      visitantes.length,
+    ativos:     visitantes.filter((v) => v.status === "ativo").length,
     finalizados: visitantes.filter((v) => v.status === "finalizado").length,
-    semsaida: visitantes.filter((v) => v.status === "semsaida").length,
+    semsaida:   visitantes.filter((v) => v.status === "semsaida").length,
   }), [visitantes]);
-
-  const topbarConfig = useMemo(
-    () => ({
-      title: "Dashboard Visitantes",
-      subtitle: "Visao geral de visitantes",
-      primaryActionLabel: "Novo Visitante",
-      onPrimaryAction: handleOpenModal,
-    }),
-    [handleOpenModal]
-  );
-
-  useDashboardTopbar(topbarConfig);
 
   function limparFiltros() {
     setEmpresa("Todas");
@@ -280,6 +295,12 @@ export default function VisitantesPage() {
       )}
 
       <div className="flex flex-col gap-5">
+        <Topbar
+        title="Visitantes"
+        subtitle="Visão geral de visitantes"
+        buttonText="Novo Visitante"/>
+
+        {/* Alerta */}
         {alertas.length > 0 && (
           <AlertaBanner
             alertas={alertas}
@@ -287,6 +308,23 @@ export default function VisitantesPage() {
           />
         )}
 
+        {/* Header */}
+        <header className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Dashboard Visitantes</h1>
+            <p className="text-xs text-muted-foreground mt-1">
+              Controle de entrada e saída de visitantes
+            </p>
+          </div>
+          <button
+            onClick={() => setModalAberto(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Plus size={16} /> Novo visitante
+          </button>
+        </header>
+
+        {/* Cards de Estatísticas */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
             label="Total"
@@ -301,7 +339,7 @@ export default function VisitantesPage() {
             value={stats.ativos}
             valueClassName="text-chart-1"
             icon={<ArrowRightLeft size={17} className="text-chart-1" />}
-            sub="dentro da fabrica"
+            sub="dentro da fábrica"
             accentVar="var(--chart-1)"
           />
           <StatCard
@@ -313,17 +351,19 @@ export default function VisitantesPage() {
             accentVar="var(--chart-2)"
           />
           <StatCard
-            label="Sem Saida"
+            label="Sem Saída"
             value={stats.semsaida}
             valueClassName="text-red-600"
             icon={<AlertTriangle size={17} className="text-red-600" />}
-            sub="requerem atencao"
-            accentVar="var(--destructive)"
+            sub="requerem atenção"
+            accentVar="var(--red)"
           />
         </div>
 
+        {/* Barra de filtros */}
         <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
           <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
+          {/* Empresa */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Empresa</label>
             <div className="relative">
@@ -337,7 +377,7 @@ export default function VisitantesPage() {
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </div>
-
+          {/* Data */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Data</label>
             <input
@@ -348,7 +388,7 @@ export default function VisitantesPage() {
               placeholder="DD/MM/AAAA"
             />
           </div>
-
+          {/* Status */}
           <div className="flex items-center gap-2">
             <label className="text-xs text-muted-foreground">Status</label>
             <div className="relative">
@@ -364,20 +404,20 @@ export default function VisitantesPage() {
               <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </div>
-
           <button
             onClick={limparFiltros}
             className="text-xs text-primary hover:text-primary/70 font-medium transition-colors underline underline-offset-2"
           >
             Limpar filtros
           </button>
-
           <span className="ml-auto text-xs text-muted-foreground">
             {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""} encontrado{filtrados.length !== 1 ? "s" : ""}
           </span>
         </div>
 
+        {/* Tabela */}
         <div className="bg-card border border-border rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+          {/* header da tabela */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
             <div className="relative">
@@ -397,11 +437,12 @@ export default function VisitantesPage() {
             </div>
           </div>
 
+          {/* tabela */}
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {["Nome", "Empresa", "CPF", "Entrada", "Saida", "Status", "Cracha"].map((col) => (
+                  {["Nome", "Empresa", "CPF", "Entrada", "Saída", "Status", "Crachá"].map((col) => (
                     <th key={col} className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                       {col}
                     </th>
