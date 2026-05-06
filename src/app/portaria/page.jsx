@@ -1,13 +1,11 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Users, Clock, LogOut, AlertTriangle, Search, X, Plus,
-  CheckCircle2, XCircle, Loader2, Download, QrCode, Phone
+  Users, Clock, AlertTriangle, Search, X, Plus,
+  CheckCircle2, XCircle, Loader2, LogOut, Phone, MapPin, Building2, Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import StatCard from "@/components/StatCard";
-import Topbar from "@/components/Topbar";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -19,17 +17,10 @@ const STATUS_LABEL = {
 };
 
 const STATUS_STYLE = {
-  ativo: "bg-green-100 text-green-700",
-  saida: "bg-blue-100 text-blue-700",
-  pendente: "bg-amber-100 text-amber-700",
-  alerta: "bg-red-100 text-red-600"
-};
-
-const STATUS_DOT = {
-  ativo: "bg-green-500",
-  saida: "bg-blue-500",
-  pendente: "bg-amber-500",
-  alerta: "bg-red-500"
+  ativo: "bg-green-100 text-green-700 border-l-4 border-green-500",
+  saida: "bg-blue-100 text-blue-700 border-l-4 border-blue-500",
+  pendente: "bg-amber-100 text-amber-700 border-l-4 border-amber-500",
+  alerta: "bg-red-100 text-red-600 border-l-4 border-red-500"
 };
 
 // ─── MODAL DE CADASTRO RÁPIDO ────────────────────────────────────────────────
@@ -63,7 +54,6 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
 
     setLoading(true);
     try {
-      // Preparar payload para o endpoint do back-end
       const payload = {
         nome: form.nome,
         cpf: form.cpf.replace(/\D/g, ""),
@@ -74,7 +64,6 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
         dataEntrada: new Date().toISOString()
       };
 
-      // Chamar endpoint de check-in (será implementado no back-end)
       const response = await api.post('/portaria/checkin', payload);
 
       if (response.sucesso) {
@@ -104,10 +93,9 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-xl border border-border w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-300">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Novo Visitante</h2>
+      <div className="bg-card rounded-xl border border-border w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-300">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/10 to-transparent">
+          <h2 className="text-lg font-bold text-foreground">Novo Visitante</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-muted rounded-lg transition-colors"
@@ -116,105 +104,100 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
           </button>
         </div>
 
-        {/* Form */}
-        <div className="p-4 space-y-3">
-          {/* Nome */}
+        <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Nome *
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+              Nome Completo *
             </label>
             <Input
               type="text"
-              placeholder="Nome completo"
+              placeholder="João Silva"
               value={form.nome}
               onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              className="mt-1 h-9 text-sm"
+              className="h-10 text-sm"
             />
           </div>
 
-          {/* CPF */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              CPF *
-            </label>
-            <Input
-              type="text"
-              placeholder="000.000.000-00"
-              value={form.cpf}
-              onChange={handleCPFChange}
-              className="mt-1 h-9 text-sm"
-              maxLength="14"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                CPF *
+              </label>
+              <Input
+                type="text"
+                placeholder="000.000.000-00"
+                value={form.cpf}
+                onChange={handleCPFChange}
+                className="h-10 text-sm"
+                maxLength="14"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                Telefone
+              </label>
+              <Input
+                type="tel"
+                placeholder="(11) 99999-9999"
+                value={form.telefone}
+                onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                className="h-10 text-sm"
+              />
+            </div>
           </div>
 
-          {/* Empresa */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
               Empresa *
             </label>
             <Input
               type="text"
-              placeholder="Nome da empresa"
+              placeholder="Empresa XYZ"
               value={form.empresa}
               onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-              className="mt-1 h-9 text-sm"
+              className="h-10 text-sm"
             />
           </div>
 
-          {/* Setor */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Setor
-            </label>
-            <select
-              value={form.setor}
-              onChange={(e) => setForm({ ...form, setor: e.target.value })}
-              className="mt-1 h-9 w-full px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            >
-              <option>Recepção</option>
-              <option>Administrativo</option>
-              <option>Produção</option>
-              <option>Laboratório</option>
-              <option>Almoxarifado</option>
-              <option>Diretoria</option>
-            </select>
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                Setor
+              </label>
+              <select
+                value={form.setor}
+                onChange={(e) => setForm({ ...form, setor: e.target.value })}
+                className="h-10 w-full px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+              >
+                <option>Recepção</option>
+                <option>Administrativo</option>
+                <option>Produção</option>
+                <option>Laboratório</option>
+                <option>Almoxarifado</option>
+                <option>Diretoria</option>
+              </select>
+            </div>
 
-          {/* Motivo */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Motivo
-            </label>
-            <select
-              value={form.motivo}
-              onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-              className="mt-1 h-9 w-full px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            >
-              <option>Visita</option>
-              <option>Entrega</option>
-              <option>Manutenção</option>
-              <option>Reunião</option>
-              <option>Outro</option>
-            </select>
-          </div>
-
-          {/* Telefone */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Telefone
-            </label>
-            <Input
-              type="tel"
-              placeholder="(00) 00000-0000"
-              value={form.telefone}
-              onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-              className="mt-1 h-9 text-sm"
-            />
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                Motivo
+              </label>
+              <select
+                value={form.motivo}
+                onChange={(e) => setForm({ ...form, motivo: e.target.value })}
+                className="h-10 w-full px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+              >
+                <option>Visita</option>
+                <option>Entrega</option>
+                <option>Manutenção</option>
+                <option>Reunião</option>
+                <option>Outro</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-border">
+        <div className="flex gap-2 p-4 border-t border-border bg-muted/20">
           <Button
             variant="outline"
             onClick={onClose}
@@ -225,16 +208,19 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
           </Button>
           <Button
             onClick={handleSubmit}
-            className="flex-1"
+            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
             disabled={loading}
           >
             {loading ? (
               <>
                 <Loader2 size={14} className="mr-2 animate-spin" />
-                Salvando...
+                Registrando...
               </>
             ) : (
-              "Registrar"
+              <>
+                <Plus size={14} className="mr-2" />
+                Registrar
+              </>
             )}
           </Button>
         </div>
@@ -246,13 +232,15 @@ function ModalCadastroRapido({ isOpen, onClose, onSave }) {
 // ─── MODAL DE CHECK-OUT ──────────────────────────────────────────────────────
 function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   const [loading, setLoading] = useState(false);
+  const [ocorrencia, setOcorrencia] = useState("");
 
   async function handleCheckout() {
     setLoading(true);
     try {
       const payload = {
         id: visitante?.id,
-        dataSaida: new Date().toISOString()
+        dataSaida: new Date().toISOString(),
+        ocorrencia: ocorrencia || null
       };
 
       const response = await api.post('/portaria/checkout', payload);
@@ -261,6 +249,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
         alert("Check-out realizado com sucesso!");
         onConfirm();
         onClose();
+        setOcorrencia("");
       } else {
         alert(response.mensagem || "Erro ao realizar check-out.");
       }
@@ -274,12 +263,14 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
 
   if (!isOpen || !visitante) return null;
 
+  const tempoPermanen = visitante.entrada ? 
+    Math.round((new Date() - new Date(visitante.entrada)) / 60000) : 0;
+
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-xl border border-border w-full max-w-sm shadow-lg animate-in fade-in zoom-in duration-300">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Confirmar Check-out</h2>
+      <div className="bg-card rounded-xl border border-border w-full max-w-md shadow-xl animate-in fade-in zoom-in duration-300">
+        <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-red-500/10 to-transparent">
+          <h2 className="text-lg font-bold text-foreground">Confirmar Check-out</h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-muted rounded-lg transition-colors"
@@ -288,34 +279,56 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 space-y-4">
-          <div className="bg-muted/40 rounded-lg p-3 space-y-2">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Nome</span>
-              <span className="text-sm font-medium text-foreground">{visitante.nome}</span>
+        <div className="p-5 space-y-4">
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3 border border-border/50">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Nome</span>
+              </div>
+              <span className="text-sm font-medium text-foreground text-right">{visitante.nome}</span>
             </div>
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">CPF</span>
-              <span className="text-sm font-medium text-foreground">{visitante.cpf}</span>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 size={16} className="text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Empresa</span>
+              </div>
+              <span className="text-sm font-medium text-foreground text-right">{visitante.empresa}</span>
             </div>
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Empresa</span>
-              <span className="text-sm font-medium text-foreground">{visitante.empresa}</span>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Setor</span>
+              </div>
+              <span className="text-sm font-medium text-foreground text-right">{visitante.setor}</span>
             </div>
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-semibold text-muted-foreground uppercase">Entrada</span>
-              <span className="text-sm font-medium text-foreground">{visitante.entrada}</span>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-muted-foreground" />
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Permanência</span>
+              </div>
+              <span className="text-sm font-medium text-foreground text-right">{tempoPermanen} min</span>
             </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            Confirme o check-out deste visitante. Esta ação não pode ser desfeita.
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+              Observações (opcional)
+            </label>
+            <textarea
+              placeholder="Ex: Crachá devolvido, sem ocorrências..."
+              value={ocorrencia}
+              onChange={(e) => setOcorrencia(e.target.value)}
+              className="w-full h-20 px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition resize-none"
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded p-2">
+            ⚠️ Esta ação registrará a saída do visitante. Certifique-se de que o crachá foi devolvido.
           </p>
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-2 p-4 border-t border-border">
+        <div className="flex gap-2 p-4 border-t border-border bg-muted/20">
           <Button
             variant="outline"
             onClick={onClose}
@@ -326,7 +339,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
           </Button>
           <Button
             onClick={handleCheckout}
-            className="flex-1 bg-red-600 hover:bg-red-700"
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
             disabled={loading}
           >
             {loading ? (
@@ -335,7 +348,10 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
                 Processando...
               </>
             ) : (
-              "Confirmar Check-out"
+              <>
+                <LogOut size={14} className="mr-2" />
+                Check-out
+              </>
             )}
           </Button>
         </div>
@@ -344,41 +360,59 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   );
 }
 
-// ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
-function LinhaVisitante({ visitante, onCheckout }) {
+// ─── CARTÃO DE VISITANTE (ESTILO OPERACIONAL) ────────────────────────────────
+function CartaoVisitante({ visitante, onCheckout }) {
+  const tempoPermanen = visitante.entrada ? 
+    Math.round((new Date() - new Date(visitante.entrada)) / 60000) : 0;
+
   return (
-    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${STATUS_DOT[visitante.status]}`} />
-          <div>
-            <p className="text-sm font-medium text-foreground">{visitante.nome}</p>
-            <p className="text-xs text-muted-foreground">{visitante.cpf}</p>
-          </div>
+    <div className={`rounded-lg p-4 ${STATUS_STYLE[visitante.status]} transition-all hover:shadow-md`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-bold text-base">{visitante.nome}</h3>
+          <p className="text-xs opacity-75">{visitante.cpf}</p>
         </div>
-      </td>
-      <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{visitante.setor}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{visitante.entrada}</td>
-      <td className="px-4 py-3">
-        <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${STATUS_STYLE[visitante.status]}`}>
+        <span className="text-xs font-semibold uppercase px-2 py-1 bg-white/50 rounded">
           {STATUS_LABEL[visitante.status]}
         </span>
-      </td>
-      <td className="px-4 py-3 text-right">
-        {visitante.status === "ativo" && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onCheckout(visitante)}
-            className="text-red-600 border-red-200 hover:bg-red-50"
-          >
-            <LogOut size={14} className="mr-1" />
-            Check-out
-          </Button>
-        )}
-      </td>
-    </tr>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+        <div className="flex items-center gap-1">
+          <Building2 size={14} />
+          <span className="truncate">{visitante.empresa}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <MapPin size={14} />
+          <span className="truncate">{visitante.setor}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Calendar size={14} />
+          <span className="text-xs">{visitante.entrada}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Clock size={14} />
+          <span className="text-xs">{tempoPermanen} min</span>
+        </div>
+      </div>
+
+      {visitante.status === "ativo" && (
+        <Button
+          size="sm"
+          onClick={() => onCheckout(visitante)}
+          className="w-full bg-red-600 hover:bg-red-700 text-white text-xs"
+        >
+          <LogOut size={14} className="mr-1" />
+          Check-out
+        </Button>
+      )}
+
+      {visitante.status === "pendente" && (
+        <div className="text-xs font-semibold text-amber-700 bg-white/50 rounded px-2 py-1 text-center">
+          Aguardando aprovação
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -397,10 +431,8 @@ export default function PortariaPage() {
   const [modalCheckoutAberto, setModalCheckoutAberto] = useState(false);
   const [visitanteSelecionado, setVisitanteSelecionado] = useState(null);
 
-  // Carregar dados
   useEffect(() => {
     fetchVisitantes();
-    // Atualizar a cada 30 segundos
     const interval = setInterval(fetchVisitantes, 30 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -408,21 +440,15 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      // Chamar endpoint para listar visitantes presentes
       const response = await api.get('/portaria/visitantes-presentes');
 
       if (response.sucesso && response.data) {
         setVisitantes(response.data);
-        // Calcular estatísticas
         const dentro = response.data.filter(v => v.status === "ativo").length;
         const saidas_hoje = response.data.filter(v => v.status === "saida").length;
         const pendentes = response.data.filter(v => v.status === "pendente").length;
 
-        setStats({
-          dentro,
-          saidas_hoje,
-          pendentes
-        });
+        setStats({ dentro, saidas_hoje, pendentes });
       }
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
@@ -431,7 +457,6 @@ export default function PortariaPage() {
     }
   }
 
-  // Filtrar visitantes
   const visitantesFiltrados = useMemo(() => {
     return visitantes.filter(v => {
       const matchBusca = busca === "" ||
@@ -455,148 +480,124 @@ export default function PortariaPage() {
   }
 
   return (
-    <>
-      <Topbar
-        title="Operação Portaria"
-        subtitle="Gerenciamento de entrada e saída de visitantes"
-        buttonText="Novo Visitante"
-      />
-
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <StatCard
-          label="Dentro"
-          value={stats.dentro}
-          valueClassName="text-green-600"
-          icon={<Users size={17} className="text-green-600" />}
-          sub="na empresa"
-          accentVar="var(--green-500)"
-          compact
-        />
-        <StatCard
-          label="Saídas"
-          value={stats.saidas_hoje}
-          valueClassName="text-blue-600"
-          icon={<LogOut size={17} className="text-blue-600" />}
-          sub="hoje"
-          accentVar="var(--blue-500)"
-          compact
-        />
-        <StatCard
-          label="Pendentes"
-          value={stats.pendentes}
-          valueClassName="text-yellow-600"
-          icon={<Clock size={17} className="text-yellow-600" />}
-          sub="aprovação"
-          accentVar="var(--yellow-500)"
-          compact
-        />
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Header Operacional */}
+      <div className="bg-gradient-to-r from-primary to-primary/80 text-white p-6 rounded-b-2xl shadow-lg">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-2">Portaria</h1>
+          <p className="text-primary-foreground/80 text-sm">Controle de entrada e saída de visitantes</p>
+        </div>
       </div>
 
-      {/* Barra de Busca e Filtros */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          {/* Busca */}
-          <div className="relative flex-1 md:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Cards de Status - Estilo Operacional */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-green-700 uppercase">Dentro</p>
+                <p className="text-3xl font-bold text-green-700 mt-1">{stats.dentro}</p>
+              </div>
+              <Users size={32} className="text-green-300" />
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-blue-700 uppercase">Saídas Hoje</p>
+                <p className="text-3xl font-bold text-blue-700 mt-1">{stats.saidas_hoje}</p>
+              </div>
+              <LogOut size={32} className="text-blue-300" />
+            </div>
+          </div>
+
+          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-amber-700 uppercase">Pendentes</p>
+                <p className="text-3xl font-bold text-amber-700 mt-1">{stats.pendentes}</p>
+              </div>
+              <Clock size={32} className="text-amber-300" />
+            </div>
+          </div>
+        </div>
+
+        {/* Barra de Ação */}
+        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input
               placeholder="Buscar por nome, CPF ou empresa..."
-              className="pl-9 h-9 text-sm"
+              className="pl-10 h-11 text-sm"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
             {busca && (
               <button
                 onClick={() => setBusca("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                <X size={14} />
+                <X size={16} />
               </button>
             )}
           </div>
 
-          {/* Filtros de Status */}
-          <div className="flex flex-wrap items-center gap-2">
-            {["Todos", "ativo", "saida", "pendente"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFiltroStatus(status)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filtroStatus === status
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {status === "ativo" ? "Dentro" : status === "saida" ? "Saída" : status}
-              </button>
-            ))}
-          </div>
-
-          {/* Botão Novo Visitante */}
           <Button
             onClick={() => setModalAberto(true)}
-            className="gap-2"
+            className="bg-green-600 hover:bg-green-700 text-white h-11 px-6 text-sm font-semibold"
           >
-            <Plus size={16} />
+            <Plus size={18} className="mr-2" />
             Novo Visitante
           </Button>
         </div>
-      </div>
 
-      {/* Tabela de Visitantes */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-sm">Visitantes Presentes</h3>
-            <p className="text-xs text-muted-foreground">{visitantesFiltrados.length} registros</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Download size={14} />
-            </Button>
-          </div>
+        {/* Filtros de Status */}
+        <div className="flex gap-2 flex-wrap">
+          {["Todos", "ativo", "saida", "pendente"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setFiltroStatus(status)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                filtroStatus === status
+                  ? "bg-primary text-white shadow-md"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {status === "ativo" ? "Dentro" : status === "saida" ? "Saída" : status === "pendente" ? "Pendentes" : "Todos"}
+            </button>
+          ))}
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="px-4 py-3">Visitante</th>
-                <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Setor</th>
-                <th className="px-4 py-3">Entrada</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center">
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <Loader2 className="animate-spin" size={24} />
-                      <span className="text-sm">Carregando visitantes...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : visitantesFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                    Nenhum visitante encontrado com os filtros aplicados.
-                  </td>
-                </tr>
-              ) : (
-                visitantesFiltrados.map((v) => (
-                  <LinhaVisitante
-                    key={v.id}
-                    visitante={v}
-                    onCheckout={handleCheckout}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Visitantes - Grid Operacional */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="animate-spin mb-3" size={32} />
+            <span className="text-sm">Carregando visitantes...</span>
+          </div>
+        ) : visitantesFiltrados.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <AlertTriangle size={32} className="mb-3 opacity-50" />
+            <span className="text-sm">Nenhum visitante encontrado</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visitantesFiltrados.map((v) => (
+              <CartaoVisitante
+                key={v.id}
+                visitante={v}
+                onCheckout={handleCheckout}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Informação de Registros */}
+        {!loading && visitantesFiltrados.length > 0 && (
+          <div className="text-center text-xs text-muted-foreground py-4">
+            Exibindo {visitantesFiltrados.length} de {visitantes.length} visitante(s)
+          </div>
+        )}
       </div>
 
       {/* Modais */}
@@ -612,6 +613,6 @@ export default function PortariaPage() {
         visitante={visitanteSelecionado}
         onConfirm={handleConfirmCheckout}
       />
-    </>
+    </div>
   );
 }
