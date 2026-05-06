@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/AuthContext';
 import { 
   LogOut,
   ChevronRight,
@@ -16,8 +17,13 @@ import {
 export default function PortariaSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { logout } = useAuth();
 
   const toggleSidebar = () => setIsOpen(!isOpen);
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <>
@@ -107,14 +113,13 @@ export default function PortariaSidebar() {
 
         {/* Rodapé */}
         <div className="p-4 border-t border-white/5">
-          <Link 
-            href="/dashboard" 
-            onClick={() => setIsOpen(false)}
-            className="w-full py-3 px-4 rounded-xl text-gray-300 hover:bg-white/5 hover:text-white text-xs font-bold transition-all flex items-center justify-center space-x-2 group cursor-pointer active:scale-95"
+          <button 
+            onClick={handleLogout}
+            className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center justify-center space-x-2 group cursor-pointer active:scale-95"
           >
             <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar ao Dashboard</span>
-          </Link>
+            <span>Sair do Sistema</span>
+          </button>
         </div>
       </aside>
     </>
