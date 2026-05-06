@@ -18,17 +18,13 @@ export default function Topbar({ title, subtitle, buttonText }) {
           <span className="text-xs font-medium text-accent-foreground">Tempo Real</span>
         </div>
 
-        {/* Exportar */}
-        <Button variant="outline" size="sm" className="gap-1.5 transition-all hover:shadow-md">
-          <Download size={13} />
-          Exportar
-        </Button>
-
-        {/* Novo Visitante */}
-        <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
-          <Plus size={13} />
-          {buttonText}
-        </Button>
+        {/* Botão de Ação - Renderizado apenas se buttonText for fornecido */}
+        {buttonText && (
+          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
+            <Plus size={13} />
+            {buttonText}
+          </Button>
+        )}
       </div>
     </header>
   );
