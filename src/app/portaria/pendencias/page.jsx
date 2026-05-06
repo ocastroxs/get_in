@@ -249,7 +249,6 @@ export default function PendenciasPage() {
       <Topbar
         title="Pendências"
         subtitle="Requisições de visita aguardando aprovação"
-        buttonText="Atualizar"
       />
 
       {/* Card de Informação */}

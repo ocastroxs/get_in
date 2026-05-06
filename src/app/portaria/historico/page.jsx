@@ -217,7 +217,6 @@ export default function HistoricoPage() {
       <Topbar
         title="Histórico"
         subtitle="Registro completo de entradas e saídas"
-        buttonText="Exportar"
       />
 
       {/* Barra de Filtros */}
