@@ -70,8 +70,8 @@ export default function NovoCadastroPage() {
       </div>
 
       {/* Breadcrumb de Steps - Melhorado */}
-      <div className="px-6 py-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-6">
+      <div className="px-6 py-6 flex justify-center">
+        <div className="flex items-center gap-6 max-w-md">
           {/* Step 1 */}
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
@@ -87,7 +87,7 @@ export default function NovoCadastroPage() {
           </div>
 
           {/* Conector */}
-          <div className={`h-1 flex-1 rounded-full transition-all duration-500 ${step >= 2 ? "bg-gradient-to-r from-primary to-primary/60" : "bg-muted/40"}`} />
+          <div className={`h-1 w-16 rounded-full transition-all duration-500 ${step >= 2 ? "bg-gradient-to-r from-primary to-primary/60" : "bg-muted/40"}`} />
 
           {/* Step 2 */}
           <div className="flex items-center gap-3">
