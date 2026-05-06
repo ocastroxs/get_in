@@ -222,11 +222,15 @@ export default function PortariaPage() {
       setLoading(true);
       const response = await api.get('/portaria/visitantes-presentes');
 
-      if (response.sucesso && response.data) {
+      if (response && typeof response === 'object' && response.sucesso && response.data) {
         setVisitantes(response.data);
+      } else if (!response || typeof response !== 'object') {
+        console.warn("Back-end não está pronto. Exibindo lista vazia.");
+        setVisitantes([]);
       }
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
+      setVisitantes([]);
     } finally {
       setLoading(false);
     }
@@ -273,22 +277,19 @@ export default function PortariaPage() {
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         <StatCard
-          title="Visitantes Presentes"
+          label="Visitantes Presentes"
           value={visitantes.filter(v => v.status === "ativo").length}
-          icon={Users}
-          color="blue"
+          icon={<Users size={20} className="text-blue-600" />}
         />
         <StatCard
-          title="Aguardando Aprovação"
+          label="Aguardando Aprovação"
           value={visitantes.filter(v => v.status === "pendente").length}
-          icon={AlertTriangle}
-          color="amber"
+          icon={<AlertTriangle size={20} className="text-amber-600" />}
         />
         <StatCard
-          title="Saídas Hoje"
+          label="Saídas Hoje"
           value={visitantes.filter(v => v.status === "saida").length}
-          icon={LogOut}
-          color="green"
+          icon={<LogOut size={20} className="text-green-600" />}
         />
       </div>
 
