@@ -263,16 +263,9 @@ export default function PortariaPage() {
       <Topbar
         title="Operação Portaria"
         subtitle="Gerenciamento de entrada e saída de visitantes"
+        buttonText="Novo Visitante"
+        buttonHref="/portaria/novo"
       />
-
-      {/* Botão Flutuante para Novo Visitante */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Link href="/portaria/novo">
-          <Button className="rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow">
-            <Plus size={24} />
-          </Button>
-        </Link>
-      </div>
 
       {/* Cards de Estatísticas */}
       <div className="grid grid-cols-3 gap-3 mb-6">
