@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,10 @@ export default function NovoCadastroPage() {
     setor: "",
     motivo: "",
     telefone: "",
-    email: ""
+    email: "",
+    setoresAcesso: [],
+    tagRFID: "",
+    epiNecessario: []
   });
 
   const [checklist, setChecklist] = useState({
@@ -26,6 +29,23 @@ export default function NovoCadastroPage() {
     empresaAcessivel: false,
     telefoneContato: false
   });
+
+  const setoresDisponiveis = [
+    "Produção",
+    "Almoxarifado",
+    "Administrativo",
+    "Laboratório",
+    "Diretoria",
+    "Recepção"
+  ];
+
+  const epiOpcoes = [
+    "Produção",
+    "Almoxarifado",
+    "Administrativo",
+    "Laboratório",
+    "Manutenção"
+  ];
 
   const maskCPF = (v) =>
     v.replace(/\D/g, "")
@@ -40,6 +60,24 @@ export default function NovoCadastroPage() {
 
   const handleChecklistChange = (key) => {
     setChecklist({ ...checklist, [key]: !checklist[key] });
+  };
+
+  const toggleSetorAcesso = (setor) => {
+    setForm({
+      ...form,
+      setoresAcesso: form.setoresAcesso.includes(setor)
+        ? form.setoresAcesso.filter(s => s !== setor)
+        : [...form.setoresAcesso, setor]
+    });
+  };
+
+  const toggleEPI = (epi) => {
+    setForm({
+      ...form,
+      epiNecessario: form.epiNecessario.includes(epi)
+        ? form.epiNecessario.filter(e => e !== epi)
+        : [...form.epiNecessario, epi]
+    });
   };
 
   const handleProximoStep = () => {
@@ -213,12 +251,9 @@ export default function NovoCadastroPage() {
                         className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
                       >
                         <option value="">Selecione...</option>
-                        <option value="Recepção">Recepção</option>
-                        <option value="Administrativo">Administrativo</option>
-                        <option value="Produção">Produção</option>
-                        <option value="Laboratório">Laboratório</option>
-                        <option value="Almoxarifado">Almoxarifado</option>
-                        <option value="Diretoria">Diretoria</option>
+                        {setoresDisponiveis.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -279,9 +314,75 @@ export default function NovoCadastroPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Seção: Permissões de Acesso */}
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
+                  <div className="p-2.5 bg-primary/10 rounded-xl">
+                    <Lock size={20} className="text-primary" />
+                  </div>
+                  <h2 className="text-lg font-bold text-foreground">Permissões de Acesso</h2>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
+                      Setores Permitidos
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {setoresDisponiveis.map(setor => (
+                        <label key={setor} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-muted/50 transition-all duration-200 border border-border/40">
+                          <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                            form.setoresAcesso.includes(setor)
+                              ? "bg-primary border-primary shadow-md shadow-primary/30"
+                              : "border-border/60"
+                          }`}>
+                            {form.setoresAcesso.includes(setor) && <Check size={14} className="text-white" />}
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{setor}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                      TAG RFID / Crachá
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Escanear ou digitar TAG RFID"
+                      value={form.tagRFID}
+                      onChange={(e) => setForm({ ...form, tagRFID: e.target.value })}
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">Escaneie o crachá ou TAG RFID do visitante</p>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
+                      EPIs Necessários
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {epiOpcoes.map(epi => (
+                        <label key={epi} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-muted/50 transition-all duration-200 border border-border/40">
+                          <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                            form.epiNecessario.includes(epi)
+                              ? "bg-primary border-primary shadow-md shadow-primary/30"
+                              : "border-border/60"
+                          }`}>
+                            {form.epiNecessario.includes(epi) && <Check size={14} className="text-white" />}
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{epi}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Coluna Direita: Prévia de Crachá + Checklist */}
+            {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
               {/* Prévia de Crachá */}
               <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
@@ -295,7 +396,7 @@ export default function NovoCadastroPage() {
                     Prévia de Crachá
                   </div>
 
-                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-5 mb-5 text-center border border-white/20">
+                  <div className="bg-white/15 rounded-xl p-5 mb-5 text-center border border-white/20">
                     <div className="w-24 h-24 bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg mx-auto mb-4 flex items-center justify-center shadow-lg">
                       <Camera size={40} className="text-gray-600" />
                     </div>
@@ -352,13 +453,33 @@ export default function NovoCadastroPage() {
                 </div>
               </div>
 
-              {/* Info Box */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-3xl p-4 flex gap-3">
-                <AlertCircle size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-900">
-                  <p className="font-bold mb-1">Informações Importantes</p>
-                  <p className="opacity-90">Preencha todos os campos obrigatórios antes de prosseguir.</p>
+              {/* Dicas de Cadastro */}
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-3xl p-5 shadow-sm">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
+                    <Lightbulb size={18} className="text-amber-600" />
+                  </div>
+                  <h3 className="font-bold text-amber-900 text-sm">Dicas de Cadastro</h3>
                 </div>
+
+                <ul className="space-y-2.5 text-xs text-amber-900/80">
+                  <li className="flex gap-2">
+                    <span className="text-amber-600 font-bold">•</span>
+                    <span>Verifique se o visitante possui documento de identificação válido</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-600 font-bold">•</span>
+                    <span>Confirme os setores permitidos antes de gerar o crachá</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-600 font-bold">•</span>
+                    <span>Escaneie a TAG RFID para vincular ao cadastro</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-amber-600 font-bold">•</span>
+                    <span>Certifique-se de que o visitante está ciente dos EPIs necessários</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
@@ -397,6 +518,12 @@ export default function NovoCadastroPage() {
                 <p><strong className="text-foreground">CPF:</strong> {form.cpf}</p>
                 <p><strong className="text-foreground">Empresa:</strong> {form.empresa}</p>
                 <p><strong className="text-foreground">Setor:</strong> {form.setor}</p>
+                {form.setoresAcesso.length > 0 && (
+                  <p><strong className="text-foreground">Setores de Acesso:</strong> {form.setoresAcesso.join(", ")}</p>
+                )}
+                {form.epiNecessario.length > 0 && (
+                  <p><strong className="text-foreground">EPIs Necessários:</strong> {form.epiNecessario.join(", ")}</p>
+                )}
               </div>
             </div>
 
