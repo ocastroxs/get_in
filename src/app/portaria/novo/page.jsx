@@ -112,7 +112,7 @@ export default function NovoCadastroPage() {
             {/* Coluna Esquerda: Formulário */}
             <div className="lg:col-span-2 space-y-6">
               {/* Seção: Dados Pessoais */}
-              <div className="bg-card/40 border border-border/30 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-xl">
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <User size={20} className="text-primary" />
@@ -180,7 +180,7 @@ export default function NovoCadastroPage() {
               </div>
 
               {/* Seção: Dados da Empresa */}
-              <div className="bg-card/40 border border-border/30 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-xl">
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <Building2 size={20} className="text-primary" />
@@ -243,7 +243,7 @@ export default function NovoCadastroPage() {
               </div>
 
               {/* Seção: Contato */}
-              <div className="bg-card/40 border border-border/30 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-xl">
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/40">
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <Phone size={20} className="text-primary" />
@@ -284,7 +284,7 @@ export default function NovoCadastroPage() {
             {/* Coluna Direita: Prévia de Crachá + Checklist */}
             <div className="lg:col-span-1 space-y-6">
               {/* Prévia de Crachá */}
-              <div className="bg-gradient-to-br from-blue-600/80 via-blue-700/80 to-blue-900/80 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative backdrop-blur-xl">
+              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
                 {/* Efeito de fundo */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
@@ -320,7 +320,7 @@ export default function NovoCadastroPage() {
               </div>
 
               {/* Checklist de Requisitos */}
-              <div className="bg-card/40 border border-border/30 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300 backdrop-blur-xl">
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
                 <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border/40">
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <Check size={20} className="text-primary" />
@@ -353,7 +353,7 @@ export default function NovoCadastroPage() {
               </div>
 
               {/* Info Box */}
-              <div className="bg-gradient-to-br from-blue-50/60 to-blue-100/40 border border-blue-200/40 rounded-3xl p-4 flex gap-3 backdrop-blur-xl">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-3xl p-4 flex gap-3">
                 <AlertCircle size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-xs text-blue-900">
                   <p className="font-bold mb-1">Informações Importantes</p>
@@ -381,7 +381,7 @@ export default function NovoCadastroPage() {
       {/* STEP 2: AGUARDANDO AUTORIZAÇÃO (Placeholder) */}
       {step === 2 && (
         <div className="p-8 max-w-4xl mx-auto">
-          <div className="bg-card/40 border border-border/30 rounded-3xl p-12 text-center shadow-sm backdrop-blur-xl">
+          <div className="bg-card border border-border rounded-3xl p-12 text-center shadow-sm">
             <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
               <AlertCircle size={40} className="text-amber-600" />
             </div>
@@ -390,7 +390,7 @@ export default function NovoCadastroPage() {
               O cadastro foi enviado para análise do supervisor. Você será notificado quando for aprovado ou recusado.
             </p>
 
-            <div className="bg-muted/20 rounded-2xl p-6 mb-8 text-left border border-border/30 backdrop-blur-lg">
+            <div className="bg-muted rounded-2xl p-6 mb-8 text-left border border-border">
               <p className="text-sm font-bold text-foreground mb-4">Dados Enviados:</p>
               <div className="text-sm text-muted-foreground space-y-2">
                 <p><strong className="text-foreground">Nome:</strong> {form.nome}</p>
