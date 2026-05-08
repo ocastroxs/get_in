@@ -21,10 +21,11 @@ import {
   Building,
   Check
 } from 'lucide-react';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleSidebar = () => setIsOpen(!isOpen);
@@ -81,11 +82,11 @@ export default function Sidebar() {
             <nav className="space-y-1.5">
               <NavItem href="/dashboard" icon={LayoutDashboard} label="Dashboard" active={pathname === '/dashboard'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/crachas" icon={IdCard} label="Crachás" active={pathname === '/dashboard/crachas'} onClick={() => setIsOpen(false)} />
-              <NavItem href="/dashboard/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/dashboard/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/visitantes" icon={Users} label="Visitantes" active={pathname === '/dashboard/visitantes'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/funcionarios" icon={UserSquare2} label="Funcionários" active={pathname === '/dashboard/funcionarios'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/checkin" icon={Check} label="Check-In / Out" active={pathname === '/dashboard/checkin'} onClick={() => setIsOpen(false)}/>
-              <NavItem href="/dashboard/empresas" icon={Building} label="Empresas" active={pathname === '/dashboard/empresas'} onClick={() => setIsOpen(false)} />
               <NavItem href="/dashboard/setores" icon={LayoutGrid} label="Setores" active={pathname === '/dashboard/setores'} onClick={() => setIsOpen(false)} />
+              <NavItem href="/dashboard/empresas" icon={Building} label="Empresas" active={pathname === '/dashboard/empresas'} onClick={() => setIsOpen(false)} />
             </nav>
           </div>
 
@@ -105,15 +106,17 @@ export default function Sidebar() {
           <div className="p-4 mt-auto border-t border-white/5">
             <div className="bg-white/5 rounded-2xl p-4 mb-4">
               <div className="flex items-center space-x-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#4DA8EA] to-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
-                  ADM
-                </div>
+                <UserAvatar 
+                  name={user?.nome || 'Administrador'} 
+                  email={user?.email || 'admin@getin.com'} 
+                  className="w-8 h-8 text-[10px]" 
+                />
                 <div className="flex-1 overflow-hidden">
-                  <p className="text-xs font-bold text-white truncate">Administrador</p>
-                  <p className="text-[10px] text-gray-400 truncate">admin@getin.com</p>
+                  <p className="text-xs font-bold text-white truncate">{user?.nome || 'Administrador'}</p>
+                  <p className="text-[10px] text-gray-400 truncate">{user?.email || 'admin@getin.com'}</p>
                 </div>
               </div>
-              <Link href="/dashboard/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
+              <Link href="/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
                 <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
                 <span>Configurações</span>
               </Link>

@@ -2,24 +2,23 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Users, Search, Filter, X, Download, Plus,
-  ChevronDown, Check, Shield, User, Eye, Star,
-  Mail, Phone, CreditCard, Building2, Briefcase,
-  Trash2, Edit, MoreVertical, Loader2
+  Users, Search, X, Download, Plus,
+  Check, Shield, User, Eye, Star,
+  Mail, Phone, Building2, Briefcase,
+  Trash2, Edit, Loader2
 } from "lucide-react";
-import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
-import { FUNCIONARIOS_MOCK } from "@/lib/mockData";
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+// ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
 const TIPO_LABEL = {
   func: "Funcionário",
   port: "Portaria",
   sup: "Supervisor",
-  ger: "Gerente"
+  ger: "Gerente",
+  adm: "Administrador"
 };
 
 const TIPO_STYLE = {
@@ -27,6 +26,7 @@ const TIPO_STYLE = {
   port: "bg-blue-100 text-blue-700",
   sup: "bg-green-100 text-green-700",
   ger: "bg-orange-100 text-orange-700",
+  adm: "bg-red-100 text-red-700",
 };
 
 const TIPO_ICON = {
@@ -34,6 +34,7 @@ const TIPO_ICON = {
   port: <Shield size={14} />,
   sup: <Eye size={14} />,
   ger: <Star size={14} />,
+  adm: <Briefcase size={14} />,
 };
 
 function toCSV(rows) {
@@ -52,26 +53,28 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Linha da Tabela ─────────────────────────────────────────────────────────
+// ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
-function LinhaFuncionario({ f, index }) {
+function LinhaFuncionario({ f }) {
+  if (!f || !f.nome) return null;
+  
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-all animate-in fade-in slide-in-from-left-2 duration-500" style={{ animationDelay: `${index * 50}ms` }}>
+    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {f.nome.charAt(0).toUpperCase()}
+            {(f.nome || "?").charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome}</div>
-            <div className="text-[11px] text-muted-foreground font-mono">{f.cpf}</div>
+            <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome || "Sem nome"}</div>
+            <div className="text-[11px] text-muted-foreground font-mono">{f.cpf || "—"}</div>
           </div>
         </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Mail size={12} /> {f.email}
+            <Mail size={12} /> {f.email || "—"}
           </div>
           {f.celular && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -89,7 +92,7 @@ function LinhaFuncionario({ f, index }) {
       <td className="py-3 px-4">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIPO_STYLE[f.tipo] || "bg-gray-100 text-gray-700"}`}>
           {TIPO_ICON[f.tipo] || <User size={14} />}
-          {TIPO_LABEL[f.tipo] || f.tipo}
+          {TIPO_LABEL[f.tipo] || f.tipo || "Sem tipo"}
         </span>
       </td>
       <td className="py-3 px-4 text-right">
@@ -106,7 +109,7 @@ function LinhaFuncionario({ f, index }) {
   );
 }
 
-// ─── Página principal ────────────────────────────────────────────────────────
+// ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 export default function FuncionariosPage() {
   const [funcionarios, setFuncionarios] = useState([]);
@@ -114,34 +117,22 @@ export default function FuncionariosPage() {
   const [busca, setBusca] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("Todos");
 
-  useEffect(() => {
-    async function fetchFuncionarios() {
-      try {
-        setLoading(true);
-        // O endpoint /user/read retorna todos os usuários (incluindo funcionários)
-        const data = await api.get('/user/read');
-        
-        if (data && data.sucesso && Array.isArray(data.dados)) {
-          // Filtrar apenas quem não é visitante (ou mostrar todos se preferir)
-          // No contexto de "Funcionários", geralmente queremos quem tem acesso ao sistema
-          const lista = data.dados.map(u => ({
-            ...u,
-            departamento: u.departamento_nome || u.departamento || "Geral"
-          }));
-          setFuncionarios(lista);
-        } else {
-          // Fallback para dados de simulação
-          setFuncionarios(FUNCIONARIOS_MOCK);
-        }
-      } catch (error) {
-        console.error('Erro ao buscar funcionários:', error);
-        // Fallback para dados de simulação em caso de erro
-        setFuncionarios(FUNCIONARIOS_MOCK);
-      } finally {
-        setLoading(false);
+  const carregarFuncionarios = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/func');
+      if (response.sucesso) {
+        setFuncionarios(response.data || []);
       }
+    } catch (error) {
+      console.error("Erro ao carregar funcionários:", error);
+    } finally {
+      setLoading(false);
     }
-    fetchFuncionarios();
+  };
+
+  useEffect(() => {
+    carregarFuncionarios();
   }, []);
 
   const filtrados = useMemo(() => {
@@ -163,35 +154,69 @@ export default function FuncionariosPage() {
   }), [funcionarios]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="flex flex-col gap-5">
+      <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Funcionários</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os colaboradores e níveis de acesso do sistema.</p>
+          <h1 className="text-xl font-semibold text-foreground">Dashboard Funcionários</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Gestão de colaboradores e níveis de acesso do sistema
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => downloadCSV(filtrados)}>
+          <button
+            onClick={() => downloadCSV(filtrados)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+          >
             <Download size={16} /> Exportar
-          </Button>
-          <Button size="sm" className="gap-2" onClick={() => window.location.href = '/registrarFuncionario'}>
+          </button>
+          <button
+            onClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
             <Plus size={16} /> Novo Funcionário
-          </Button>
+          </button>
         </div>
+      </header>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard
+          label="Total"
+          value={stats.total}
+          valueClassName="text-primary"
+          icon={<Users size={17} className="text-primary" />}
+          sub="colaboradores"
+          accentVar="var(--primary)"
+        />
+        <StatCard
+          label="Gerentes"
+          value={stats.gerentes}
+          valueClassName="text-orange-600"
+          icon={<Star size={17} className="text-orange-600" />}
+          sub="liderança"
+          accentVar="var(--orange-500)"
+        />
+        <StatCard
+          label="Supervisores"
+          value={stats.supervisores}
+          valueClassName="text-green-600"
+          icon={<Eye size={17} className="text-green-600" />}
+          sub="supervisão"
+          accentVar="var(--green-500)"
+        />
+        <StatCard
+          label="Portaria"
+          value={stats.portaria}
+          valueClassName="text-blue-600"
+          icon={<Shield size={17} className="text-blue-600" />}
+          sub="acesso"
+          accentVar="var(--blue-500)"
+        />
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Colaboradores" value={stats.total} icon={<Users size={20} className="text-primary" />} accentVar="var(--primary)" />
-        <StatCard label="Gerentes" value={stats.gerentes} valueClassName="text-chart-4" icon={<Star size={20} className="text-chart-4" />} accentVar="var(--chart-4)" />
-        <StatCard label="Supervisores" value={stats.supervisores} valueClassName="text-chart-2" icon={<Eye size={20} className="text-chart-2" />} accentVar="var(--chart-2)" />
-        <StatCard label="Portaria" value={stats.portaria} valueClassName="text-chart-3" icon={<Shield size={20} className="text-chart-3" />} accentVar="var(--chart-3)" />
-      </div>
-
-      {/* Filtros */}
-      <div className="bg-card border border-border rounded-xl p-4 shadow-sm">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           <div className="relative w-full md:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <input
               type="text"
               placeholder="Buscar por nome, CPF ou email..."
@@ -202,9 +227,6 @@ export default function FuncionariosPage() {
           </div>
           
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-            <div className="flex items-center gap-1 mr-2 text-xs font-medium text-muted-foreground">
-              <Filter size={14} /> Filtrar:
-            </div>
             {["Todos", "ger", "sup", "port", "func"].map((tipo) => (
               <button
                 key={tipo}
@@ -218,7 +240,7 @@ export default function FuncionariosPage() {
                 {tipo === "Todos" ? "Todos" : TIPO_LABEL[tipo]}
               </button>
             ))}
-            { (busca || filtroTipo !== "Todos") && (
+            {(busca || filtroTipo !== "Todos") && (
               <button 
                 onClick={() => { setBusca(""); setFiltroTipo("Todos"); }}
                 className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
@@ -231,17 +253,16 @@ export default function FuncionariosPage() {
         </div>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-muted/50 border-b border-border">
-                <th className="py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Funcionário</th>
-                <th className="py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contato</th>
-                <th className="py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Departamento</th>
-                <th className="py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nível de Acesso</th>
-                <th className="py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Ações</th>
+              <tr className="bg-muted/40 border-b border-border">
+                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Funcionário</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Contato</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Departamento</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Nível de Acesso</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -255,8 +276,8 @@ export default function FuncionariosPage() {
                   </td>
                 </tr>
               ) : filtrados.length > 0 ? (
-                filtrados.map((f, i) => (
-                  <LinhaFuncionario key={f.id || i} f={f} index={i} />
+                filtrados.map((f) => (
+                  <LinhaFuncionario key={f.id} f={f} />
                 ))
               ) : (
                 <tr>

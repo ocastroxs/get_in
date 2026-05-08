@@ -1,8 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2, AlertCircle } from 'lucide-react';
-import Sidebar from '@/components/ui/sidebar';
-import ParticlesBackground from '@/components/ui/ParticlesBackground';
 
 const CadastroFuncionario = () => {
   // ==========================================
@@ -211,8 +209,10 @@ const CadastroFuncionario = () => {
               <label className="text-xs font-semibold text-gray-600 mb-2">Turno de trabalho</label>
               <select name="turno" value={formData.turno} onChange={handleChange} className="px-4 py-2.5 bg-white/50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#4DA8EA]">
                 <option value="">Selecione o turno</option>
-                <option value="Administrativo">Administrativo — 08h às 18h</option>
-                <option value="Manhã">Manhã (06:00 - 14:00)</option>
+                <option value="manha">Manhã</option>
+                <option value="tarde">Tarde</option>
+                <option value="noite">Noite</option>
+                <option value="comercial">Comercial</option>
               </select>
             </div>
             <div className="flex flex-col relative">
@@ -267,74 +267,70 @@ const CadastroFuncionario = () => {
   };
 
   return (
-    <div className="flex min-h-screen relative overflow-hidden">
-      <ParticlesBackground />
-      <Sidebar />
-      <main className="flex-1 p-6 md:p-10 relative z-10 flex flex-col items-center justify-center mt-16 lg:mt-0 overflow-y-auto max-h-screen custom-scrollbar">
-        <div className="w-full max-w-4xl">
-          
-          {/* Título */}
-          <div className="mb-8 text-center md:text-left">
-            <h1 className="text-3xl font-black text-[#0A2540] mb-2 tracking-tight">Novo Funcionário</h1>
-            <p className="text-gray-500 font-medium">Cadastre um novo colaborador no sistema GETIN.</p>
-          </div>
-
-          {/* Stepper (Passos) */}
-          <div className="flex items-center justify-between mb-12 w-full max-w-2xl mx-auto">
-            {['Dados', 'Perfil', 'Setores', 'Revisão'].map((label, index) => {
-              const step = index + 1;
-              const isAtivo = passoAtual === step;
-              const isConcluido = passoAtual > step;
-              return (
-                <React.Fragment key={label}>
-                  <div className="flex flex-col items-center relative z-10">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-500 ${isAtivo ? 'bg-[#4DA8EA] text-white shadow-lg shadow-blue-400/30 scale-110' : isConcluido ? 'bg-[#0A2540] text-white' : 'bg-white border-2 border-gray-200 text-gray-400'}`}>
-                      {isConcluido ? <Check className="w-5 h-5" /> : step}
-                    </div>
-                    <span className={`mt-2 text-[10px] font-bold uppercase tracking-widest ${isAtivo ? 'text-[#4DA8EA]' : isConcluido ? 'text-[#0A2540]' : 'text-gray-400'}`}>{label}</span>
-                  </div>
-                  {index < 3 && <div className={`flex-1 h-0.5 mx-4 transition-colors duration-500 ${isConcluido ? 'bg-[#0A2540]' : 'bg-gray-200'}`}></div>}
-                </React.Fragment>
-              );
-            })}
-          </div>
-
-          {/* Card de Formulário */}
-          <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <form onSubmit={e => e.preventDefault()}>
-              {renderizarPasso()}
-              
-              {erro && (
-                <div className="mt-6 p-4 bg-red-50 border-l-4 border-red-500 flex items-center space-x-3 animate-in slide-in-from-top-2">
-                  <AlertCircle className="w-5 h-5 text-red-500" />
-                  <span className="text-sm text-red-700 font-bold">{erro}</span>
-                </div>
-              )}
-
-              {!sucesso && (
-                <div className="mt-10 pt-8 border-t border-gray-100 flex justify-between items-center">
-                  {passoAtual > 1 ? (
-                    <button onClick={passoAnterior} disabled={loading} className="flex items-center text-gray-500 hover:text-[#0A2540] font-bold text-xs transition-colors disabled:opacity-50">
-                      <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
-                    </button>
-                  ) : <div></div>}
-
-                  {passoAtual < 4 ? (
-                    <button onClick={proximoPasso} className="bg-[#0A2540] hover:bg-[#133c66] text-white px-8 py-3.5 rounded-2xl font-bold text-xs flex items-center transition-all shadow-lg shadow-blue-950/20 active:scale-95">
-                      Próximo Passo <ArrowRight className="w-4 h-4 ml-2" />
-                    </button>
-                  ) : (
-                    <button onClick={finalizarCadastro} disabled={loading} className="bg-[#10B981] hover:bg-[#059669] text-white px-8 py-3.5 rounded-2xl font-bold text-xs flex items-center transition-all shadow-lg shadow-green-500/20 active:scale-95 disabled:opacity-50">
-                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
-                      {loading ? 'Processando...' : 'Finalizar Cadastro'}
-                    </button>
-                  )}
-                </div>
-              )}
-            </form>
-          </div>
+    <div className="flex flex-col items-center justify-center w-full py-6">
+      <div className="w-full max-w-4xl">
+        
+        {/* Título */}
+        <div className="mb-8 text-center md:text-left">
+          <h1 className="text-3xl font-black text-[#0A2540] mb-2 tracking-tight">Novo Funcionário</h1>
+          <p className="text-gray-500 font-medium">Cadastre um novo colaborador no sistema GETIN.</p>
         </div>
-      </main>
+
+        {/* Stepper (Passos) */}
+        <div className="flex items-center justify-between mb-12 w-full max-w-2xl mx-auto">
+          {['Dados', 'Perfil', 'Setores', 'Revisão'].map((label, index) => {
+            const step = index + 1;
+            const isAtivo = passoAtual === step;
+            const isConcluido = passoAtual > step;
+            return (
+              <React.Fragment key={label}>
+                <div className="flex flex-col items-center relative z-10">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-500 ${isAtivo ? 'bg-[#4DA8EA] text-white shadow-lg shadow-blue-400/30 scale-110' : isConcluido ? 'bg-[#0A2540] text-white' : 'bg-white border-2 border-gray-200 text-gray-400'}`}>
+                    {isConcluido ? <Check className="w-5 h-5" /> : step}
+                  </div>
+                  <span className={`mt-2 text-[10px] font-bold uppercase tracking-widest ${isAtivo ? 'text-[#4DA8EA]' : isConcluido ? 'text-[#0A2540]' : 'text-gray-400'}`}>{label}</span>
+                </div>
+                {index < 3 && <div className={`flex-1 h-0.5 mx-4 transition-colors duration-500 ${isConcluido ? 'bg-[#0A2540]' : 'bg-gray-200'}`}></div>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Card de Formulário */}
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <form onSubmit={e => e.preventDefault()}>
+            {renderizarPasso()}
+            
+            {erro && (
+              <div className="mt-6 p-4 bg-red-50 border-l-4 border-red-500 flex items-center space-x-3 animate-in slide-in-from-top-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <span className="text-sm text-red-700 font-bold">{erro}</span>
+              </div>
+            )}
+
+            {!sucesso && (
+              <div className="mt-10 pt-8 border-t border-gray-100 flex justify-between items-center">
+                {passoAtual > 1 ? (
+                  <button onClick={passoAnterior} disabled={loading} className="flex items-center text-gray-500 hover:text-[#0A2540] font-bold text-xs transition-colors disabled:opacity-50">
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+                  </button>
+                ) : <div></div>}
+
+                {passoAtual < 4 ? (
+                  <button onClick={proximoPasso} className="bg-[#0A2540] hover:bg-[#133c66] text-white px-8 py-3.5 rounded-2xl font-bold text-xs flex items-center transition-all shadow-lg shadow-blue-950/20 active:scale-95">
+                    Próximo Passo <ArrowRight className="w-4 h-4 ml-2" />
+                  </button>
+                ) : (
+                  <button onClick={finalizarCadastro} disabled={loading} className="bg-[#10B981] hover:bg-[#059669] text-white px-8 py-3.5 rounded-2xl font-bold text-xs flex items-center transition-all shadow-lg shadow-green-500/20 active:scale-95 disabled:opacity-50">
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+                    {loading ? 'Processando...' : 'Finalizar Cadastro'}
+                  </button>
+                )}
+              </div>
+            )}
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

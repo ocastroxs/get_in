@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { 
   Shield, 
   Eye, 
@@ -11,14 +11,16 @@ import {
   RotateCcw, 
   Save,
   Search,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { api } from '@/services/api';
 
-// ─── Dados de Permissões ─────────────────────────────────────────────────────
+// ─── Dados de Permissões (estrutura padrão) ──────────────────────────────────
 
-const PERMISSOES_FUNCIONARIOS = [
+const PERMISSOES_PADRAO = [
   {
     categoria: 'VISITANTES',
     funcionalidades: [
@@ -62,7 +64,7 @@ const PERMISSOES_FUNCIONARIOS = [
   }
 ];
 
-const PERMISSOES_VISITANTES = [
+const PERMISSOES_VISITANTES_PADRAO = [
   { titulo: 'Visualizar mapa do prédio', desc: 'Ver mapa de rotas liberadas', visitante: 'allow' },
   { titulo: 'Acesso ao refeitório', desc: 'Permissão para entrar na área de alimentação', visitante: 'deny' },
   { titulo: 'Gerar QR Code de entrada', desc: 'Criar passe temporário na catraca', visitante: 'read' },
@@ -72,17 +74,54 @@ export default function PermissoesPage() {
   const [abaAtiva, setAbaAtiva] = useState('funcionarios');
   const [loading, setLoading] = useState(false);
   const [busca, setBusca] = useState('');
+  const [permissoesFuncionarios, setPermissoesFuncionarios] = useState(PERMISSOES_PADRAO);
+  const [permissoesVisitantes, setPermissoesVisitantes] = useState(PERMISSOES_VISITANTES_PADRAO);
 
-  const handleSalvar = () => {
+  const carregarPermissoes = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      // 🔌 Endpoint futuro: /permissoes ou similar
+      // Por enquanto, usamos dados padrão pois o back-end ainda não possui este modelo
+      const response = await api.get('/permissoes');
+      if (response.sucesso && response.data) {
+        setPermissoesFuncionarios(response.data.funcionarios || PERMISSOES_PADRAO);
+        setPermissoesVisitantes(response.data.visitantes || PERMISSOES_VISITANTES_PADRAO);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar permissões:", error);
+      // Mantém os dados padrão em caso de erro
+    } finally {
       setLoading(false);
-      alert("Configurações de permissão salvas com sucesso!");
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    carregarPermissoes();
+  }, []);
+
+  const handleSalvar = async () => {
+    setLoading(true);
+    try {
+      // 🔌 Endpoint futuro: POST /permissoes
+      const response = await api.post('/permissoes', {
+        funcionarios: permissoesFuncionarios,
+        visitantes: permissoesVisitantes
+      });
+      
+      if (response.sucesso) {
+        alert("Configurações de permissão salvas com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar permissões:", error);
+      alert("Erro ao salvar permissões. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDescartar = () => {
     setBusca('');
+    carregarPermissoes();
   };
 
   return (
@@ -92,8 +131,8 @@ export default function PermissoesPage() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Permissões</h1>
-            <p className="text-sm text-muted-foreground mt-1">Determine o que cada perfil e visitante pode acessar no sistema.</p>
+            <h1 className="text-xl font-semibold text-foreground">Permissões</h1>
+            <p className="text-xs text-muted-foreground mt-1">Determine o que cada perfil e visitante pode acessar no sistema.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -101,6 +140,7 @@ export default function PermissoesPage() {
               size="sm" 
               className="gap-1.5"
               onClick={handleDescartar}
+              disabled={loading}
             >
               <RotateCcw size={14} />
               Descartar
@@ -113,7 +153,7 @@ export default function PermissoesPage() {
             >
               {loading ? (
                 <>
-                  <RotateCcw size={14} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                   Salvando...
                 </>
               ) : (
@@ -184,9 +224,17 @@ export default function PermissoesPage() {
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           {abaAtiva === 'funcionarios' ? (
-            <TabelaFuncionarios busca={busca} />
+            <TabelaFuncionarios 
+              permissoes={permissoesFuncionarios}
+              setPermissoes={setPermissoesFuncionarios}
+              busca={busca} 
+            />
           ) : (
-            <TabelaVisitantes busca={busca} />
+            <TabelaVisitantes 
+              permissoes={permissoesVisitantes}
+              setPermissoes={setPermissoesVisitantes}
+              busca={busca} 
+            />
           )}
         </div>
       </div>
@@ -212,16 +260,16 @@ function TabButton({ active, onClick, label }) {
   );
 }
 
-function TabelaFuncionarios({ busca }) {
+function TabelaFuncionarios({ permissoes, setPermissoes, busca }) {
   const categoriasFiltradas = useMemo(() => {
-    return PERMISSOES_FUNCIONARIOS.map(cat => ({
+    return permissoes.map(cat => ({
       ...cat,
       funcionalidades: cat.funcionalidades.filter(item => 
         item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
         item.desc.toLowerCase().includes(busca.toLowerCase())
       )
     })).filter(cat => cat.funcionalidades.length > 0);
-  }, [busca]);
+  }, [permissoes, busca]);
 
   if (categoriasFiltradas.length === 0) {
     return (
@@ -278,13 +326,13 @@ function TabelaFuncionarios({ busca }) {
   );
 }
 
-function TabelaVisitantes({ busca }) {
+function TabelaVisitantes({ permissoes, setPermissoes, busca }) {
   const funcionalidadesFiltradas = useMemo(() => {
-    return PERMISSOES_VISITANTES.filter(item => 
+    return permissoes.filter(item => 
       item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       item.desc.toLowerCase().includes(busca.toLowerCase())
     );
-  }, [busca]);
+  }, [permissoes, busca]);
 
   if (funcionalidadesFiltradas.length === 0) {
     return (
@@ -340,8 +388,8 @@ function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin })
     <tr className="hover:bg-muted/30 transition-colors">
       <td className="py-4 px-6">
         <div>
-          <p className="font-semibold text-sm text-foreground">{titulo}</p>
-          <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
+          <p className="font-semibold text-sm text-foreground">{titulo || "—"}</p>
+          <p className="text-xs text-muted-foreground font-normal mt-1">{desc || "—"}</p>
         </div>
       </td>
       
@@ -391,8 +439,8 @@ function PermissionRowVisitante({ titulo, desc, visitante }) {
     <tr className="hover:bg-muted/30 transition-colors">
       <td className="py-4 px-6">
         <div>
-          <p className="font-semibold text-sm text-foreground">{titulo}</p>
-          <p className="text-xs text-muted-foreground font-normal mt-1">{desc}</p>
+          <p className="font-semibold text-sm text-foreground">{titulo || "—"}</p>
+          <p className="text-xs text-muted-foreground font-normal mt-1">{desc || "—"}</p>
         </div>
       </td>
       

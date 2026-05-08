@@ -1,50 +1,48 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   CreditCard, ArrowRightLeft, Undo2, AlertTriangle,
   Search, Filter, X, Download, Plus, Check,
-  ChevronDown, MoreHorizontal
+  ChevronDown, MoreHorizontal, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/StatCard";
-
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-const CRACHAS_MOCK = [
-  { id: 1,  tagId: "TAG-001", visitante: "João Carvalho",    empresa: "SupliTec",   setor: "Produção",      entrega: "29/07/2025 · 08:02", devolucao: null,                status: "alerta"     },
-  { id: 2,  tagId: "TAG-002", visitante: "Marina Souza",     empresa: "NutriFab",   setor: "Laboratório",   entrega: "29/07/2025 · 08:15", devolucao: null,                status: "emprestado" },
-  { id: 3,  tagId: "TAG-003", visitante: "Carlos Mendes",    empresa: "AçoForte",   setor: "Almoxarifado",  entrega: "29/07/2025 · 08:34", devolucao: "29/07/2025 · 11:20", status: "devolvido"  },
-  { id: 4,  tagId: "TAG-004", visitante: "Beatriz Ramos",    empresa: "Carrefour",  setor: "Diretoria",     entrega: "29/07/2025 · 09:00", devolucao: "29/07/2025 · 10:45", status: "devolvido"  },
-  { id: 5,  tagId: "TAG-005", visitante: "André Costa",      empresa: "SupliTec",   setor: "Produção",      entrega: "29/07/2025 · 09:10", devolucao: null,                status: "emprestado" },
-  { id: 6,  tagId: "TAG-006", visitante: "Fernanda Lima",    empresa: "LogisBR",    setor: "Recepção",      entrega: "29/07/2025 · 09:30", devolucao: null,                status: "ativo"      },
-  { id: 7,  tagId: "TAG-007", visitante: "Ricardo Pereira",  empresa: "MecParts",   setor: "Manutenção",    entrega: "29/07/2025 · 10:05", devolucao: null,                status: "alerta"     },
-  { id: 8,  tagId: "TAG-008", visitante: "Camila Torres",    empresa: "VigilSec",   setor: "Portaria",      entrega: "29/07/2025 · 10:22", devolucao: "29/07/2025 · 12:00", status: "devolvido"  },
-  { id: 9,  tagId: "TAG-009", visitante: "Paulo Nascimento", empresa: "FoodAudit",  setor: "Laboratório",   entrega: "29/07/2025 · 11:00", devolucao: null,                status: "emprestado" },
-  { id: 10, tagId: "TAG-010", visitante: "Larissa Fonseca",  empresa: "NutriFab",   setor: "Produção",      entrega: "29/07/2025 · 11:45", devolucao: null,                status: "ativo"      },
-];
+import { api } from "@/services/api";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL = {
-  ativo:       "Ativo",
-  emprestado:  "Emprestado",
-  devolvido:   "Devolvido",
-  alerta:      "Alerta",
+  disponivel: "Disponível",
+  emUso:      "Em Uso",
+  perdido:    "Perdido",
+  alerta:     "Alerta",
+  // Fallbacks para compatibilidade com mock anterior
+  ativo:      "Ativo",
+  emprestado: "Emprestado",
+  devolvido:  "Devolvido",
 };
 
 const STATUS_STYLE = {
+  disponivel: "bg-gray-100 text-gray-700",
+  emUso:      "bg-green-100 text-green-700",
+  perdido:    "bg-red-100   text-red-600",
+  alerta:     "bg-red-100   text-red-600",
+  // Fallbacks
   ativo:      "bg-green-100 text-green-700",
   emprestado: "bg-amber-100 text-amber-700",
   devolvido:  "bg-blue-100  text-blue-700",
-  alerta:     "bg-red-100   text-red-600",
 };
 
 const STATUS_DOT = {
+  disponivel: "bg-gray-500",
+  emUso:      "bg-green-500",
+  perdido:    "bg-red-500",
+  alerta:     "bg-red-500",
+  // Fallbacks
   ativo:      "bg-green-500",
   emprestado: "bg-amber-500",
   devolvido:  "bg-blue-500",
-  alerta:     "bg-red-500",
 };
 
 const SETOR_STYLE = {
@@ -67,12 +65,12 @@ const SETOR_DOT = {
   "Portaria":     "bg-teal-500",
 };
 
-const STATUS_FILTER_OPTS = ["Todas", "ativo", "emprestado", "devolvido", "alerta"];
+const STATUS_FILTER_OPTS = ["Todas", "disponivel", "emUso", "perdido", "alerta"];
 
 function toCSV(rows) {
-  const cols = ["Tag ID", "Visitante", "Empresa", "Setor", "Entrega", "Devolução", "Status"];
+  const cols = ["ID", "Status", "Tag Código"];
   const lines = rows.map((r) =>
-    [r.tagId, r.visitante, r.empresa, r.setor, r.entrega, r.devolucao ?? "—", STATUS_LABEL[r.status]].join(";")
+    [r.id, STATUS_LABEL[r.status] || r.status, r.codigoTag || "—"].join(";")
   );
   return [cols.join(";"), ...lines].join("\n");
 }
@@ -85,63 +83,62 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Modal Cadastrar Nova TAG (Refatorado) ────────────────────────────────────
-// Este modal agora é APENAS para cadastro de TAGs físicas, não para criar visitas.
+// ─── Modal Cadastrar Nova TAG ────────────────────────────────────────────────
 
 function ModalCadastrarTag({ onClose, onSave }) {
   const [form, setForm] = useState({
     tagId: ""
   });
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.tagId.trim()) {
       alert("Preencha o ID da TAG.");
       return;
     }
     
-    // Validar se a TAG já existe
-    const tagExistente = CRACHAS_MOCK.some(c => c.tagId.toUpperCase() === form.tagId.toUpperCase());
-    if (tagExistente) {
-      alert("Esta TAG já foi cadastrada no sistema.");
-      return;
+    setLoading(true);
+    try {
+      // No back-end atual, precisamos criar um crachá e depois uma tag
+      // Ou apenas o crachá se a lógica for simplificada.
+      // Por enquanto, vamos simular a chamada que você integrará.
+      const response = await api.post('/cracha', { status: 'disponivel' });
+      
+      if (response.sucesso) {
+        onSave();
+        onClose();
+      } else {
+        alert(response.mensagem || "Erro ao cadastrar crachá.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão com o servidor.");
+    } finally {
+      setLoading(false);
     }
-
-    onSave({
-      id: Date.now(),
-      tagId: form.tagId.toUpperCase(),
-      visitante: null,
-      empresa: null,
-      setor: null,
-      entrega: null,
-      devolucao: null,
-      status: "disponivel"
-    });
-    onClose();
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm mx-4 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-        {/* header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <CreditCard size={16} className="text-primary" />
             </div>
-            <h2 className="font-semibold text-foreground">Cadastrar Nova TAG</h2>
+            <h2 className="font-semibold text-foreground">Cadastrar Novo Crachá</h2>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        {/* body */}
         <div className="px-6 py-5 space-y-4">
           <p className="text-xs text-muted-foreground">
-            Cadastre um novo crachá físico no sistema. Este será vinculado a um visitante quando necessário.
+            Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status "Disponível".
           </p>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">ID da TAG *</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador (Opcional)</label>
             <input
               type="text"
               value={form.tagId}
@@ -149,17 +146,14 @@ function ModalCadastrarTag({ onClose, onSave }) {
               onChange={(e) => setForm({ tagId: e.target.value })}
               className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             />
-            <p className="text-[10px] text-muted-foreground mt-1.5">
-              Use o formato TAG-XXX (ex: TAG-011, TAG-100)
-            </p>
           </div>
         </div>
 
-        {/* footer */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
-          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
-          <Button size="sm" className="gap-1.5" onClick={handleSubmit}>
-            <Check size={13} /> Cadastrar TAG
+          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+            Confirmar Cadastro
           </Button>
         </div>
       </div>
@@ -170,15 +164,13 @@ function ModalCadastrarTag({ onClose, onSave }) {
 // ─── Linha da Tabela ──────────────────────────────────────────────────────────
 
 function LinhaCracha({ c }) {
-  const isDisponivel = c.status === "disponivel";
-  
   return (
     <tr className="border-b border-border hover:bg-accent/40 transition-colors">
       <td className="py-3 px-4">
-        <span className="text-xs font-semibold font-mono text-primary">{c.tagId}</span>
+        <span className="text-xs font-semibold font-mono text-primary">#{c.id}</span>
       </td>
       <td className="py-3 px-4 text-sm font-medium text-foreground whitespace-nowrap">
-        {c.visitante || "—"}
+        {c.visitante || <span className="text-muted-foreground italic text-xs">Nenhum vinculado</span>}
       </td>
       <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">
         {c.empresa || "—"}
@@ -194,17 +186,9 @@ function LinhaCracha({ c }) {
       <td className="py-3 px-4 text-sm text-foreground whitespace-nowrap">{c.entrega || "—"}</td>
       <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{c.devolucao ?? "—"}</td>
       <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-          isDisponivel 
-            ? "bg-gray-100 text-gray-700" 
-            : STATUS_STYLE[c.status] ?? "bg-muted text-muted-foreground"
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            isDisponivel 
-              ? "bg-gray-500" 
-              : STATUS_DOT[c.status] ?? "bg-muted-foreground"
-          }`} />
-          {isDisponivel ? "Disponível" : STATUS_LABEL[c.status] ?? c.status}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[c.status] ?? "bg-muted text-muted-foreground"}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[c.status] ?? "bg-muted-foreground"}`} />
+          {STATUS_LABEL[c.status] || c.status}
         </span>
       </td>
       <td className="py-3 px-4">
@@ -219,47 +203,60 @@ function LinhaCracha({ c }) {
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function CrachasPage() {
-  const [crachas, setCrachas]         = useState(CRACHAS_MOCK);
+  const [crachas, setCrachas]         = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState("Todas");
   const [busca, setBusca]             = useState("");
+
+  const carregarCrachas = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/cracha');
+      if (response.sucesso) {
+        setCrachas(response.data || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar crachás:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    carregarCrachas();
+  }, []);
 
   const filtrados = useMemo(() => {
     return crachas.filter((c) => {
       const matchStatus = statusFiltro === "Todas" || c.status === statusFiltro;
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
-        c.tagId.toLowerCase().includes(q) ||
+        String(c.id).includes(q) ||
         (c.visitante && c.visitante.toLowerCase().includes(q)) ||
-        (c.empresa && c.empresa.toLowerCase().includes(q)) ||
-        (c.setor && c.setor.toLowerCase().includes(q));
+        (c.empresa && c.empresa.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });
   }, [crachas, statusFiltro, busca]);
 
   const stats = useMemo(() => ({
     total:      crachas.length,
-    ativos:     crachas.filter((c) => c.status === "ativo").length,
-    emprestados:crachas.filter((c) => c.status === "emprestado" || c.status === "alerta").length,
-    devolvidos: crachas.filter((c) => c.status === "devolvido").length,
+    emUso:      crachas.filter((c) => c.status === "emUso").length,
+    disponiveis:crachas.filter((c) => c.status === "disponivel").length,
+    perdidos:   crachas.filter((c) => c.status === "perdido").length,
     alertas:    crachas.filter((c) => c.status === "alerta").length,
   }), [crachas]);
-
-  function handleSave(novo) {
-    setCrachas((p) => [novo, ...p]);
-  }
 
   return (
     <>
       {modalAberto && (
         <ModalCadastrarTag
           onClose={() => setModalAberto(false)}
-          onSave={handleSave}
+          onSave={carregarCrachas}
         />
       )}
 
       <div className="flex flex-col gap-5">
-        {/* Header */}
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard Crachás</h1>
@@ -271,59 +268,57 @@ export default function CrachasPage() {
             onClick={() => setModalAberto(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
           >
-            <Plus size={16} /> Cadastrar TAG
+            <Plus size={16} /> Cadastrar Crachá
           </button>
         </header>
 
-        {/* Cards de Estatísticas */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatCard
-            label="Total de TAGs"
+            label="Total"
             value={stats.total}
             valueClassName="text-primary"
             icon={<CreditCard size={17} className="text-primary" />}
-            sub="crachás cadastrados"
+            sub="cadastrados"
             accentVar="var(--primary)"
           />
           <StatCard
             label="Em Uso"
-            value={stats.ativos}
-            valueClassName="text-chart-1"
-            icon={<ArrowRightLeft size={17} className="text-chart-1" />}
+            value={stats.emUso}
+            valueClassName="text-green-600"
+            icon={<ArrowRightLeft size={17} className="text-green-600" />}
             sub="visitantes ativos"
-            accentVar="var(--chart-1)"
+            accentVar="var(--green-500)"
           />
           <StatCard
-            label="Emprestados"
-            value={stats.emprestados}
-            valueClassName="text-chart-2"
-            icon={<AlertTriangle size={17} className="text-chart-2" />}
-            sub="pendentes de devolução"
-            accentVar="var(--chart-2)"
+            label="Disponíveis"
+            value={stats.disponiveis}
+            valueClassName="text-blue-600"
+            icon={<Check size={17} className="text-blue-600" />}
+            sub="prontos para uso"
+            accentVar="var(--blue-500)"
           />
           <StatCard
-            label="Devolvidos"
-            value={stats.devolvidos}
-            valueClassName="text-chart-3"
-            icon={<Undo2 size={17} className="text-chart-3" />}
-            sub="100% sem pendências"
-            accentVar="var(--chart-3)"
+            label="Perdidos"
+            value={stats.perdidos}
+            valueClassName="text-amber-600"
+            icon={<AlertTriangle size={17} className="text-amber-600" />}
+            sub="requerem reposição"
+            accentVar="var(--amber-500)"
           />
           <StatCard
             label="Alertas"
             value={stats.alertas}
             valueClassName="text-red-600"
             icon={<AlertTriangle size={17} className="text-red-600" />}
-            sub="requerem atenção"
-            accentVar="var(--red)"
+            sub="atenção necessária"
+            accentVar="var(--red-500)"
           />
         </div>
 
-        {/* Barra de filtros */}
         <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
           <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
           {STATUS_FILTER_OPTS.map((opt) => {
-            const isAlerta = opt === "alerta";
+            const isAlerta = opt === "alerta" || opt === "perdido";
             const isActive = statusFiltro === opt;
             return (
               <button
@@ -342,44 +337,37 @@ export default function CrachasPage() {
                 `}
               >
                 {isAlerta && <AlertTriangle size={11} />}
-                {opt === "Todas" ? "Todas" : STATUS_LABEL[opt]}
+                {STATUS_LABEL[opt] || opt}
               </button>
             );
           })}
-          {/* Busca */}
           <div className="ml-auto relative">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar tag, visitante…"
+              placeholder="Buscar por ID ou visitante…"
               className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             />
-            {busca && (
-              <button
-                onClick={() => setBusca("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X size={11} />
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Tabela */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          {/* Header da tabela */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden min-h-[300px] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div>
               <h2 className="text-sm font-semibold text-foreground">Registro de Crachás</h2>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                {crachas.length} crachás cadastrados · mostrando {Math.min(10, filtrados.length)} por página
+                {loading ? "Carregando dados..." : `${crachas.length} crachás encontrados`}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                <Filter size={13} />
+              <button
+                onClick={carregarCrachas}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                title="Recarregar"
+              >
+                <Undo2 size={13} className={loading ? "animate-spin" : ""} />
               </button>
               <button
                 onClick={() => downloadCSV(filtrados)}
@@ -390,12 +378,11 @@ export default function CrachasPage() {
             </div>
           </div>
 
-          {/* Tabela */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto flex-1">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {["Tag ID", "Visitante", "Empresa", "Setor Vinculado", "Data de Entrega", "Data de Devolução", "Status", ""].map((col) => (
+                  {["ID", "Visitante Atual", "Empresa", "Setor", "Entrega", "Devolução", "Status", ""].map((col) => (
                     <th
                       key={col}
                       className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap"
@@ -406,14 +393,26 @@ export default function CrachasPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.length === 0 ? (
+                {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                      Nenhum crachá encontrado com os filtros aplicados.
+                    <td colSpan={8} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        <span className="text-sm text-muted-foreground">Sincronizando com o servidor...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <CreditCard className="w-8 h-8 text-muted-foreground/30" />
+                        <span className="text-sm text-muted-foreground">Nenhum crachá encontrado.</span>
+                      </div>
                     </td>
                   </tr>
                 ) : (
-                  filtrados.slice(0, 10).map((c) => <LinhaCracha key={c.id} c={c} />)
+                  filtrados.map((c) => <LinhaCracha key={c.id} c={c} />)
                 )}
               </tbody>
             </table>

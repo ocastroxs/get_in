@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function Topbar({ title, subtitle, buttonText }) {
+export default function Topbar({ title, subtitle, buttonText, buttonHref, onButtonClick }) {
   return (
     <header className="mb-6 flex flex-col gap-4 border-b border-border px-2 pb-4 animate-in fade-in slide-in-from-top-4 duration-700 md:flex-row md:items-center md:justify-between">
       <div className="min-w-0 animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
@@ -18,19 +19,20 @@ export default function Topbar({ title, subtitle, buttonText }) {
           <span className="text-xs font-medium text-accent-foreground">Tempo Real</span>
         </div>
 
-        {/* Exportar */}
-        <Button variant="outline" size="sm" className="gap-1.5 transition-all hover:shadow-md">
-          <Download size={13} />
-          Exportar
-        </Button>
-
-        {/* Novo Visitante */}
-        {buttonText && (
-          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
+        {/* Botão de Ação - Renderizado apenas se buttonText for fornecido */}
+        {buttonText && buttonHref ? (
+          <Link href={buttonHref}>
+            <Button size="sm" className="gap-1.5 transition-all hover:shadow-md">
+              <Plus size={13} />
+              {buttonText}
+            </Button>
+          </Link>
+        ) : buttonText && onButtonClick ? (
+          <Button size="sm" className="gap-1.5 transition-all hover:shadow-md" onClick={onButtonClick}>
             <Plus size={13} />
             {buttonText}
           </Button>
-        )}
+        ) : null}
       </div>
     </header>
   );

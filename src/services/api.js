@@ -81,3 +81,23 @@ export const authService = {
     return false;
   }
 };
+
+export const publicService = {
+  async getStats() {
+    try {
+      // Este endpoint deve ser criado no back-end como uma rota pública
+      const data = await api.get('/public/stats');
+      return data;
+    } catch (error) {
+      console.error('Erro ao buscar estatísticas públicas:', error);
+      return {
+        sucesso: false,
+        data: {
+          visitasHoje: 0,
+          setoresAtivos: 0,
+          rastreabilidade: 0
+        }
+      };
+    }
+  }
+};
