@@ -39,14 +39,6 @@ export default function NovoCadastroPage() {
     "Recepção"
   ];
 
-  const epiOpcoes = [
-    "Produção",
-    "Almoxarifado",
-    "Administrativo",
-    "Laboratório",
-    "Manutenção"
-  ];
-
   const maskCPF = (v) =>
     v.replace(/\D/g, "")
       .replace(/(\d{3})(\d)/, "$1.$2")
@@ -68,15 +60,6 @@ export default function NovoCadastroPage() {
       setoresAcesso: form.setoresAcesso.includes(setor)
         ? form.setoresAcesso.filter(s => s !== setor)
         : [...form.setoresAcesso, setor]
-    });
-  };
-
-  const toggleEPI = (epi) => {
-    setForm({
-      ...form,
-      epiNecessario: form.epiNecessario.includes(epi)
-        ? form.epiNecessario.filter(e => e !== epi)
-        : [...form.epiNecessario, epi]
     });
   };
 
@@ -358,26 +341,6 @@ export default function NovoCadastroPage() {
                     />
                     <p className="text-xs text-muted-foreground mt-2">Escaneie o crachá ou TAG RFID do visitante</p>
                   </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-3">
-                      EPIs Necessários
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {epiOpcoes.map(epi => (
-                        <label key={epi} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-muted/50 transition-all duration-200 border border-border/40">
-                          <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
-                            form.epiNecessario.includes(epi)
-                              ? "bg-primary border-primary shadow-md shadow-primary/30"
-                              : "border-border/60"
-                          }`}>
-                            {form.epiNecessario.includes(epi) && <Check size={14} className="text-white" />}
-                          </div>
-                          <span className="text-sm font-medium text-foreground">{epi}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -394,13 +357,6 @@ export default function NovoCadastroPage() {
                 <div className="relative z-10">
                   <div className="text-xs font-bold uppercase tracking-widest mb-5 opacity-90">
                     Prévia de Crachá
-                  </div>
-
-                  <div className="bg-white/15 rounded-xl p-5 mb-5 text-center border border-white/20">
-                    <div className="w-24 h-24 bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg mx-auto mb-4 flex items-center justify-center shadow-lg">
-                      <Camera size={40} className="text-gray-600" />
-                    </div>
-                    <p className="text-xs opacity-80 font-medium">Foto não capturada</p>
                   </div>
 
                   <div className="space-y-3 text-sm">
@@ -475,10 +431,6 @@ export default function NovoCadastroPage() {
                     <span className="text-amber-600 font-bold">•</span>
                     <span>Escaneie a TAG RFID para vincular ao cadastro</span>
                   </li>
-                  <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
-                    <span>Certifique-se de que o visitante está ciente dos EPIs necessários</span>
-                  </li>
                 </ul>
               </div>
             </div>
@@ -520,9 +472,6 @@ export default function NovoCadastroPage() {
                 <p><strong className="text-foreground">Setor:</strong> {form.setor}</p>
                 {form.setoresAcesso.length > 0 && (
                   <p><strong className="text-foreground">Setores de Acesso:</strong> {form.setoresAcesso.join(", ")}</p>
-                )}
-                {form.epiNecessario.length > 0 && (
-                  <p><strong className="text-foreground">EPIs Necessários:</strong> {form.epiNecessario.join(", ")}</p>
                 )}
               </div>
             </div>
