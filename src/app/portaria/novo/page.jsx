@@ -610,8 +610,8 @@ export default function NovoCadastroPage() {
                   CM
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-foreground">Carlos Mendes</h3>
-                  <p className="text-[10px] text-muted-foreground">Gerente de Produção - Ramal 214</p>
+                  <h3 className="font-bold text-sm text-foreground">Supervisor</h3>
+                  <p className="text-[10px] text-muted-foreground">Gerente de Produção</p>
                 </div>
               </div>
               <div className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[9px] font-bold border border-amber-100">
@@ -619,41 +619,13 @@ export default function NovoCadastroPage() {
               </div>
             </div>
 
-            {/* Simulação de Notificação */}
-            <div className="bg-gradient-to-br from-[#0A2540] via-[#123B63] to-[#0A2540] rounded-2xl overflow-hidden border border-[#4DA8EA]/20 shadow-lg shadow-[#0A2540]/10">
-              <div className="bg-white/5 px-4 py-2 flex items-center gap-2 border-b border-white/10">
-                <div className="w-4 h-4 bg-[#4DA8EA] rounded flex items-center justify-center text-[8px] text-white font-bold">A</div>
-                <span className="text-[9px] text-blue-100/80 font-medium uppercase tracking-wider">VisitTrack App - Simulação da notificação recebida pelo supervisor</span>
-              </div>
-              <div className="p-5">
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2 bg-[#4DA8EA]/12 rounded-lg border border-[#4DA8EA]/15">
-                    <Bell size={16} className="text-[#4DA8EA]" />
-                  </div>
-                  <div>
-                    <h4 className="text-white text-xs font-bold mb-1">Nova solicitação de acesso</h4>
-                    <p className="text-blue-100/70 text-[10px] leading-relaxed">
-                      O visitante <strong>{form.nome || "João Carvalho"}</strong> ({form.empresa || "TechMaint Serviços"}) chegou na portaria para <strong>{form.motivo || "manutenção"}</strong>. 
-                      Solicita acesso aos setores <strong>{form.setoresAcesso.join(", ") || "Produção"}</strong>. Autoriza a entrada?
-                    </p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <Button className="bg-[#4DA8EA] hover:bg-[#3b97d8] text-white text-[10px] font-bold h-9 rounded-xl border-0 shadow-md shadow-[#4DA8EA]/25">
-                    <Check size={14} className="mr-1.5" /> Aprovar Acesso
-                  </Button>
-                  <Button className="bg-white/5 hover:bg-white/10 text-blue-50 text-[10px] font-bold h-9 rounded-xl border border-white/10">
-                    <X size={14} className="mr-1.5" /> Negar
-                  </Button>
-                </div>
-              </div>
-            </div>
+            
 
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-border/40">
               <p className="text-[10px] text-muted-foreground font-medium">Não está respondendo? Contate o supervisor:</p>
               <div className="flex gap-2">
                 <Button variant="outline" className="h-8 rounded-lg text-[10px] font-bold gap-1.5 border-border/60">
-                  <PhoneCall size={12} /> Ligar - Ramal 214
+                  <PhoneCall size={12} /> Ligar
                 </Button>
                 <Button variant="outline" className="h-8 rounded-lg text-[10px] font-bold gap-1.5 border-border/60">
                   <RefreshCw size={12} /> Reenviar Notificação
@@ -672,11 +644,8 @@ export default function NovoCadastroPage() {
               <Button variant="outline" onClick={handleVoltarStep} className="h-10 rounded-xl text-[11px] font-bold gap-2 border-border/60 px-5">
                 <X size={14} /> Cancelar Cadastro
               </Button>
-              <Button variant="outline" className="h-10 rounded-xl text-[11px] font-bold gap-2 border-amber-200 bg-amber-50 text-amber-700 px-5">
-                <AlertCircle size={14} /> Acesso de Emergência
-              </Button>
               <Button className="h-10 rounded-xl text-[11px] font-bold gap-2 bg-blue-500 hover:bg-blue-600 text-white px-8 shadow-lg shadow-blue-500/20">
-                <RefreshCw size={14} /> Simular Aprovação
+                <RefreshCw size={14} /> Voltar
               </Button>
             </div>
           </div>
