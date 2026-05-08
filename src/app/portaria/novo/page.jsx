@@ -40,12 +40,14 @@ export default function NovoCadastroPage() {
   ];
 
   useEffect(() => {
-    let timer;
-    if (step === 2 && tempoEspera > 0) {
-      timer = setInterval(() => {
-        setTempoEspera((prev) => prev + 1);
-      }, 1000);
+    if (step !== 2) {
+      return undefined;
     }
+
+    const timer = setInterval(() => {
+      setTempoEspera((prev) => prev + 1);
+    }, 1000);
+
     return () => clearInterval(timer);
   }, [step]);
 
@@ -67,12 +69,19 @@ export default function NovoCadastroPage() {
   };
 
   const toggleSetorAcesso = (setor) => {
-    setForm({
-      ...form,
-      setoresAcesso: form.setoresAcesso.includes(setor)
-        ? form.setoresAcesso.filter(s => s !== setor)
-        : [...form.setoresAcesso, setor]
-    });
+    setForm((prev) => ({
+      ...prev,
+      setoresAcesso: prev.setoresAcesso.includes(setor)
+        ? prev.setoresAcesso.filter((s) => s !== setor)
+        : [...prev.setoresAcesso, setor]
+    }));
+  };
+
+  const toggleChecklistItem = (itemKey) => {
+    setChecklist((prev) => ({
+      ...prev,
+      [itemKey]: !prev[itemKey]
+    }));
   };
 
   const handleProximoStep = () => {
@@ -88,9 +97,9 @@ export default function NovoCadastroPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-transparent">
       {/* Header com Navegação */}
-      <div className="p-6 flex items-center justify-between bg-white border-b border-border/40">
+      <div className="p-6 flex items-center justify-between border-b border-white/40 bg-white/72 backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <Link href="/portaria" className="p-2 hover:bg-muted/60 rounded-lg transition-all duration-200 hover:scale-110">
             <ArrowLeft size={20} className="text-muted-foreground" />
@@ -215,6 +224,7 @@ export default function NovoCadastroPage() {
                       <option value="O">Outro</option>
                     </select>
                   </div>
+
                 </div>
               </div>
 
@@ -275,6 +285,7 @@ export default function NovoCadastroPage() {
                       </select>
                     </div>
                   </div>
+
                 </div>
               </div>
 
@@ -331,18 +342,37 @@ export default function NovoCadastroPage() {
                       Setores Permitidos
                     </label>
                     <div className="grid grid-cols-2 gap-3">
-                      {setoresDisponiveis.map(setor => (
-                        <label key={setor} className="flex items-center gap-3 cursor-pointer p-3 rounded-lg hover:bg-muted/50 transition-all duration-200 border border-border/40">
-                          <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
-                            form.setoresAcesso.includes(setor)
-                              ? "bg-primary border-primary shadow-md shadow-primary/30"
-                              : "border-border/60"
-                          }`}>
-                            {form.setoresAcesso.includes(setor) && <Check size={14} className="text-white" />}
-                          </div>
-                          <span className="text-sm font-medium text-foreground">{setor}</span>
-                        </label>
-                      ))}
+                      {setoresDisponiveis.map((setor, index) => {
+                        const isSelected = form.setoresAcesso.includes(setor);
+
+                        return (
+                          <label
+                            key={setor}
+                            htmlFor={`setor-acesso-${index}`}
+                            className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all duration-200 border ${
+                              isSelected
+                                ? "bg-primary/5 border-primary/30 shadow-sm"
+                                : "border-border/40 hover:bg-muted/50"
+                            }`}
+                          >
+                            <input
+                              id={`setor-acesso-${index}`}
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSetorAcesso(setor)}
+                              className="sr-only"
+                            />
+                            <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
+                              isSelected
+                                ? "bg-primary border-primary shadow-md shadow-primary/30"
+                                : "border-border/60"
+                            }`}>
+                              {isSelected && <Check size={14} className="text-white" />}
+                            </div>
+                            <span className="text-sm font-medium text-foreground">{setor}</span>
+                          </label>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -366,30 +396,46 @@ export default function NovoCadastroPage() {
             {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
               {/* Prévia de Crachá */}
-              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
-                {/* Efeito de fundo */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
-                </div>
+              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
+                <div className="rounded-[24px] border border-border/60 bg-background p-5">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-foreground">
+                        Prévia de Crachá
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Dados atualizados conforme o cadastro
+                      </p>
+                    </div>
 
-                <div className="relative z-10">
-                  <div className="text-xs font-bold uppercase tracking-widest mb-5 opacity-90">
-                    Prévia de Crachá
+                    <div className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                      <Tag size={11} />
+                      Visitante
+                    </div>
                   </div>
 
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Nome:</span>
-                      <span className="font-bold text-right text-sm">{form.nome || "—"}</span>
+                    <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Nome:</span>
+                      <span className="font-bold text-right text-sm text-foreground">{form.nome || "—"}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Empresa:</span>
-                      <span className="font-bold text-right text-xs">{form.empresa || "—"}</span>
+                    <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Empresa:</span>
+                      <span className="font-bold text-right text-xs text-foreground">{form.empresa || "—"}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Setor:</span>
-                      <span className="font-bold text-right text-xs">{form.setor || "—"}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Setor:</span>
+                      <span className="font-bold text-right text-xs text-foreground">{form.setor || "—"}</span>
                     </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                      Status
+                    </span>
+                    <span className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[10px] font-bold text-primary">
+                      Pronto para emissão
+                    </span>
                   </div>
                 </div>
               </div>
@@ -411,7 +457,20 @@ export default function NovoCadastroPage() {
                     { key: "empresaAcessivel", label: "Empresa acessível" },
                     { key: "telefoneContato", label: "Telefone de contato" }
                   ].map(({ key, label }) => (
-                    <label key={key} className="flex items-center gap-3 cursor-pointer group p-2.5 rounded-lg hover:bg-muted/50 transition-all duration-200">
+                    <label
+                      key={key}
+                      htmlFor={`checklist-${key}`}
+                      className={`flex items-center gap-3 cursor-pointer group p-2.5 rounded-lg transition-all duration-200 ${
+                        checklist[key] ? "bg-primary/5" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <input
+                        id={`checklist-${key}`}
+                        type="checkbox"
+                        checked={checklist[key]}
+                        onChange={() => toggleChecklistItem(key)}
+                        className="sr-only"
+                      />
                       <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
                         checklist[key]
                           ? "bg-primary border-primary shadow-md shadow-primary/30"
@@ -561,29 +620,29 @@ export default function NovoCadastroPage() {
             </div>
 
             {/* Simulação de Notificação */}
-            <div className="bg-[#0F172A] rounded-2xl overflow-hidden border border-slate-800">
-              <div className="bg-slate-800/50 px-4 py-2 flex items-center gap-2 border-b border-slate-700">
-                <div className="w-4 h-4 bg-blue-500 rounded flex items-center justify-center text-[8px] text-white font-bold">A</div>
-                <span className="text-[9px] text-slate-300 font-medium uppercase tracking-wider">VisitTrack App - Simulação da notificação recebida pelo supervisor</span>
+            <div className="bg-gradient-to-br from-[#0A2540] via-[#123B63] to-[#0A2540] rounded-2xl overflow-hidden border border-[#4DA8EA]/20 shadow-lg shadow-[#0A2540]/10">
+              <div className="bg-white/5 px-4 py-2 flex items-center gap-2 border-b border-white/10">
+                <div className="w-4 h-4 bg-[#4DA8EA] rounded flex items-center justify-center text-[8px] text-white font-bold">A</div>
+                <span className="text-[9px] text-blue-100/80 font-medium uppercase tracking-wider">VisitTrack App - Simulação da notificação recebida pelo supervisor</span>
               </div>
               <div className="p-5">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2 bg-amber-500/10 rounded-lg">
-                    <Bell size={16} className="text-amber-500" />
+                  <div className="p-2 bg-[#4DA8EA]/12 rounded-lg border border-[#4DA8EA]/15">
+                    <Bell size={16} className="text-[#4DA8EA]" />
                   </div>
                   <div>
                     <h4 className="text-white text-xs font-bold mb-1">Nova solicitação de acesso</h4>
-                    <p className="text-slate-400 text-[10px] leading-relaxed">
+                    <p className="text-blue-100/70 text-[10px] leading-relaxed">
                       O visitante <strong>{form.nome || "João Carvalho"}</strong> ({form.empresa || "TechMaint Serviços"}) chegou na portaria para <strong>{form.motivo || "manutenção"}</strong>. 
                       Solicita acesso aos setores <strong>{form.setoresAcesso.join(", ") || "Produção"}</strong>. Autoriza a entrada?
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold h-9 rounded-xl border-0">
+                  <Button className="bg-[#4DA8EA] hover:bg-[#3b97d8] text-white text-[10px] font-bold h-9 rounded-xl border-0 shadow-md shadow-[#4DA8EA]/25">
                     <Check size={14} className="mr-1.5" /> Aprovar Acesso
                   </Button>
-                  <Button className="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[10px] font-bold h-9 rounded-xl border border-rose-500/20">
+                  <Button className="bg-white/5 hover:bg-white/10 text-blue-50 text-[10px] font-bold h-9 rounded-xl border border-white/10">
                     <X size={14} className="mr-1.5" /> Negar
                   </Button>
                 </div>

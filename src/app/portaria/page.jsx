@@ -1,9 +1,16 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
+
+import { useEffect, useMemo, useState } from "react";
 import {
-  Users, Clock, LogOut, AlertTriangle, Search, X, Plus,
-  CheckCircle2, XCircle, Loader2, Download, QrCode, Phone, MapPin, Building2, Calendar, Eye, EyeOff
+  AlertTriangle,
+  Building2,
+  Clock,
+  Loader2,
+  LogOut,
+  QrCode,
+  Search,
+  Users,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +18,6 @@ import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { api } from "@/services/api";
 
-// ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 const STATUS_LABEL = {
   ativo: "Dentro",
   saida: "Saída",
@@ -33,7 +39,54 @@ const STATUS_DOT = {
   alerta: "bg-red-500"
 };
 
-// ─── MODAL DE CHECK-OUT ──────────────────────────────────────────────────────
+const STATUS_FILTERS = [
+  { label: "Todos", value: "Todos" },
+  { label: "Ativo", value: "ativo" },
+  { label: "Pendente", value: "pendente" },
+  { label: "Saída", value: "saida" }
+];
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function formatDuration(startDate) {
+  if (!startDate) return "—";
+
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) {
+    return "—";
+  }
+
+  const diffInMinutes = Math.max(0, Math.round((Date.now() - start.getTime()) / 60000));
+  const hours = Math.floor(diffInMinutes / 60);
+  const minutes = diffInMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+
+  return `${hours}h ${minutes.toString().padStart(2, "0")}min`;
+}
+
+function getSetorLabel(visitante) {
+  if (Array.isArray(visitante?.setoresAcesso) && visitante.setoresAcesso.length > 0) {
+    return visitante.setoresAcesso.join(", ");
+  }
+
+  return visitante?.setor || "—";
+}
+
 function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   const [loading, setLoading] = useState(false);
 
@@ -45,7 +98,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
         dataSaida: new Date().toISOString()
       };
 
-      const response = await api.post('/portaria/checkout', payload);
+      const response = await api.post("/portaria/checkout", payload);
 
       if (response.sucesso) {
         alert("Check-out realizado com sucesso!");
@@ -64,66 +117,66 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
 
   if (!isOpen || !visitante) return null;
 
-  const tempoPermanen = Math.round((new Date() - new Date(visitante.dataEntrada)) / 60000);
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-card rounded-xl border border-border w-full max-w-md shadow-lg animate-in fade-in zoom-in duration-300">
-        <div className="flex items-center justify-between p-4 border-b border-border">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md animate-in zoom-in rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+        <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-lg font-semibold text-foreground">Check-out</h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-muted rounded-lg transition-colors"
+            className="rounded-lg p-1 transition-colors hover:bg-muted"
+            type="button"
           >
             <X size={18} className="text-muted-foreground" />
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
-          <div className="bg-muted/40 rounded-lg p-3 space-y-3">
+        <div className="space-y-4 p-4">
+          <div className="space-y-3 rounded-lg bg-muted/40 p-3">
             <div className="flex items-start gap-2">
-              <Users size={16} className="text-muted-foreground mt-0.5" />
+              <Users size={16} className="mt-0.5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Visitante</p>
-                <p className="text-sm font-medium text-foreground">{visitante.nome}</p>
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Visitante</p>
+                <p className="text-sm font-medium text-foreground">{visitante.nome || "—"}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <Building2 size={16} className="text-muted-foreground mt-0.5" />
+              <Building2 size={16} className="mt-0.5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Empresa</p>
-                <p className="text-sm font-medium text-foreground">{visitante.empresa}</p>
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Empresa</p>
+                <p className="text-sm font-medium text-foreground">{visitante.empresa || "—"}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <Clock size={16} className="text-muted-foreground mt-0.5" />
+              <Clock size={16} className="mt-0.5 text-muted-foreground" />
               <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Tempo de Permanência</p>
-                <p className="text-sm font-medium text-foreground">{tempoPermanen} minutos</p>
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Tempo de Permanência</p>
+                <p className="text-sm font-medium text-foreground">{formatDuration(visitante.dataEntrada)}</p>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Observações
             </label>
             <textarea
               placeholder="Adicione observações sobre a visita (opcional)"
-              className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition resize-none"
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               rows="3"
             />
           </div>
         </div>
 
-        <div className="flex gap-2 p-4 border-t border-border">
+        <div className="flex gap-2 border-t border-border p-4">
           <Button
             variant="outline"
             onClick={onClose}
             className="flex-1"
             disabled={loading}
+            type="button"
           >
             Cancelar
           </Button>
@@ -131,6 +184,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
             onClick={handleCheckout}
             className="flex-1 bg-red-600 hover:bg-red-700"
             disabled={loading}
+            type="button"
           >
             {loading ? (
               <>
@@ -150,59 +204,57 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   );
 }
 
-// ─── CARTÃO DE VISITANTE ─────────────────────────────────────────────────────
-function CartaoVisitante({ visitante, onCheckout }) {
-  const statusClass = STATUS_STYLE[visitante.status] || STATUS_STYLE.ativo;
-  const dotClass = STATUS_DOT[visitante.status] || STATUS_DOT.ativo;
+function LinhaVisitante({ visitante, onCheckout }) {
+  const status = visitante.status || "ativo";
+  const statusClass = STATUS_STYLE[status] || STATUS_STYLE.ativo;
+  const dotClass = STATUS_DOT[status] || STATUS_DOT.ativo;
 
   return (
-    <div className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-foreground">{visitante.nome}</h3>
-          <p className="text-xs text-muted-foreground">{visitante.cpf}</p>
+    <tr className="border-b border-border transition-colors hover:bg-muted/50">
+      <td className="px-4 py-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">{visitante.nome || "—"}</p>
+          <p className="text-xs text-muted-foreground">{visitante.cpf || "CPF não informado"}</p>
         </div>
-        <span className={`inline-flex px-2 py-1 rounded-md text-xs font-medium ${statusClass}`}>
-          {STATUS_LABEL[visitante.status]}
+      </td>
+      <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa || "—"}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{getSetorLabel(visitante)}</td>
+      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+        {formatDateTime(visitante.dataEntrada)}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+        {formatDuration(visitante.dataEntrada)}
+      </td>
+      <td className="px-4 py-3">
+        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+          {STATUS_LABEL[status] || STATUS_LABEL.ativo}
         </span>
-      </div>
-
-      <div className="space-y-2 mb-4 text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Building2 size={14} />
-          <span>{visitante.empresa}</span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <MapPin size={14} />
-          <span>{visitante.setor}</span>
-        </div>
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock size={14} />
-          <span>{visitante.dataEntrada}</span>
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" className="flex-1 text-xs">
-          <QrCode size={12} className="mr-1" />
-          Crachá
-        </Button>
-        {visitante.status === "ativo" && (
-          <Button
-            size="sm"
-            onClick={() => onCheckout(visitante)}
-            className="flex-1 text-xs bg-red-600 hover:bg-red-700"
-          >
-            <LogOut size={12} className="mr-1" />
-            Saída
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" type="button">
+            <QrCode size={12} />
+            <span className="hidden xl:inline">Crachá</span>
           </Button>
-        )}
-      </div>
-    </div>
+
+          {status === "ativo" && (
+            <Button
+              size="sm"
+              onClick={() => onCheckout(visitante)}
+              className="h-8 gap-1.5 bg-red-600 text-xs hover:bg-red-700"
+              type="button"
+            >
+              <LogOut size={12} />
+              <span className="hidden xl:inline">Saída</span>
+            </Button>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }
 
-// ─── PÁGINA PRINCIPAL ────────────────────────────────────────────────────────
 export default function PortariaPage() {
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -220,11 +272,11 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      const response = await api.get('/portaria/visitantes-presentes');
+      const response = await api.get("/portaria/visitantes-presentes");
 
-      if (response && typeof response === 'object' && response.sucesso && response.data) {
+      if (response && typeof response === "object" && response.sucesso && response.data) {
         setVisitantes(response.data);
-      } else if (!response || typeof response !== 'object') {
+      } else if (!response || typeof response !== "object") {
         console.warn("Back-end não está pronto. Exibindo lista vazia.");
         setVisitantes([]);
       }
@@ -237,13 +289,19 @@ export default function PortariaPage() {
   }
 
   const visitantesFiltrados = useMemo(() => {
-    return visitantes.filter(v => {
-      const matchBusca = busca === "" ||
-        v.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        v.cpf.includes(busca) ||
-        v.empresa.toLowerCase().includes(busca.toLowerCase());
+    return visitantes.filter((visitante) => {
+      const nome = visitante?.nome?.toLowerCase() || "";
+      const cpf = visitante?.cpf || "";
+      const empresa = visitante?.empresa?.toLowerCase() || "";
+      const termoBusca = busca.toLowerCase();
 
-      const matchStatus = filtroStatus === "Todos" || v.status === filtroStatus.toLowerCase();
+      const matchBusca =
+        busca === "" ||
+        nome.includes(termoBusca) ||
+        cpf.includes(busca) ||
+        empresa.includes(termoBusca);
+
+      const matchStatus = filtroStatus === "Todos" || visitante.status === filtroStatus;
 
       return matchBusca && matchStatus;
     });
@@ -267,40 +325,39 @@ export default function PortariaPage() {
         buttonHref="/portaria/novo"
       />
 
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         <StatCard
           label="Visitantes Presentes"
-          value={visitantes.filter(v => v.status === "ativo").length}
+          value={visitantes.filter((visitante) => visitante.status === "ativo").length}
           icon={<Users size={20} className="text-blue-600" />}
         />
         <StatCard
           label="Aguardando Aprovação"
-          value={visitantes.filter(v => v.status === "pendente").length}
+          value={visitantes.filter((visitante) => visitante.status === "pendente").length}
           icon={<AlertTriangle size={20} className="text-amber-600" />}
         />
         <StatCard
           label="Saídas Hoje"
-          value={visitantes.filter(v => v.status === "saida").length}
+          value={visitantes.filter((visitante) => visitante.status === "saida").length}
           icon={<LogOut size={20} className="text-green-600" />}
         />
       </div>
 
-      {/* Barra de Busca e Filtros */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-6">
+      <div className="mb-6 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="relative flex-1 md:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
             <Input
               placeholder="Buscar por nome, CPF ou empresa..."
-              className="pl-9 h-9 text-sm"
+              className="h-9 pl-9 text-sm"
               value={busca}
-              onChange={(e) => setBusca(e.target.value)}
+              onChange={(event) => setBusca(event.target.value)}
             />
             {busca && (
               <button
                 onClick={() => setBusca("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                type="button"
               >
                 <X size={14} />
               </button>
@@ -308,49 +365,78 @@ export default function PortariaPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {["Todos", "Ativo", "Pendente", "Saida"].map((status) => (
+            {STATUS_FILTERS.map((status) => (
               <button
-                key={status}
-                onClick={() => setFiltroStatus(status)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filtroStatus === status
+                key={status.value}
+                onClick={() => setFiltroStatus(status.value)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
+                  filtroStatus === status.value
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "bg-muted text-muted-foreground hover:bg-accent"
                 }`}
+                type="button"
               >
-                {status}
+                {status.label}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Grid de Visitantes */}
-      <div>
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Loader2 className="animate-spin mb-2" size={24} />
-            <span className="text-sm">Carregando visitantes...</span>
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b border-border p-4">
+          <div>
+            <h3 className="text-sm font-bold">Visitantes em Operação</h3>
+            <p className="text-xs text-muted-foreground">{visitantesFiltrados.length} registros</p>
           </div>
-        ) : visitantesFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Users className="mb-2 opacity-50" size={32} />
-            <span className="text-sm">Nenhum visitante encontrado</span>
+          <div className="text-[11px] text-muted-foreground">
+            Atualização automática a cada 30 segundos
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visitantesFiltrados.map((v) => (
-              <CartaoVisitante
-                key={v.id}
-                visitante={v}
-                onCheckout={handleCheckout}
-              />
-            ))}
-          </div>
-        )}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3">Visitante</th>
+                <th className="px-4 py-3">Empresa</th>
+                <th className="px-4 py-3">Setor</th>
+                <th className="px-4 py-3">Entrada</th>
+                <th className="px-4 py-3">Permanência</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="animate-spin" size={24} />
+                      <span className="text-sm">Carregando visitantes...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : visitantesFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                    Nenhum visitante encontrado.
+                  </td>
+                </tr>
+              ) : (
+                visitantesFiltrados.map((visitante, index) => (
+                  <LinhaVisitante
+                    key={visitante.id || `${visitante.cpf || visitante.nome || "visitante"}-${index}`}
+                    visitante={visitante}
+                    onCheckout={handleCheckout}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Modal de Check-out */}
       <ModalCheckout
         isOpen={modalCheckoutAberto}
         onClose={() => setModalCheckoutAberto(false)}

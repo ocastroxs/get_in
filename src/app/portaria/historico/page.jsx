@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import { api } from "@/services/api";
 
+const STATUS_OPTIONS = ["Todos", "Ativo", "Finalizado"];
+
 // ─── MODAL DE DETALHES ───────────────────────────────────────────────────────
 function ModalDetalhes({ isOpen, onClose, registro }) {
   if (!isOpen || !registro) return null;
@@ -191,9 +193,27 @@ export default function HistoricoPage() {
     });
   }, [registros, busca, filtroStatus, filtroData]);
 
+  const resumoStatus = useMemo(() => ({
+    Todos: registros.length,
+    Ativo: registros.filter((r) => !r.dataSaida).length,
+    Finalizado: registros.filter((r) => Boolean(r.dataSaida)).length,
+  }), [registros]);
+
+  const filtrosAtivos = [
+    busca ? `Busca: "${busca}"` : null,
+    filtroData ? `Data: ${filtroData}` : null,
+    filtroStatus !== "Todos" ? `Status: ${filtroStatus}` : null,
+  ].filter(Boolean);
+
   function handleDetalhes(registro) {
     setRegistroSelecionado(registro);
     setModalAberto(true);
+  }
+
+  function limparFiltros() {
+    setBusca("");
+    setFiltroData("");
+    setFiltroStatus("Todos");
   }
 
   function downloadCSV() {
@@ -220,65 +240,126 @@ export default function HistoricoPage() {
       />
 
       {/* Barra de Filtros */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-6 space-y-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          {/* Busca */}
-          <div className="relative flex-1 md:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-            <Input
-              placeholder="Buscar por nome, CPF ou empresa..."
-              className="pl-9 h-9 text-sm"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-            {busca && (
-              <button
-                onClick={() => setBusca("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+      <div className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm">
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/10">
+                <Filter size={18} className="text-primary" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Filtros do Histórico</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Refine os registros por visitante, período e status de permanência.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+                {registrosFiltrados.length} resultado(s)
+              </div>
+              {filtrosAtivos.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={limparFiltros}
+                  className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} className="mr-1.5" />
+                  Limpar filtros
+                </Button>
+              )}
+              <Button
+                type="button"
+                onClick={downloadCSV}
+                variant="outline"
+                className="h-9 gap-2 rounded-xl border-border/60"
               >
-                <X size={14} />
-              </button>
-            )}
+                <Download size={14} />
+                Exportar CSV
+              </Button>
+            </div>
           </div>
 
-          {/* Data */}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-            <Input
-              type="date"
-              placeholder="Filtrar por data..."
-              className="pl-9 h-9 text-sm"
-              value={filtroData}
-              onChange={(e) => setFiltroData(e.target.value)}
-            />
+          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_260px] gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+              <Input
+                placeholder="Buscar por nome, CPF ou empresa..."
+                className="pl-10 pr-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+              <Input
+                type="date"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={filtroData}
+                onChange={(e) => setFiltroData(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* Exportar */}
-          <Button
-            onClick={downloadCSV}
-            variant="outline"
-            className="gap-2"
-          >
-            <Download size={14} />
-            Exportar
-          </Button>
-        </div>
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              <Filter size={13} />
+              Status da visita
+            </div>
 
-        {/* Filtros de Status */}
-        <div className="flex flex-wrap items-center gap-2">
-          {["Todos", "Ativo", "Finalizado"].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFiltroStatus(status)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                filtroStatus === status
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+            <div className="flex flex-wrap items-center gap-2">
+              {STATUS_OPTIONS.map((status) => {
+                const isActive = filtroStatus === status;
+
+                return (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setFiltroStatus(status)}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                      isActive
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40 hover:text-foreground"
+                    }`}
+                  >
+                    <span>{status}</span>
+                    <span className={`min-w-5 h-5 px-1 rounded-full text-[10px] flex items-center justify-center ${
+                      isActive
+                        ? "bg-white/20 text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}>
+                      {resumoStatus[status]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {filtrosAtivos.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {filtrosAtivos.map((filtro) => (
+                <span
+                  key={filtro}
+                  className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary"
+                >
+                  {filtro}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
