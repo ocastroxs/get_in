@@ -114,28 +114,26 @@ export default function NovoCadastroPage() {
           </div>
         </div>
 
-        {/* Breadcrumb de Steps - Estilo Imagem */}
+        {/* Breadcrumb de Steps - Corrigido para 2 passos */}
         <div className="flex items-center gap-4 bg-muted/30 p-1.5 rounded-full border border-border/40">
           {[
             { id: 1, label: "Identificação" },
-            { id: 2, label: "Acesso" },
-            { id: 3, label: "Aprovação" },
-            { id: 4, label: "Crachá" }
+            { id: 2, label: "Autorização" }
           ].map((s) => (
             <div key={s.id} className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                (step === 1 && s.id === 1) || (step === 2 && s.id === 3)
+                step === s.id
                   ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30"
-                  : (step === 2 && s.id < 3) || (step === 1 && s.id < 1)
+                  : step > s.id
                     ? "bg-emerald-500 text-white"
                     : "bg-white text-muted-foreground border border-border"
               }`}>
-                {(step === 2 && s.id < 3) ? <Check size={12} /> : s.id}
+                {step > s.id ? <Check size={12} /> : s.id}
               </div>
               <span className={`text-[11px] font-bold ${
-                (step === 1 && s.id === 1) || (step === 2 && s.id === 3)
+                step === s.id
                   ? "text-foreground"
-                  : (step === 2 && s.id < 3)
+                  : step > s.id
                     ? "text-emerald-600"
                     : "text-muted-foreground"
               }`}>
