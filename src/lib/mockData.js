@@ -89,15 +89,15 @@ export const PICO_MOVIMENTO = [
 export const TIPOS_VISITANTE = [
   { name: "Técnico / Manutenção", value: 14, color: "var(--chart-1)" },
   { name: "Auditor / Fiscal", value: 9, color: "var(--chart-2)" },
-  { name: "Fornecedor", value: 8, color: "var(--chart-3)" },
-  { name: "Visitante Geral", value: 7, color: "var(--chart-5)" },
+  { name: "Fornecedor", value: 8, color: "rgba(15, 58, 125, 0.42)" },
+  { name: "Visitante Geral", value: 7, color: "rgba(15, 58, 125, 0.24)" },
 ];
 
 export const STATUS_VISITANTES = [
   { name: "Dentro da fábrica", value: 14, color: "var(--chart-2)" },
   { name: "Aguard. aprovação", value: 2, color: "var(--chart-3)" },
   { name: "Alerta permanência", value: 1, color: "var(--chart-5)" },
-  { name: "Check-out realizado", value: 24, color: "var(--muted)" },
+  { name: "Check-out realizado", value: 24, color: "rgba(15, 58, 125, 0.18)" },
 ];
 
 export const ULTIMOS_CHECKINS = [

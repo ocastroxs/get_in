@@ -36,10 +36,11 @@ export default function TiposVisitantesChart({
   const chartSize = mobileLayout ? 112 : 156;
 
   return (
-    <div className={`bg-card text-card-foreground rounded-xl border border-border flex flex-col shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-3 p-4" : "gap-3 p-4 min-h-[280px]"}`}>
+    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "gap-4 p-5 min-h-[280px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
-        <h2 className={`${mobileLayout ? "text-base" : "text-sm"} font-bold text-foreground`}>{title}</h2>
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuicao</p>
+        <h2 className={`${mobileLayout ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h2>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
 
       <div className={`mt-1 flex ${mobileLayout ? "flex-col gap-4" : "flex-1 items-center gap-6"}`}>
@@ -72,7 +73,7 @@ export default function TiposVisitantesChart({
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-bold text-foreground`}>{total}</span>
+            <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
             <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
           </div>
         </div>
@@ -81,7 +82,7 @@ export default function TiposVisitantesChart({
           {data.map((item, index) => (
             <div
               key={index}
-              className={`grid items-center rounded-lg hover:bg-muted/50 transition-all hover:translate-x-1 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2 py-1.5"}`}
+              className={`grid items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2.5" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2.5 py-2"}`}
               style={{ animationDelay: `${500 + index * 50}ms` }}
             >
               <div className="flex min-w-0 items-center gap-2.5">

@@ -10,39 +10,79 @@ export default function StatCard({
   deltaDir,
   accentVar = "var(--primary)",
   compact = false,
+  featured = false,
+  insight,
 }) {
   return (
     <div
       className={[
-        "bg-card text-card-foreground rounded-xl border border-border flex flex-col hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4 duration-700",
-        compact ? "min-h-[112px] gap-2 p-3" : "gap-3 p-4",
+        "group flex flex-col rounded-[20px] border border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg animate-in fade-in slide-in-from-bottom-4",
+        compact ? "min-h-[112px] gap-2 p-4" : "gap-4 p-5",
+        featured ? "min-h-[168px] justify-between bg-[linear-gradient(180deg,rgba(15,58,125,0.03),rgba(255,255,255,0.98))]" : "",
       ].join(" ")}
-      style={{ borderBottomColor: accentVar, borderBottomWidth: "2px" }}
+      style={{
+        borderTopColor: accentVar,
+        borderTopWidth: "2px",
+        boxShadow: featured ? "0 2px 6px rgba(15, 58, 125, 0.08)" : undefined,
+      }}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className={compact ? "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground" : "text-[11px] font-semibold uppercase tracking-widest text-muted-foreground"}>
+        <p
+          className={[
+            "font-semibold uppercase text-muted-foreground",
+            compact ? "text-[10px] tracking-[0.18em]" : "text-[11px] tracking-[0.22em]",
+          ].join(" ")}
+        >
           {label}
         </p>
         {icon && (
-          <div className={compact ? "flex h-8 w-8 items-center justify-center rounded-lg bg-accent animate-in fade-in zoom-in duration-700 delay-100" : "flex h-9 w-9 items-center justify-center rounded-lg bg-accent transition-all group-hover:scale-110 animate-in fade-in zoom-in duration-700 delay-100"}>
+          <div
+            className={[
+              "flex items-center justify-center rounded-xl border border-border/70 bg-accent/80 transition-colors group-hover:bg-accent",
+              compact ? "h-8 w-8" : featured ? "h-11 w-11" : "h-9 w-9",
+            ].join(" ")}
+          >
             {icon}
           </div>
         )}
       </div>
 
       <div className={compact ? "flex items-end gap-2" : "flex items-end gap-3"}>
-        <span className={`${compact ? "text-2xl" : "text-4xl"} font-bold leading-none ${valueClassName}`}>
+        <span
+          className={[
+            "font-mono font-semibold leading-none tracking-tight",
+            compact ? "text-[2rem]" : featured ? "text-[2.7rem]" : "text-[2.6rem]",
+            valueClassName,
+          ].join(" ")}
+        >
           {value}
         </span>
         {delta !== undefined && (
-          <span className={`flex items-center gap-0.5 font-semibold ${compact ? "mb-0 text-[10px]" : "mb-0.5 text-xs"} ${deltaDir === "up" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+          <span
+            className={[
+              "inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold",
+              compact ? "mb-0 text-[10px]" : "mb-0.5 text-xs",
+              deltaDir === "up"
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-red-50 text-red-700",
+            ].join(" ")}
+          >
             {deltaDir === "up" ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {delta}%
           </span>
         )}
       </div>
 
-      {sub && <p className={compact ? "text-[11px] leading-snug text-muted-foreground" : "text-xs text-muted-foreground"}>{sub}</p>}
+      {(sub || insight) && (
+        <div className="space-y-1">
+          {sub ? (
+            <p className={compact ? "text-[11px] leading-snug text-muted-foreground" : "text-xs text-muted-foreground"}>
+              {sub}
+            </p>
+          ) : null}
+          {insight ? <p className="text-xs font-medium text-foreground/80">{insight}</p> : null}
+        </div>
+      )}
     </div>
   );
 }
