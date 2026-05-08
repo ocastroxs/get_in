@@ -493,7 +493,7 @@ export default function NovoCadastroPage() {
                 Aguardando há {formatTime(tempoEspera)}
               </div>
               
-              <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-bold border border-blue-100">
+              <div className="flex items-center gap-2 bg-primary/5 text-primary px-4 py-2 rounded-full text-[10px] font-bold border border-primary/10">
                 <Bell size={12} />
                 Notificação push enviada às 08:12 - VisitTrack App
               </div>
