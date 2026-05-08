@@ -114,7 +114,7 @@ export default function NovoCadastroPage() {
           </div>
         </div>
 
-        {/* Breadcrumb de Steps - Corrigido para 2 passos */}
+        {/* Breadcrumb de Steps - 2 passos */}
         <div className="flex items-center gap-4 bg-muted/30 p-1.5 rounded-full border border-border/40">
           {[
             { id: 1, label: "Identificação" },
@@ -469,7 +469,7 @@ export default function NovoCadastroPage() {
         </div>
       )}
 
-      {/* STEP 2: AGUARDANDO AUTORIZAÇÃO (Novo Layout Baseado na Imagem) */}
+      {/* STEP 2: AGUARDANDO AUTORIZAÇÃO */}
       {step === 2 && (
         <div className="p-8 max-w-5xl mx-auto space-y-6">
           {/* Card Central de Status */}
@@ -500,83 +500,45 @@ export default function NovoCadastroPage() {
             </div>
           </div>
 
-          {/* Grid de Informações */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Dados do Visitante */}
-            <div className="bg-white border border-border rounded-[32px] p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-blue-50 rounded-xl">
-                  <User size={18} className="text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-foreground">Dados do Visitante</h3>
-                  <p className="text-[10px] text-muted-foreground">Resumo do cadastro enviado</p>
-                </div>
+          {/* Dados do Visitante - Ocupando largura total após remoção da timeline */}
+          <div className="bg-white border border-border rounded-[32px] p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-blue-50 rounded-xl">
+                <User size={20} className="text-blue-600" />
               </div>
-
-              <div className="space-y-4">
-                {[
-                  { label: "Nome", value: form.nome || "João Carvalho" },
-                  { label: "Empresa", value: form.empresa || "TechMaint Serviços" },
-                  { label: "Tipo", value: "Técnico / Manutenção" },
-                  { label: "CPF", value: form.cpf || "02.345.678-90" },
-                  { label: "Período", value: "28 jul - 08:00 - 17:00" },
-                  { label: "Crachá", value: form.tagRFID || "TAG-0047" },
-                ].map((item, i) => (
-                  <div key={i} className="flex justify-between items-center border-b border-border/40 pb-2 last:border-0">
-                    <span className="text-[11px] text-muted-foreground font-medium">{item.label}</span>
-                    <span className="text-[11px] text-foreground font-bold">{item.value}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between items-center pt-1">
-                  <span className="text-[11px] text-muted-foreground font-medium">Setores</span>
-                  <div className="flex gap-2">
-                    <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-[9px] font-bold border border-amber-100">
-                      <div className="w-1 h-1 rounded-full bg-amber-500" /> Produção
-                    </span>
-                    <span className="flex items-center gap-1 bg-rose-50 text-rose-700 px-2 py-0.5 rounded text-[9px] font-bold border border-rose-100">
-                      <div className="w-1 h-1 rounded-full bg-rose-500" /> Manutenção
-                    </span>
-                  </div>
-                </div>
+              <div>
+                <h3 className="font-bold text-base text-foreground">Dados do Visitante</h3>
+                <p className="text-xs text-muted-foreground">Resumo do cadastro enviado</p>
               </div>
             </div>
 
-            {/* Status do Processo */}
-            <div className="bg-white border border-border rounded-[32px] p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-slate-50 rounded-xl">
-                  <Zap size={18} className="text-slate-600" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+              {[
+                { label: "Nome", value: form.nome || "—" },
+                { label: "Empresa", value: form.empresa || "—" },
+                { label: "Tipo", value: form.motivo || "—" },
+                { label: "CPF", value: form.cpf || "—" },
+                { label: "Período", value: "Acesso imediato" },
+                { label: "Crachá / TAG", value: form.tagRFID || "Pendente" },
+              ].map((item, i) => (
+                <div key={i} className="flex justify-between items-center border-b border-border/40 pb-3">
+                  <span className="text-xs text-muted-foreground font-medium">{item.label}</span>
+                  <span className="text-xs text-foreground font-bold">{item.value}</span>
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-foreground">Status do Processo</h3>
-                  <p className="text-[10px] text-muted-foreground">Acompanhamento em tempo real</p>
+              ))}
+              <div className="flex justify-between items-center pt-1 md:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium">Setores de Acesso</span>
+                <div className="flex gap-2">
+                  {form.setoresAcesso.length > 0 ? (
+                    form.setoresAcesso.map((setor, idx) => (
+                      <span key={idx} className="flex items-center gap-1 bg-primary/5 text-primary px-3 py-1 rounded-full text-[10px] font-bold border border-primary/10">
+                        <div className="w-1 h-1 rounded-full bg-primary" /> {setor}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Nenhum setor selecionado</span>
+                  )}
                 </div>
-              </div>
-
-              <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-                {[
-                  { title: "Visitante cadastrado", time: "08:10 - Rafael Silva (Portaria)", desc: "Dados pessoais e permissões registrados no sistema.", status: "complete" },
-                  { title: "Crachá TAG-0047 vinculado", time: "08:11 - Sistema automático", desc: "", status: "complete" },
-                  { title: "Notificação enviada ao supervisor", time: "08:12 - Push notification", desc: "Carlos Mendes — Gerente de Produção", status: "complete" },
-                  { title: "Aguardando aprovação", time: "Agora - Em andamento...", desc: "", status: "active" },
-                  { title: "Crachá ativado e entregue", time: "Pendente", desc: "", status: "pending" },
-                ].map((item, i) => (
-                  <div key={i} className="relative pl-8">
-                    <div className={`absolute left-0 top-1 w-6 h-6 rounded-full border-4 border-white flex items-center justify-center z-10 ${
-                      item.status === "complete" ? "bg-emerald-500" : item.status === "active" ? "bg-amber-400" : "bg-slate-200"
-                    }`}>
-                      {item.status === "complete" && <Check size={10} className="text-white" />}
-                    </div>
-                    <div>
-                      <h4 className={`text-[11px] font-bold ${item.status === "pending" ? "text-muted-foreground" : "text-foreground"}`}>
-                        {item.title}
-                      </h4>
-                      <p className="text-[9px] text-muted-foreground font-medium">{item.time}</p>
-                      {item.desc && <p className="text-[9px] text-muted-foreground mt-1 bg-slate-50 p-1.5 rounded-lg border border-slate-100">{item.desc}</p>}
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -612,7 +574,8 @@ export default function NovoCadastroPage() {
                   <div>
                     <h4 className="text-white text-xs font-bold mb-1">Nova solicitação de acesso</h4>
                     <p className="text-slate-400 text-[10px] leading-relaxed">
-                      O técnico João Carvalho (TechMaint Serviços) chegou na portaria para manutenção. Solicita acesso aos setores Produção e Manutenção das 08h às 17h. Autoriza a entrada?
+                      O visitante <strong>{form.nome || "João Carvalho"}</strong> ({form.empresa || "TechMaint Serviços"}) chegou na portaria para <strong>{form.motivo || "manutenção"}</strong>. 
+                      Solicita acesso aos setores <strong>{form.setoresAcesso.join(", ") || "Produção"}</strong>. Autoriza a entrada?
                     </p>
                   </div>
                 </div>
