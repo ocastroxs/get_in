@@ -1,13 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Circle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/AuthContext";
+import { api } from "@/services/api";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function NovoCadastroPage() {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
-  const [tempoEspera, setTempoEspera] = useState(30);
+  const [tempoEspera, setTempoEspera] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
@@ -84,12 +89,42 @@ export default function NovoCadastroPage() {
     }));
   };
 
-  const handleProximoStep = () => {
+  const handleProximoStep = async () => {
     if (!form.nome || !form.cpf || !form.empresa) {
       alert("Preencha os campos obrigatórios");
       return;
     }
-    setStep(2);
+    
+    if (!user || !user.id) {
+      alert("Erro: Usuário não autenticado");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const payload = {
+        idUsuario: user.id,
+        idDepartamento: user.idDepartamento || 1,
+        motivo: form.motivo || "Visita",
+        validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        descricao: `Visitante: ${form.nome} | CPF: ${form.cpf} | Empresa: ${form.empresa}`,
+        empresa: form.empresa
+      };
+      
+      const response = await api.post('/requisicao-visitante', payload);
+      
+      if (response.sucesso) {
+        setStep(2);
+        setTempoEspera(0);
+      } else {
+        alert(response.mensagem || "Erro ao registrar visitante");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao conectar com o servidor");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleVoltarStep = () => {
@@ -420,7 +455,7 @@ export default function NovoCadastroPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/40 rounded-full px-2.5 py-1 backdrop-blur-sm">
-                        <Dot size={6} className="fill-emerald-400 text-emerald-400 animate-pulse" />
+                        <Circle size={6} className="fill-emerald-400 text-emerald-400 animate-pulse" />
                         <span className="text-[9px] font-bold text-emerald-300">Ativo</span>
                       </div>
                     </div>
@@ -497,9 +532,7 @@ export default function NovoCadastroPage() {
                   </div>
 
                   <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                      Status
-                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"></span>
                     <span className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[10px] font-bold text-primary">
                       Pronto para emissão
                     </span>
@@ -587,9 +620,18 @@ export default function NovoCadastroPage() {
                 Cancelar
               </Button>
             </Link>
-            <Button onClick={handleProximoStep} className="rounded-xl px-6 h-11 font-semibold bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 flex items-center gap-2">
-              Próximo Passo
-              <ChevronRight size={16} />
+            <Button onClick={handleProximoStep} disabled={loading} className="rounded-xl px-6 h-11 font-semibold bg-gradient-to-r from-primary to-primary/90 hover:shadow-lg hover:shadow-primary/30 transition-all duration-200 flex items-center gap-2">
+              {loading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  Próximo Passo
+                  <ChevronRight size={16} />
+                </>
+              )}
             </Button>
           </div>
         </div>
