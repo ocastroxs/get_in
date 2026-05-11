@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Topbar from '@/components/Topbar';
+import StatCard from '@/components/StatCard';
 import ModalAprovacaoVisitante from '@/components/supervisor/ModalAprovacaoVisitante';
 import { api } from '@/services/api';
 
