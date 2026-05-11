@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/AuthContext';
 import SupervisorSidebar from '@/components/supervisor/SupervisorSidebar';
-import ParticlesBackground from '@/components/ParticlesBackground';
+import ParticlesBackground from '@/components/ui/ParticlesBackground';
 import { Loader2 } from 'lucide-react';
 
 export default function SupervisorLayout({ children }) {
