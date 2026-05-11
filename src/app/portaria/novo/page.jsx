@@ -543,7 +543,7 @@ export default function NovoCadastroPage() {
               Aguardando aprovação do supervisor
             </h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
-              A notificação foi enviada para Carlos Mendes via app mobile. O visitante ficará em espera até a confirmação de acesso.
+              A notificação foi enviada via app mobile. O visitante ficará em espera até a confirmação de acesso.
             </p>
 
             <div className="flex flex-col items-center gap-4">
