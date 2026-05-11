@@ -77,32 +77,32 @@ export default function SupervisorDashboardPage() {
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
-            title="Pendentes"
+            label="Pendentes"
             value={countPendentes}
-            icon={AlertTriangle}
-            color="amber"
-            trend={countPendentes > 0 ? 'Ação necessária' : 'Nenhuma'}
+            icon={<AlertTriangle size={20} className="text-amber-600" />}
+            accentVar="#d97706"
+            sub={countPendentes > 0 ? 'Ação necessária' : 'Nenhuma'}
           />
           <StatCard
-            title="Aprovados"
+            label="Aprovados"
             value={countAprovados}
-            icon={CheckCircle2}
-            color="green"
-            trend={`${countAprovados} visitantes`}
+            icon={<CheckCircle2 size={20} className="text-green-600" />}
+            accentVar="#16a34a"
+            sub={`${countAprovados} visitantes`}
           />
           <StatCard
-            title="Recusados"
+            label="Recusados"
             value={countRecusados}
-            icon={XCircle}
-            color="red"
-            trend={`${countRecusados} rejeitados`}
+            icon={<XCircle size={20} className="text-red-600" />}
+            accentVar="#dc2626"
+            sub={`${countRecusados} rejeitados`}
           />
           <StatCard
-            title="Total"
+            label="Total"
             value={countTotal}
-            icon={Users}
-            color="blue"
-            trend="Requisições"
+            icon={<Users size={20} className="text-blue-600" />}
+            accentVar="#2563eb"
+            sub="Requisições"
           />
         </div>
 
