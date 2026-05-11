@@ -173,47 +173,30 @@ export default function AprovacoesSupervisorPage() {
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                  Pendentes
-                </p>
-                <p className="text-3xl font-bold text-amber-600">{countPendentes}</p>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-lg">
-                <AlertTriangle size={24} className="text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                  Aprovados
-                </p>
-                <p className="text-3xl font-bold text-green-600">{countAprovados}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-lg">
-                <CheckCircle2 size={24} className="text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                  Recusados
-                </p>
-                <p className="text-3xl font-bold text-red-600">{countRecusados}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-lg">
-                <XCircle size={24} className="text-red-600" />
-              </div>
-            </div>
-          </div>
+          <StatCard
+            label="Pendentes"
+            value={countPendentes}
+            valueClassName="text-amber-600"
+            icon={<AlertTriangle size={17} className="text-amber-600" />}
+            sub="Aguardando análise"
+            accentVar="var(--warning)"
+          />
+          <StatCard
+            label="Aprovados"
+            value={countAprovados}
+            valueClassName="text-green-600"
+            icon={<CheckCircle2 size={17} className="text-green-600" />}
+            sub="Visitantes autorizados"
+            accentVar="var(--chart-2)"
+          />
+          <StatCard
+            label="Recusados"
+            value={countRecusados}
+            valueClassName="text-red-600"
+            icon={<XCircle size={17} className="text-red-600" />}
+            sub="Acesso não autorizado"
+            accentVar="var(--destructive)"
+          />
         </div>
 
         {/* Filtros e Busca */}
