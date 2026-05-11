@@ -1,10 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Dot } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function NovoCadastroPage() {
   const [step, setStep] = useState(1);
@@ -396,30 +395,104 @@ export default function NovoCadastroPage() {
 
             {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Prévia de Crachá */}
-              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
-                {/* Efeito de fundo */}
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
-                </div>
-
-                <div className="relative z-10">
-                  <div className="text-xs font-bold uppercase tracking-widest mb-5 opacity-90">
-                    Prévia de Crachá
+              {/* Prévia de Crachá - Design Profissional */}
+              <div className="relative group">
+                {/* Cartão Principal do Crachá */}
+                <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-3xl p-6 text-white shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden relative border border-white/10 h-full flex flex-col">
+                  {/* Efeito de fundo premium */}
+                  <div className="absolute inset-0 opacity-20">
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-blue-400 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-400 rounded-full blur-3xl"></div>
                   </div>
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Nome:</span>
-                      <span className="font-bold text-right text-sm">{form.nome || "—"}</span>
+                  {/* Furo do Crachá (Topo) */}
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-10 h-6 bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-2xl border border-white/5 shadow-lg"></div>
+
+                  <div className="relative z-10 flex flex-col h-full">
+                    {/* Header com Status */}
+                    <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/10">
+                      <div className="flex-1">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.3em] text-blue-200 opacity-75 mb-1">
+                          Visitante
+                        </div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
+                          Prévia de Crachá
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/40 rounded-full px-2.5 py-1 backdrop-blur-sm">
+                        <Dot size={6} className="fill-emerald-400 text-emerald-400 animate-pulse" />
+                        <span className="text-[9px] font-bold text-emerald-300">Ativo</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Empresa:</span>
-                      <span className="font-bold text-right text-xs">{form.empresa || "—"}</span>
+
+                    {/* Avatar + Informações Principais */}
+                    <div className="flex gap-4 mb-5">
+                      <div className="flex-shrink-0">
+                        <UserAvatar name={form.nome} email="" className="w-14 h-14 text-lg shadow-lg border-2 border-white/20" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-white truncate mb-1">
+                          {form.nome || "Nome do Visitante"}
+                        </div>
+                        <div className="text-xs text-blue-200 truncate mb-2">
+                          {form.empresa || "Empresa"}
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-2 py-1 w-fit border border-white/10">
+                          <Tag size={10} className="text-blue-300" />
+                          <span className="text-[10px] font-semibold text-blue-200">
+                            {form.tagRFID ? form.tagRFID.slice(0, 8) + "..." : "TAG: —"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="opacity-80">Setor:</span>
-                      <span className="font-bold text-right text-xs">{form.setor || "—"}</span>
+
+                    {/* Setor de Destino */}
+                    {form.setor && (
+                      <div className="mb-4 pb-4 border-b border-white/10">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2">
+                          Setor de Destino
+                        </div>
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-400/40 rounded-full px-3 py-1.5 backdrop-blur-sm">
+                          <div className="w-2 h-2 rounded-full bg-violet-400"></div>
+                          <span className="text-xs font-bold text-violet-200">{form.setor}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Setores de Acesso */}
+                    {form.setoresAcesso.length > 0 && (
+                      <div className="mb-4 pb-4 border-b border-white/10">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2">
+                          Acesso Permitido
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {form.setoresAcesso.map((setor, idx) => (
+                            <div key={idx} className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
+                              <span className="text-[9px] font-semibold text-white/80">{setor}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rodapé com QR Code Simulado */}
+                    <div className="mt-auto pt-3 border-t border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-white/40">
+                          ID: {form.cpf ? form.cpf.replace(/\D/g, "").slice(0, 8) : "—"}
+                        </div>
+                        {/* QR Code Simulado */}
+                        <div className="w-10 h-10 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                          <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
+                            {[...Array(9)].map((_, i) => (
+                              <div key={i} className={`rounded-sm ${
+                                [0, 2, 4, 6, 8].includes(i) ? "bg-white/60" : "bg-white/20"
+                              }`}></div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
