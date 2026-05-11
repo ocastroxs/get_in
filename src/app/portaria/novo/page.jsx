@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Dot } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function NovoCadastroPage() {
   const [step, setStep] = useState(1);
@@ -396,36 +397,29 @@ export default function NovoCadastroPage() {
             {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
               {/* Prévia de Crachá */}
-              <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-                <div className="rounded-[24px] border border-border/60 bg-background p-5">
-                  <div className="mb-5 flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-foreground">
-                        Prévia de Crachá
-                      </div>
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        Dados atualizados conforme o cadastro
-                      </p>
-                    </div>
+              <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl hover:shadow-2xl transition-shadow duration-300 overflow-hidden relative">
+                {/* Efeito de fundo */}
+                <div className="absolute inset-0 opacity-10">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full blur-3xl"></div>
+                </div>
 
-                    <div className="flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                      <Tag size={11} />
-                      Visitante
-                    </div>
+                <div className="relative z-10">
+                  <div className="text-xs font-bold uppercase tracking-widest mb-5 opacity-90">
+                    Prévia de Crachá
                   </div>
 
                   <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Nome:</span>
-                      <span className="font-bold text-right text-sm text-foreground">{form.nome || "—"}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Nome:</span>
+                      <span className="font-bold text-right text-sm">{form.nome || "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 border-b border-border/50 pb-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Empresa:</span>
-                      <span className="font-bold text-right text-xs text-foreground">{form.empresa || "—"}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Empresa:</span>
+                      <span className="font-bold text-right text-xs">{form.empresa || "—"}</span>
                     </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Setor:</span>
-                      <span className="font-bold text-right text-xs text-foreground">{form.setor || "—"}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="opacity-80">Setor:</span>
+                      <span className="font-bold text-right text-xs">{form.setor || "—"}</span>
                     </div>
                   </div>
 
