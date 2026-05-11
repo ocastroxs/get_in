@@ -182,7 +182,7 @@ export default function HistoricoSupervisorPage() {
         subtitle="Visualize todas as requisições processadas"
       />
 
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-6 animate-in fade-in duration-700">
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">

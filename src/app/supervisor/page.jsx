@@ -73,7 +73,7 @@ export default function SupervisorDashboardPage() {
         subtitle="Visão geral das solicitações de visitantes"
       />
 
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-6 animate-in fade-in duration-700">
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard
