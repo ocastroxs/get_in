@@ -11,12 +11,15 @@ import {
   CheckCircle2,
   XCircle,
   Filter,
-  ChevronRight
+  ChevronRight,
+  X,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Topbar from '@/components/Topbar';
 import StatCard from '@/components/StatCard';
+import ModalFiltro from '@/components/ui/ModalFiltro';
 import ModalAprovacaoVisitante from '@/components/supervisor/ModalAprovacaoVisitante';
 import { api } from '@/services/api';
 
@@ -63,18 +66,18 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-foreground">{usuario.nome || '—'}</p>
-          <p className="text-xs text-muted-foreground">{usuario.cpf || 'CPF não informado'}</p>
+          <p className="text-sm font-bold text-foreground">{usuario.nome || '—'}</p>
+          <p className="text-[11px] text-muted-foreground">{usuario.cpf || 'CPF não informado'}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || '—'}</td>
       <td className="px-4 py-3 text-sm text-foreground">{departamento.nome || '—'}</td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || '—'}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
         {formatDateTime(requisicao.dataDaRequisicao)}
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+        <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
           {STATUS_LABEL[status] || STATUS_LABEL.pendente}
         </span>
@@ -85,11 +88,11 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
             <Button
               size="sm"
               onClick={() => onAprovar(requisicao)}
-              className="h-8 gap-1.5 bg-blue-600 text-xs hover:bg-blue-700"
+              className="h-8 gap-1.5 bg-blue-600 text-[11px] font-bold hover:bg-blue-700 rounded-lg"
               type="button"
             >
-              <ChevronRight size={12} />
-              <span className="hidden xl:inline">Analisar</span>
+              <ChevronRight size={14} />
+              <span className="hidden xl:inline uppercase">Analisar</span>
             </Button>
           )}
         </div>
@@ -105,6 +108,9 @@ export default function AprovacoesSupervisorPage() {
   const [filtroStatus, setFiltroStatus] = useState('pendente');
   const [modalAberto, setModalAberto] = useState(false);
   const [requisicaoSelecionada, setRequisicaoSelecionada] = useState(null);
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempFiltroStatus, setTempFiltroStatus] = useState("pendente");
 
   useEffect(() => {
     fetchRequisicoes();
@@ -164,6 +170,16 @@ export default function AprovacoesSupervisorPage() {
   const countAprovados = requisicoes.filter((r) => r.status === 'aprovado').length;
   const countRecusados = requisicoes.filter((r) => r.status === 'recusado').length;
 
+  const aplicarFiltros = () => {
+    setFiltroStatus(tempFiltroStatus);
+  };
+
+  const limparFiltros = () => {
+    setTempFiltroStatus("pendente");
+    setFiltroStatus("pendente");
+    setBusca("");
+  };
+
   return (
     <>
       <Topbar
@@ -171,9 +187,9 @@ export default function AprovacoesSupervisorPage() {
         subtitle="Gerenciamento de solicitações de visitantes da portaria"
       />
 
-      <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard
             label="Pendentes"
             value={countPendentes}
@@ -200,81 +216,120 @@ export default function AprovacoesSupervisorPage() {
           />
         </div>
 
-        {/* Filtros e Busca */}
-        <div className="bg-card border border-border rounded-lg p-6 shadow-sm mb-6">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="flex-1 w-full">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+        {/* Barra de Filtros Padronizada */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 items-center gap-3 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  type="text"
                   placeholder="Buscar por nome, CPF ou empresa..."
+                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
                 />
+                {busca && (
+                  <button
+                    type="button"
+                    onClick={() => setBusca("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
+              
+              <Button
+                type="button"
+                onClick={() => setModalFiltroAberto(true)}
+                variant="outline"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              >
+                <Filter size={16} />
+                <span className="hidden sm:inline">Filtros</span>
+                {filtroStatus !== "todos" && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                    1
+                  </span>
+                )}
+              </Button>
             </div>
 
-            <div className="flex gap-2 w-full lg:w-auto">
-              <select
-                value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-              >
-                <option value="pendente">Pendentes</option>
-                <option value="aprovado">Aprovados</option>
-                <option value="recusado">Recusados</option>
-                <option value="todos">Todos</option>
-              </select>
+            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+              {requisicoesFiltradas.length} resultado(s) encontrado(s)
             </div>
           </div>
+
+          {(filtroStatus !== "todos" || busca) && (
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+              {busca && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Busca: {busca}
+                </span>
+              )}
+              {filtroStatus !== "todos" && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Status: {STATUS_LABEL[filtroStatus] || filtroStatus}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                onClick={limparFiltros}
+                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Limpar tudo
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Tabela de Requisições */}
-        <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center p-8">
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h3 className="font-bold text-sm text-foreground">Listagem de Aprovações</h3>
+          </div>
+          
+          {loading && requisicoes.length === 0 ? (
+            <div className="flex items-center justify-center p-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : requisicoesFiltradas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center">
-              <AlertTriangle size={32} className="text-muted-foreground mb-3" />
+            <div className="flex flex-col items-center justify-center p-20 text-center">
+              <AlertTriangle size={32} className="text-muted/30 mb-3" />
               <p className="text-sm text-muted-foreground">
-                {busca || filtroStatus !== 'pendente'
-                  ? 'Nenhuma requisição encontrada com os filtros aplicados.'
-                  : 'Nenhuma requisição pendente no momento.'}
+                Nenhuma requisição encontrada com os filtros aplicados.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Visitante
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Empresa
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Departamento
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Motivo
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Data da Requisição
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Data
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border">
                   {requisicoesFiltradas.map((requisicao) => (
                     <LinhaRequisicao
                       key={requisicao.id}
@@ -295,6 +350,39 @@ export default function AprovacoesSupervisorPage() {
         requisicao={requisicaoSelecionada}
         onConfirm={handleConfirmacao}
       />
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status da Requisição
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempFiltroStatus(status)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                    tempFiltroStatus === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  <span>{status === "todos" ? "Todos os Status" : STATUS_LABEL[status]}</span>
+                  {tempFiltroStatus === status && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ModalFiltro>
     </>
   );
 }

@@ -12,7 +12,8 @@ import {
   Users,
   X,
   Filter,
-  Check
+  Check,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,27 +217,27 @@ function LinhaVisitante({ visitante, onCheckout }) {
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-foreground">{visitante.nome || "—"}</p>
-          <p className="text-xs text-muted-foreground">{visitante.cpf || "CPF não informado"}</p>
+          <p className="text-sm font-bold text-foreground">{visitante.nome || "—"}</p>
+          <p className="text-[11px] text-muted-foreground">{visitante.cpf || "CPF não informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{getSetorLabel(visitante)}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
         {formatDateTime(visitante.dataEntrada)}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+      <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
         {formatDuration(visitante.dataEntrada)}
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+        <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
           {STATUS_LABEL[status] || STATUS_LABEL.ativo}
         </span>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" type="button">
+          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[10px] font-bold uppercase rounded-lg" type="button">
             <QrCode size={12} />
             <span className="hidden xl:inline">Crachá</span>
           </Button>
@@ -245,7 +246,7 @@ function LinhaVisitante({ visitante, onCheckout }) {
             <Button
               size="sm"
               onClick={() => onCheckout(visitante)}
-              className="h-8 gap-1.5 bg-red-600 text-xs hover:bg-red-700"
+              className="h-8 gap-1.5 bg-red-600 text-[10px] font-bold uppercase hover:bg-red-700 rounded-lg"
               type="button"
             >
               <LogOut size={12} />
@@ -332,37 +333,69 @@ export default function PortariaPage() {
     setBusca("");
   };
 
+  const exportarCSV = () => {
+    if (visitantesFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const headers = ["Nome", "CPF", "Empresa", "Setor", "Entrada", "Duração", "Status"];
+    const rows = visitantesFiltrados.map(v => [
+      v.nome,
+      v.cpf,
+      v.empresa,
+      getSetorLabel(v),
+      formatDateTime(v.dataEntrada),
+      formatDuration(v.dataEntrada),
+      STATUS_LABEL[v.status] || "Dentro"
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `visitantes_presentes_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const countDentro = visitantes.filter((v) => v.status === "ativo").length;
+  const countPendentes = visitantes.filter((v) => v.status === "pendente").length;
+  const countAlerta = visitantes.filter((v) => v.status === "alerta").length;
+
   return (
     <>
-      <Topbar
-        title="Operação Portaria"
-        subtitle="Gerenciamento de entrada e saída de visitantes"
-        buttonText="Novo Visitante"
-        buttonHref="/portaria/novo"
-      />
+      <Topbar title="Portaria" subtitle="Controle de acesso e visitantes presentes" />
 
-      <div className="flex flex-col gap-5 p-4 md:p-6 animate-in fade-in duration-700">
+      <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatCard
-            label="Presentes Agora"
-            value={visitantes.filter(v => v.status === "ativo").length}
-            icon={<Users className="text-primary" size={18} />}
-            sub="visitantes no local"
-            accentVar="var(--primary)"
+            label="Visitantes Dentro"
+            value={countDentro}
+            icon={<Users size={20} className="text-green-600" />}
+            accentVar="#16a34a"
+            sub="Acesso liberado"
           />
           <StatCard
             label="Aguardando"
-            value={visitantes.filter(v => v.status === "pendente").length}
-            icon={<Clock className="text-amber-500" size={18} />}
-            sub="pré-cadastros hoje"
-            accentVar="var(--amber-500)"
+            value={countPendentes}
+            icon={<Clock size={20} className="text-amber-600" />}
+            accentVar="#d97706"
+            sub="Na recepção"
           />
           <StatCard
             label="Alertas"
-            value={visitantes.filter(v => v.status === "alerta").length}
-            icon={<AlertTriangle className="text-red-500" size={18} />}
-            sub="permanência excedida"
-            accentVar="var(--destructive)"
+            value={countAlerta}
+            icon={<AlertTriangle size={20} className="text-red-600" />}
+            accentVar="#dc2626"
+            sub="Tempo excedido"
           />
         </div>
 
@@ -405,8 +438,18 @@ export default function PortariaPage() {
               </Button>
             </div>
 
-            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-              {visitantesFiltrados.length} visitante(s) listado(s)
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={exportarCSV}
+                variant="outline"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Exportar CSV</span>
+              </Button>
+              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+                {visitantesFiltrados.length} presente(s)
+              </div>
             </div>
           </div>
 
@@ -434,43 +477,47 @@ export default function PortariaPage() {
           )}
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h3 className="font-bold text-sm text-foreground">Visitantes no Local</h3>
+          </div>
+          
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-muted/40 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Entrada</th>
-                  <th className="px-4 py-3">Permanência</th>
+                  <th className="px-4 py-3">Duração</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {loading && visitantes.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground">Sincronizando dados...</p>
+                    <td colSpan={7} className="py-20 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="animate-spin" size={24} />
+                        <span className="text-sm">Carregando visitantes...</span>
                       </div>
                     </td>
                   </tr>
-                ) : visitantesFiltrados.length > 0 ? (
+                ) : visitantesFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
+                      <div className="flex flex-col items-center gap-2">
+                        <Users className="h-12 w-12 text-muted/30" />
+                        <p>Nenhum visitante presente no momento.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
                   visitantesFiltrados.map((v) => (
                     <LinhaVisitante key={v.id} visitante={v} onCheckout={handleCheckout} />
                   ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Users className="h-12 w-12 text-muted/30" />
-                        <p className="text-sm text-muted-foreground">Nenhum visitante encontrado.</p>
-                      </div>
-                    </td>
-                  </tr>
                 )}
               </tbody>
             </table>
@@ -495,7 +542,7 @@ export default function PortariaPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
-              Status da Visita
+              Status de Permanência
             </label>
             <div className="grid grid-cols-1 gap-2">
               {STATUS_FILTERS.map((f) => (
@@ -514,12 +561,6 @@ export default function PortariaPage() {
                 </button>
               ))}
             </div>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> Filtrar por status ajuda a identificar rapidamente quem ainda está no prédio ou quem possui pendências de entrada.
-            </p>
           </div>
         </div>
       </ModalFiltro>
