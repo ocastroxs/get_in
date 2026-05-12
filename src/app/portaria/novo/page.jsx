@@ -434,15 +434,6 @@ export default function NovoCadastroPage() {
               <div className="relative group">
                 {/* Cartão Principal do Crachá */}
                 <div className="bg-card rounded-3xl p-6 text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden relative border border-border h-full flex flex-col">
-                  {/* Efeito de fundo premium */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-secondary/[0.04]"></div>
-                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-secondary/35 to-primary/25"></div>
-                  <div className="absolute right-5 top-5 h-16 w-16 rounded-full border border-primary/10 bg-primary/[0.03]"></div>
-                  <div className="absolute -bottom-8 -left-8 h-28 w-28 rounded-full border border-secondary/10 bg-secondary/[0.03]"></div>
-
-                  {/* Furo do Crachá (Topo) */}
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-10 h-6 bg-background rounded-b-2xl border border-border shadow-sm"></div>
-
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Header com Status */}
                     <div className="flex items-start justify-between mb-5 pb-4 border-b border-border/60">
@@ -472,7 +463,7 @@ export default function NovoCadastroPage() {
                         <div className="text-xs text-muted-foreground truncate mb-2">
                           {form.empresa || "Empresa"}
                         </div>
-                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-full px-2 py-1 w-fit border border-border/60">
+                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-sm px-2 py-1 w-fit border border-border/60">
                           <Tag size={10} className="text-primary" />
                           <span className="text-[10px] font-semibold text-muted-foreground">
                             {form.tagRFID ? form.tagRFID.slice(0, 8) + "..." : "TAG: —"}
@@ -515,7 +506,7 @@ export default function NovoCadastroPage() {
                     <div className="mt-auto pt-3 border-t border-border/60">
                       <div className="flex items-center justify-between">
                         <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                          ID: {form.cpf ? form.cpf.replace(/\D/g, "").slice(0, 8) : "—"}
+                          CPF: {form.cpf ? form.cpf.replace(/\D/g, "").slice(0, 8) : "—"}
                         </div>
                         {/* QR Code Simulado */}
                         <div className="w-10 h-10 bg-background border border-border rounded-lg flex items-center justify-center shadow-xs">
