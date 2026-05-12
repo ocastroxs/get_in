@@ -299,18 +299,18 @@ export default function HistoricoPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-              {registrosFiltrados.length} resultado(s)
-            </div>
             <Button
               type="button"
               onClick={downloadCSV}
               variant="outline"
-              className="h-11 gap-2 rounded-xl border-border/60"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
             >
               <Download size={16} />
               <span className="hidden sm:inline">Exportar CSV</span>
             </Button>
+            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+              {registrosFiltrados.length} resultado(s)
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Clock, CheckCircle2, XCircle, Loader2, Search, X, AlertTriangle, User, Building2, MapPin, Phone, Filter, Check
+  Clock, CheckCircle2, XCircle, Loader2, Search, X, AlertTriangle, User, Building2, MapPin, Phone, Filter, Check, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -259,6 +259,38 @@ export default function PendenciasPage() {
     setBusca("");
   };
 
+  const exportarCSV = () => {
+    if (requisicoesFiltradas.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const headers = ["Visitante", "CPF", "Empresa", "Setor", "Motivo", "Solicitação"];
+    const rows = requisicoesFiltradas.map(r => [
+      r.visitante,
+      r.cpf,
+      r.empresa,
+      r.setor,
+      r.motivo,
+      r.solicitacao
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `pendencias_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <Topbar
@@ -317,8 +349,18 @@ export default function PendenciasPage() {
               </Button>
             </div>
 
-            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-              {requisicoesFiltradas.length} registro(s) listado(s)
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={exportarCSV}
+                variant="outline"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Exportar CSV</span>
+              </Button>
+              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+                {requisicoesFiltradas.length} registro(s)
+              </div>
             </div>
           </div>
 
