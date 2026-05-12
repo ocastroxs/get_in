@@ -485,6 +485,7 @@ export default function PortariaPage() {
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-border bg-muted/20">
             <h3 className="font-bold text-sm text-foreground">Visitantes no Local</h3>
+            <p className="text-xs text-muted-foreground">{visitantesFiltrados.length} visitantes encontrados</p>
           </div>
           
           <div className="overflow-x-auto">
