@@ -2,16 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  ArrowRightLeft,
-  Check,
-  Loader2,
-  LogOut,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Users,
-  X,
+  Users, ArrowRightLeft, LogOut, AlertTriangle,
+  Search, X, Plus, CreditCard, Check, Loader2,
+  MoreHorizontal
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
@@ -240,6 +233,7 @@ export default function VisitantesPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [busca, setBusca] = useState("");
+  const [mostrarBanner, setMostrarBanner] = useState(true);
 
   const carregarVisitantes = async () => {
     setLoading(true);
@@ -278,15 +272,12 @@ export default function VisitantesPage() {
     });
   }, [visitantes, statusFiltro, busca]);
 
-  const stats = useMemo(
-    () => ({
-      total: visitantes.length,
-      ativos: visitantes.filter((visitante) => visitante.status === "ativo").length,
-      finalizados: visitantes.filter((visitante) => visitante.status === "finalizado").length,
-      alertas: alertas.length,
-    }),
-    [visitantes, alertas.length]
-  );
+  const stats = useMemo(() => ({
+    total:       visitantes.length,
+    ativos:      visitantes.filter((v) => v.status === "ativo").length,
+    finalizados: visitantes.filter((v) => v.status === "finalizado").length,
+    alertas:     visitantes.filter((v) => v.status === "semsaida").length,
+  }), [visitantes]);
 
   return (
     <>
@@ -307,43 +298,46 @@ export default function VisitantesPage() {
           onButtonClick={() => setModalAberto(true)}
         />
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {mostrarBanner && alertas.length > 0 ? (
+          <AlertaBanner alertas={alertas} onDismiss={() => setMostrarBanner(false)} />
+        ) : null}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
-            label="Total"
+            label="Total de Visitas"
             value={stats.total}
-            valueClassName="text-primary"
             icon={<Users size={17} className="text-primary" />}
-            sub="visitantes"
+            sub="Registros no sistema"
             accentVar="var(--primary)"
           />
           <StatCard
-            label="Ativos"
+            label="Ativos Agora"
             value={stats.ativos}
             valueClassName="text-green-600"
-            icon={<ArrowRightLeft size={17} className="text-green-600" />}
-            sub="na empresa"
-            accentVar="var(--green-500)"
+            icon={<Check size={17} className="text-green-600" />}
+            sub="Dentro da empresa"
+            accentVar="var(--chart-2)"
           />
           <StatCard
             label="Finalizados"
             value={stats.finalizados}
             valueClassName="text-blue-600"
-            icon={<LogOut size={17} className="text-blue-600" />}
-            sub="check-outs"
-            accentVar="var(--blue-500)"
+            icon={<ArrowRightLeft size={17} className="text-blue-600" />}
+            sub="Visitas concluídas"
+            accentVar="var(--chart-3)"
           />
           <StatCard
             label="Alertas"
             value={stats.alertas}
             valueClassName="text-red-600"
             icon={<AlertTriangle size={17} className="text-red-600" />}
-            sub="requerem atencao"
+            sub="requerem atenção"
             accentVar="var(--red-500)"
           />
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -353,22 +347,18 @@ export default function VisitantesPage() {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar visitante..."
-                  className="h-8 w-52 rounded-lg border border-border bg-background pl-8 pr-3 text-xs text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
                 />
-                {busca ? (
-                  <button
-                    onClick={() => setBusca("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                {busca && (
+                  <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X size={11} />
                   </button>
-                ) : null}
+                )}
               </div>
-
               <select
                 value={statusFiltro}
                 onChange={(e) => setStatusFiltro(e.target.value)}
-                className="h-8 rounded-lg border border-border bg-background px-3 text-xs text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-8 px-3 rounded-lg border border-border bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
               >
                 <option value="Todos">Todos Status</option>
                 <option value="ativo">Ativos</option>
@@ -378,16 +368,44 @@ export default function VisitantesPage() {
             </div>
           </div>
 
+          {(statusFiltro !== "Todos" || busca) && (
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+              {busca && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Busca: {busca}
+                </span>
+              )}
+              {statusFiltro !== "Todos" && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Status: {STATUS_LABEL[statusFiltro] || statusFiltro}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                onClick={limparFiltros}
+                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Limpar tudo
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Tabela de Visitantes */}
+        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h3 className="font-bold text-sm">Listagem de Visitantes</h3>
+            <p className="text-xs text-muted-foreground">Monitoramento em tempo real</p>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/40">
-                  {["Visitante", "Empresa", "Setor", "Entrada", "Saida", "Status", "Acoes"].map((coluna) => (
-                    <th
-                      key={coluna}
-                      className="whitespace-nowrap px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
-                    >
-                      {coluna}
+                  {["Visitante", "Empresa", "Setor", "Entrada", "Saída", "Status", "Ações"].map((col) => (
+                    <th key={col} className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                      {col}
                     </th>
                   ))}
                 </tr>
@@ -416,6 +434,44 @@ export default function VisitantesPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status da Visita
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {["Todos", "ativo", "semsaida", "finalizado", "pendente"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempStatusFiltro(status)}
+                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                    tempStatusFiltro === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  {STATUS_LABEL[status] || status}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-[10px] text-primary/80 leading-relaxed">
+              <strong>Nota:</strong> Filtros avançados permitem encontrar registros específicos com mais facilidade. Combine com a busca por texto para melhores resultados.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
     </>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from '@/services/api';
 
 // ─── Dados de Permissões (estrutura padrão) ──────────────────────────────────
@@ -76,12 +77,14 @@ export default function PermissoesPage() {
   const [busca, setBusca] = useState('');
   const [permissoesFuncionarios, setPermissoesFuncionarios] = useState(PERMISSOES_PADRAO);
   const [permissoesVisitantes, setPermissoesVisitantes] = useState(PERMISSOES_VISITANTES_PADRAO);
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState("Todas");
+  const [tempFiltroCategoria, setTempFiltroCategoria] = useState("Todas");
 
   const carregarPermissoes = async () => {
     setLoading(true);
     try {
-      // 🔌 Endpoint futuro: /permissoes ou similar
-      // Por enquanto, usamos dados padrão pois o back-end ainda não possui este modelo
       const response = await api.get('/permissoes');
       if (response.sucesso && response.data) {
         setPermissoesFuncionarios(response.data.funcionarios || PERMISSOES_PADRAO);
@@ -89,7 +92,6 @@ export default function PermissoesPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar permissões:", error);
-      // Mantém os dados padrão em caso de erro
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,6 @@ export default function PermissoesPage() {
   const handleSalvar = async () => {
     setLoading(true);
     try {
-      // 🔌 Endpoint futuro: POST /permissoes
       const response = await api.post('/permissoes', {
         funcionarios: permissoesFuncionarios,
         visitantes: permissoesVisitantes
@@ -121,8 +122,22 @@ export default function PermissoesPage() {
 
   const handleDescartar = () => {
     setBusca('');
+    setFiltroCategoria("Todas");
+    setTempFiltroCategoria("Todas");
     carregarPermissoes();
   };
+
+  const aplicarFiltros = () => {
+    setFiltroCategoria(tempFiltroCategoria);
+  };
+
+  const limparFiltros = () => {
+    setTempFiltroCategoria("Todas");
+    setFiltroCategoria("Todas");
+    setBusca("");
+  };
+
+  const categoriasUnicas = ["Todas", ...new Set(PERMISSOES_PADRAO.map(c => c.categoria))];
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
@@ -138,7 +153,7 @@ export default function PermissoesPage() {
             <Button 
               variant="outline" 
               size="sm" 
-              className="gap-1.5"
+              className="gap-1.5 rounded-xl"
               onClick={handleDescartar}
               disabled={loading}
             >
@@ -147,7 +162,7 @@ export default function PermissoesPage() {
             </Button>
             <Button 
               size="sm" 
-              className="gap-1.5"
+              className="gap-1.5 rounded-xl"
               onClick={handleSalvar}
               disabled={loading}
             >
@@ -181,43 +196,83 @@ export default function PermissoesPage() {
         </div>
       </div>
 
-      {/* Legenda e Busca */}
-      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-green-100 border border-green-300"></div>
-            <span>Permitida</span>
+      {/* Barra de Filtros Padronizada */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar funcionalidade ou descrição..."
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            
+            <Button
+              type="button"
+              onClick={() => setModalFiltroAberto(true)}
+              variant="outline"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtrar Categorias</span>
+              {filtroCategoria !== "Todas" && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  1
+                </span>
+              )}
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-red-100 border border-red-300"></div>
-            <span>Bloqueado</span>
+
+          <div className="hidden lg:flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-100 border border-green-300"></div>
+              <span>Permitida</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-100 border border-red-300"></div>
+              <span>Bloqueado</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-100 border border-yellow-300"></div>
+              <span>Leitura</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full bg-yellow-100 border border-yellow-300"></div>
-            <span>Somente leitura</span>
-          </div>
-          <span className="text-muted-foreground italic">— Clique para alterar</span>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              type="text" 
-              placeholder="Buscar funcionalidade..." 
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="pl-10 text-sm"
-            />
+        {(filtroCategoria !== "Todas" || busca) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            {busca && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Busca: {busca}
+              </span>
+            )}
+            {filtroCategoria !== "Todas" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Categoria: {filtroCategoria}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={limparFiltros}
+              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar tudo
+            </Button>
           </div>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-10 w-10"
-          >
-            <Filter className="w-4 h-4" />
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* Conteúdo Principal */}
@@ -228,6 +283,7 @@ export default function PermissoesPage() {
               permissoes={permissoesFuncionarios}
               setPermissoes={setPermissoesFuncionarios}
               busca={busca} 
+              filtroCategoria={filtroCategoria}
             />
           ) : (
             <TabelaVisitantes 
@@ -239,6 +295,38 @@ export default function PermissoesPage() {
         </div>
       </div>
 
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Categoria de Funcionalidade
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {categoriasUnicas.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setTempFiltroCategoria(cat)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                    tempFiltroCategoria === cat
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  <span>{cat === "Todas" ? "Todas as Categorias" : cat}</span>
+                  {tempFiltroCategoria === cat && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </ModalFiltro>
     </div>
   );
 }
@@ -260,64 +348,76 @@ function TabButton({ active, onClick, label }) {
   );
 }
 
-function TabelaFuncionarios({ permissoes, setPermissoes, busca }) {
+function TabelaFuncionarios({ permissoes, setPermissoes, busca, filtroCategoria }) {
   const categoriasFiltradas = useMemo(() => {
     return permissoes.map(cat => ({
       ...cat,
       funcionalidades: cat.funcionalidades.filter(item => 
-        item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-        item.desc.toLowerCase().includes(busca.toLowerCase())
+        (filtroCategoria === "Todas" || cat.categoria === filtroCategoria) &&
+        (item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
+        item.desc.toLowerCase().includes(busca.toLowerCase()))
       )
     })).filter(cat => cat.funcionalidades.length > 0);
-  }, [permissoes, busca]);
+  }, [permissoes, busca, filtroCategoria]);
 
   if (categoriasFiltradas.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-        <p>Nenhuma funcionalidade encontrada</p>
+        <p className="text-sm">Nenhuma funcionalidade encontrada.</p>
       </div>
     );
   }
 
+  const togglePermissao = (catIndex, funcIndex, perfil) => {
+    const novas = [...permissoes];
+    const cat = novas[catIndex];
+    const func = cat.funcionalidades[funcIndex];
+    
+    const ciclos = {
+      'allow': 'read',
+      'read': 'deny',
+      'deny': 'allow'
+    };
+    
+    func[perfil] = ciclos[func[perfil]];
+    setPermissoes(novas);
+  };
+
   return (
     <table className="w-full text-left border-collapse">
       <thead>
-        <tr className="bg-slate-800 text-white">
-          <th className="py-4 px-6 text-sm font-semibold">Funcionalidade</th>
-          <th className="py-4 px-6 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <Shield size={16} />
-              <span className="text-xs font-semibold">Portaria</span>
-            </div>
-          </th>
-          <th className="py-4 px-6 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <Eye size={16} />
-              <span className="text-xs font-semibold">Supervisor</span>
-            </div>
-          </th>
-          <th className="py-4 px-6 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <ShieldAlert size={16} />
-              <span className="text-xs font-semibold">Administrador</span>
-            </div>
-          </th>
+        <tr className="bg-muted/40 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <th className="px-4 py-3 min-w-[300px]">Funcionalidade</th>
+          <th className="px-4 py-3 text-center w-24">Portaria</th>
+          <th className="px-4 py-3 text-center w-24">Supervisor</th>
+          <th className="px-4 py-3 text-center w-24">Admin</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
-        {categoriasFiltradas.map((categoria, catIdx) => (
-          <Fragment key={catIdx}>
-            <tr className="bg-muted/40">
-              <td colSpan={4} className="px-6 py-2.5">
-                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">{categoria.categoria}</h3>
+        {categoriasFiltradas.map((cat, catIdx) => (
+          <Fragment key={cat.categoria}>
+            <tr className="bg-muted/20">
+              <td colSpan="4" className="px-4 py-2 text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/5">
+                {cat.categoria}
               </td>
             </tr>
-            {categoria.funcionalidades.map((func, idx) => (
-              <PermissionRowFuncionario 
-                key={`${catIdx}-${idx}`}
-                {...func}
-              />
+            {cat.funcionalidades.map((item, itemIdx) => (
+              <tr key={item.titulo} className="hover:bg-muted/30 transition-colors">
+                <td className="px-4 py-3">
+                  <p className="text-xs font-bold text-foreground">{item.titulo}</p>
+                  <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <PermissaoBadge status={item.portaria} onClick={() => togglePermissao(catIdx, itemIdx, 'portaria')} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <PermissaoBadge status={item.supervisor} onClick={() => togglePermissao(catIdx, itemIdx, 'supervisor')} />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <PermissaoBadge status={item.admin} onClick={() => togglePermissao(catIdx, itemIdx, 'admin')} />
+                </td>
+              </tr>
             ))}
           </Fragment>
         ))}
@@ -327,152 +427,64 @@ function TabelaFuncionarios({ permissoes, setPermissoes, busca }) {
 }
 
 function TabelaVisitantes({ permissoes, setPermissoes, busca }) {
-  const funcionalidadesFiltradas = useMemo(() => {
+  const filtradas = useMemo(() => {
     return permissoes.filter(item => 
       item.titulo.toLowerCase().includes(busca.toLowerCase()) ||
       item.desc.toLowerCase().includes(busca.toLowerCase())
     );
   }, [permissoes, busca]);
 
-  if (funcionalidadesFiltradas.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-        <p>Nenhuma funcionalidade encontrada</p>
-      </div>
-    );
-  }
+  const togglePermissao = (index) => {
+    const novas = [...permissoes];
+    const ciclos = { 'allow': 'read', 'read': 'deny', 'deny': 'allow' };
+    novas[index].visitante = ciclos[novas[index].visitante];
+    setPermissoes(novas);
+  };
 
   return (
     <table className="w-full text-left border-collapse">
       <thead>
-        <tr className="bg-slate-800 text-white">
-          <th className="py-4 px-6 text-sm font-semibold">Funcionalidade</th>
-          <th className="py-4 px-6 text-center">
-            <div className="flex items-center justify-center gap-2">
-              <Eye size={16} />
-              <span className="text-xs font-semibold">Comum</span>
-            </div>
-          </th>
+        <tr className="bg-muted/40 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <th className="px-4 py-3">Acesso do Visitante</th>
+          <th className="px-4 py-3 text-center w-32">Permissão</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border">
-        <tr className="bg-muted/40">
-          <td colSpan={2} className="px-6 py-2.5">
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">ACESSO PELO APLICATIVO</h3>
-          </td>
-        </tr>
-        {funcionalidadesFiltradas.map((func, idx) => (
-          <PermissionRowVisitante 
-            key={idx}
-            {...func}
-          />
+        {filtradas.map((item, idx) => (
+          <tr key={item.titulo} className="hover:bg-muted/30 transition-colors">
+            <td className="px-4 py-3">
+              <p className="text-xs font-bold text-foreground">{item.titulo}</p>
+              <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+            </td>
+            <td className="px-4 py-3 text-center">
+              <PermissaoBadge status={item.visitante} onClick={() => togglePermissao(idx)} />
+            </td>
+          </tr>
         ))}
       </tbody>
     </table>
   );
 }
 
-function PermissionRowFuncionario({ titulo, desc, portaria, supervisor, admin }) {
-  const [p, setP] = useState(portaria);
-  const [s, setS] = useState(supervisor);
-  const [a, setA] = useState(admin);
-
-  const alternarStatus = (statusAtual) => {
-    if (statusAtual === 'allow') return 'deny';
-    if (statusAtual === 'deny') return 'read';
-    return 'allow';
-  };
-
-  return (
-    <tr className="hover:bg-muted/30 transition-colors">
-      <td className="py-4 px-6">
-        <div>
-          <p className="font-semibold text-sm text-foreground">{titulo || "—"}</p>
-          <p className="text-xs text-muted-foreground font-normal mt-1">{desc || "—"}</p>
-        </div>
-      </td>
-      
-      <td className="py-4 px-6 text-center">
-        <button 
-          onClick={() => setP(alternarStatus(p))} 
-          className="hover:scale-110 active:scale-95 transition-transform inline-flex"
-          title="Clique para alterar"
-        >
-          <Badge status={p} />
-        </button>
-      </td>
-
-      <td className="py-4 px-6 text-center">
-        <button 
-          onClick={() => setS(alternarStatus(s))} 
-          className="hover:scale-110 active:scale-95 transition-transform inline-flex"
-          title="Clique para alterar"
-        >
-          <Badge status={s} />
-        </button>
-      </td>
-
-      <td className="py-4 px-6 text-center">
-        <button 
-          onClick={() => setA(alternarStatus(a))} 
-          className="hover:scale-110 active:scale-95 transition-transform inline-flex"
-          title="Clique para alterar"
-        >
-          <Badge status={a} />
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function PermissionRowVisitante({ titulo, desc, visitante }) {
-  const [status, setStatus] = useState(visitante);
-
-  const alternarStatus = (statusAtual) => {
-    if (statusAtual === 'allow') return 'deny';
-    if (statusAtual === 'deny') return 'read';
-    return 'allow';
-  };
-
-  return (
-    <tr className="hover:bg-muted/30 transition-colors">
-      <td className="py-4 px-6">
-        <div>
-          <p className="font-semibold text-sm text-foreground">{titulo || "—"}</p>
-          <p className="text-xs text-muted-foreground font-normal mt-1">{desc || "—"}</p>
-        </div>
-      </td>
-      
-      <td className="py-4 px-6 text-center">
-        <button 
-          onClick={() => setStatus(alternarStatus(status))} 
-          className="hover:scale-110 active:scale-95 transition-transform inline-flex"
-          title="Clique para alterar"
-        >
-          <Badge status={status} />
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function Badge({ status }) {
+function PermissaoBadge({ status, onClick }) {
   const styles = {
-    allow: "bg-green-100 border-green-200 text-green-700",
-    deny: "bg-red-100 border-red-200 text-red-700",
-    read: "bg-yellow-100 border-yellow-200 text-yellow-700"
+    allow: 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200',
+    read: 'bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-200',
+    deny: 'bg-red-100 text-red-700 border-red-200 hover:bg-red-200'
   };
 
   const icons = {
-    allow: <Check className="w-3.5 h-3.5" strokeWidth={3} />,
-    deny: <X className="w-3.5 h-3.5" strokeWidth={3} />,
-    read: <Minus className="w-3.5 h-3.5" strokeWidth={3} />
+    allow: <Check size={12} />,
+    read: <Eye size={12} />,
+    deny: <X size={12} />
   };
 
   return (
-    <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full border ${styles[status] || styles.deny}`}>
-      {icons[status] || icons.deny}
-    </div>
+    <button 
+      onClick={onClick}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${styles[status]}`}
+    >
+      {icons[status]}
+    </button>
   );
 }

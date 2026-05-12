@@ -10,12 +10,13 @@ import {
   X,
   Settings,
   Home,
-  AlertTriangle,
-  FileText
+  CheckCircle2,
+  FileText,
+  Clock
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
 
-export default function PortariaSidebar() {
+export default function SupervisorSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const { logout, user } = useAuth();
@@ -33,7 +34,7 @@ export default function PortariaSidebar() {
         onClick={toggleSidebar}
         aria-label={isOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
         aria-expanded={isOpen}
-        aria-controls="portaria-sidebar"
+        aria-controls="supervisor-sidebar"
         className="lg:hidden fixed top-8 left-6 z-[60] p-2 bg-[#0A254052] rounded-2xl text-white active:scale-90 transition-all border border-white/10"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -48,49 +49,45 @@ export default function PortariaSidebar() {
       )}
 
       {/* Sidebar Principal */}
-      <aside id="portaria-sidebar" className={`
+      <aside id="supervisor-sidebar" className={`
         fixed lg:sticky top-0 left-0 h-screen w-72 bg-[#0A2540] flex flex-col shadow-2xl z-[55] transition-all duration-500 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Cabeçalho com Logo/Texto */}
         <div className="p-8 ml-18 mb-4 flex items-center justify-between">
           <div className="flex items-center space-x-3 group cursor-pointer">
-           
-            <h1 className="text-2xl  font-black text-white tracking-tighter group-hover:tracking-normal transition-all duration-300">
+            <h1 className="text-2xl font-black text-white tracking-tighter group-hover:tracking-normal transition-all duration-300">
               GET<span className="text-[#4DA8EA]">IN</span>
             </h1>
           </div>
-          
-          
-        
         </div>
 
         {/* Navegação Principal */}
         <div className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
           <div>
             <p className="px-4 text-[10px] font-bold text-gray-300 tracking-[0.2em] uppercase mb-4 opacity-70">
-              Fluxo de Portaria
+              Fluxo de Supervisor
             </p>
             <nav className="space-y-1.5">
               <NavItem 
-                href="/portaria" 
+                href="/supervisor" 
                 icon={Home} 
-                label="Operação" 
-                active={pathname === '/portaria'} 
+                label="Dashboard" 
+                active={pathname === '/supervisor'} 
                 onClick={() => setIsOpen(false)} 
               />
               <NavItem 
-                href="/portaria/pendencias" 
-                icon={AlertTriangle} 
-                label="Pendências" 
-                active={pathname === '/portaria/pendencias'} 
+                href="/supervisor/aprovacoes" 
+                icon={CheckCircle2} 
+                label="Aprovações Pendentes" 
+                active={pathname === '/supervisor/aprovacoes'} 
                 onClick={() => setIsOpen(false)} 
               />
               <NavItem 
-                href="/portaria/historico" 
+                href="/supervisor/historico" 
                 icon={FileText} 
-                label="Histórico" 
-                active={pathname === '/portaria/historico'} 
+                label="Histórico de Aprovações" 
+                active={pathname === '/supervisor/historico'} 
                 onClick={() => setIsOpen(false)} 
               />
             </nav>
@@ -98,25 +95,25 @@ export default function PortariaSidebar() {
         </div>
 
         {/* Rodapé da Sidebar */}
-          <div className="p-4 mt-auto border-t border-white/5">
-            <div className="bg-white/5 rounded-2xl p-4 mb-4">
-              <div className="flex items-center space-x-3 mb-3">
-                <UserAvatar 
-                  name={user?.nome || 'Portaria'} 
-                  email={user?.email || 'portaria@getin.com'} 
-                  className="w-8 h-8 text-[10px]" 
-                />
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-xs font-bold text-white truncate">{user?.nome || 'Portaria'}</p>
-                  <p className="text-[10px] text-gray-400 truncate">{user?.email || 'portaria@getin.com'}</p>
-                </div>
+        <div className="p-4 mt-auto border-t border-white/5">
+          <div className="bg-white/5 rounded-2xl p-4 mb-4">
+            <div className="flex items-center space-x-3 mb-3">
+              <UserAvatar 
+                name={user?.nome || 'Supervisor'} 
+                email={user?.email || 'supervisor@getin.com'} 
+                className="w-8 h-8 text-[10px]" 
+              />
+              <div className="flex-1 overflow-hidden">
+                <p className="text-xs font-bold text-white truncate">{user?.nome || 'Supervisor'}</p>
+                <p className="text-[10px] text-gray-400 truncate">{user?.email || 'supervisor@getin.com'}</p>
               </div>
-              <Link href="/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
-                <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
-                <span>Configurações</span>
-              </Link>
             </div>
-          
+            <Link href="/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
+              <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
+              <span>Configurações</span>
+            </Link>
+          </div>
+        
           <button 
             onClick={handleLogout}
             className="w-full py-3 px-4 rounded-xl text-red-400 hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group cursor-pointer active:scale-95 transition-transform"

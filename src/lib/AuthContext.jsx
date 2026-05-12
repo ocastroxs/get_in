@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
 
   // Redirecionar para login se não autenticado e tentar acessar rota protegida
   useEffect(() => {
-    const protectedRoutes = ["/dashboard", "/registrarFuncionario", "/permissao", "/crachas", "/relatorios"];
+    const protectedRoutes = ["/dashboard", "/registrarFuncionario", "/permissao", "/crachas", "/relatorios", "/supervisor", "/portaria"];
     const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
     if (!isLoading && !isAuthenticated && isProtectedRoute) {
@@ -40,21 +40,33 @@ export function AuthProvider({ children }) {
     }
   }, [isAuthenticated, isLoading, pathname, router]);
 
-  const login = (userData, token) => {
+  const login = (userData, token, funcionario = null) => {
     // Agora o login recebe os dados reais vindos da sua integração
-    localStorage.setItem("getin_token", token);
-    localStorage.setItem("getin_user", JSON.stringify(userData));
+    localStorage.setItem('getin_token', token);
+    localStorage.setItem('getin_user', JSON.stringify(userData));
+    if (funcionario) {
+      localStorage.setItem('getin_funcionario', JSON.stringify(funcionario));
+    }
     setUser(userData);
     setIsAuthenticated(true);
-    router.push("/dashboard");
+    
+    // Redirecionar baseado no tipo de funcionário
+    if (funcionario && funcionario.tipo === 'sup') {
+      router.push('/supervisor');
+    } else if (funcionario && funcionario.tipo === 'port') {
+      router.push('/portaria');
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("getin_token");
-    localStorage.removeItem("getin_user");
+    localStorage.removeItem('getin_token');
+    localStorage.removeItem('getin_user');
+    localStorage.removeItem('getin_funcionario');
     setUser(null);
     setIsAuthenticated(false);
-    router.push("/");
+    router.push('/');
   };
 
   return (

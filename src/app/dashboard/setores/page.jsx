@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
@@ -166,8 +168,8 @@ function ModalSetor({ setor, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -255,66 +257,35 @@ function LinhaSetor({ setor, fluxoMax, onEditar, onExcluir }) {
     <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${setor.acesso === "restrito" || setor.acesso === "bloqueado" ? "bg-red-50" : "bg-accent"}`}>
-            <AcessoIcon size={15} className={ACESSO_ICON_COLOR[setor.acesso]} />
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]">
+            {setor.id}
           </div>
-          <div>
-            <p className="text-sm font-semibold text-foreground leading-tight">{setor.nome || "—"}</p>
-            <p className="text-[11px] text-muted-foreground">{setor.id || "—"}</p>
-          </div>
+          <div className="font-bold text-sm text-foreground">{setor.nome}</div>
         </div>
       </td>
-
-      <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">{setor.responsavel || "—"}</td>
-
+      <td className="py-3 px-4 text-xs font-medium text-muted-foreground">{setor.responsavel || "—"}</td>
       <td className="py-3 px-4">
-        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${ACESSO_STYLE[setor.acesso] || "bg-gray-100 text-gray-700"}`}>
-          {ACESSO_LABEL[setor.acesso] || "—"}
+        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${ACESSO_STYLE[setor.acesso]}`}>
+          <AcessoIcon size={12} className={ACESSO_ICON_COLOR[setor.acesso]} />
+          {ACESSO_LABEL[setor.acesso]}
+        </div>
+      </td>
+      <td className="py-3 px-4">
+        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${STATUS_STYLE[setor.status]}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[setor.status]}`} />
+          {STATUS_LABEL[setor.status]}
         </span>
       </td>
-
-      <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[setor.status] || "bg-gray-100 text-gray-700"}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[setor.status] || "bg-gray-400"}`} />
-          {STATUS_LABEL[setor.status] || "—"}
-        </span>
-      </td>
-
-      <td className="py-3 px-4 text-sm text-muted-foreground whitespace-nowrap">
-        {setor.visitantes || 0} pessoa{(setor.visitantes || 0) !== 1 ? "s" : ""}
-      </td>
-
-      <td className="py-3 px-4">
-        <FluxoBar value={setor.fluxo || 0} max={fluxoMax} />
-      </td>
-
-      <td className="py-3 px-4">
-        <p className="text-xs font-semibold text-foreground">{setor.ultimaAtualizacao?.data ?? "—"}</p>
-        <p className="text-[11px] text-muted-foreground">{setor.ultimaAtualizacao?.hora ?? ""}</p>
-      </td>
-
-      <td className="py-3 px-4">
-        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-          <button
-            title="Copiar link"
-            onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/setores/${setor.id}`)}
-            className="w-7 h-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <Link2 size={13} />
+      <td className="py-3 px-4 text-xs font-medium text-foreground tabular-nums">{setor.visitantes || 0}</td>
+      <td className="py-3 px-4"><FluxoBar value={setor.fluxo} max={fluxoMax} /></td>
+      <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{setor.ultimaAtualizacao}</td>
+      <td className="py-3 px-4 text-right">
+        <div className="flex items-center justify-end gap-1">
+          <button onClick={() => onEditar(setor)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+            <Pencil size={14} />
           </button>
-          <button
-            title="Editar setor"
-            onClick={() => onEditar(setor)}
-            className="w-7 h-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            title="Excluir setor"
-            onClick={() => onExcluir(setor)}
-            className="w-7 h-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
-          >
-            <Trash2 size={13} />
+          <button onClick={() => onExcluir(setor)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+            <Trash2 size={14} />
           </button>
         </div>
       </td>
@@ -325,277 +296,322 @@ function LinhaSetor({ setor, fluxoMax, onEditar, onExcluir }) {
 // ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 export default function SetoresPage() {
-  const [setores, setSetores]           = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const [setores, setSetores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [acessoFiltro, setAcessoFiltro] = useState("Todos");
-  const [busca, setBusca]               = useState("");
-
-  const [modalSetor, setModalSetor]     = useState(null);
-  const [modalExcluir, setModalExcluir] = useState(null);
+  const [busca, setBusca] = useState("");
+  
+  const [modalSetor, setModalSetor]     = useState({ open: false, data: null });
+  const [modalExcluir, setModalExcluir] = useState({ open: false, data: null });
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempStatusFiltro, setTempStatusFiltro] = useState("Todos");
+  const [tempAcessoFiltro, setTempAcessoFiltro] = useState("Todos");
 
   const carregarSetores = async () => {
     setLoading(true);
     try {
       const response = await api.get('/dep');
       if (response.sucesso) {
-        const dados = (response.data || []).map(dep => ({
-          ...dep,
-          acesso: "liberado",
-          status: "ativo",
-          visitantes: 0,
-          fluxo: 0,
-          ultimaAtualizacao: { data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString() }
+        // Mock de dados adicionais para visualização
+        const data = (response.data || []).map(s => ({
+          ...s,
+          responsavel: s.responsavel || "Não definido",
+          acesso: s.acesso || (Math.random() > 0.7 ? (Math.random() > 0.5 ? "restrito" : "bloqueado") : "liberado"),
+          status: s.status || (Math.random() > 0.8 ? "restrito" : "ativo"),
+          visitantes: Math.floor(Math.random() * 25),
+          fluxo: Math.floor(Math.random() * 50),
+          ultimaAtualizacao: "Há 5 min"
         }));
-        setSetores(dados);
+        setSetores(data);
       }
-    } catch (error) {
-      console.error("Erro ao carregar setores:", error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    carregarSetores();
-  }, []);
+  useEffect(() => { carregarSetores(); }, []);
 
   const filtrados = useMemo(() => {
-    return setores.filter((s) => {
-      const mStatus = statusFiltro === "Todos" || s.status === statusFiltro;
-      const mAcesso = acessoFiltro === "Todos" || s.acesso === acessoFiltro;
-      const mBusca  = busca.trim() === "" ||
-        (s.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
-        (s.responsavel || "").toLowerCase().includes(busca.toLowerCase()) ||
-        (s.id || "").toString().toLowerCase().includes(busca.toLowerCase());
-      return mStatus && mAcesso && mBusca;
+    return setores.filter(s => {
+      const matchStatus = statusFiltro === "Todos" || s.status === statusFiltro;
+      const matchAcesso = acessoFiltro === "Todos" || s.acesso === acessoFiltro;
+      const matchBusca  = !busca.trim() || s.nome.toLowerCase().includes(busca.toLowerCase());
+      return matchStatus && matchAcesso && matchBusca;
     });
   }, [setores, statusFiltro, acessoFiltro, busca]);
 
-  const stats = useMemo(() => {
-    const maiorFluxo = setores.reduce((a, b) => (b.fluxo || 0) > (a.fluxo || 0) ? b : a, setores[0]);
-    const bloqueados = setores.filter((s) => s.acesso === "bloqueado").length; 
-    const restritos  = setores.filter((s) => s.acesso === "restrito").length;
-    return {
-      total:      setores.length,
-      ativos:     setores.filter((s) => s.status === "ativo").length,
-      pctAtivos:  setores.length > 0 ? Math.round((setores.filter((s) => s.status === "ativo").length / setores.length) * 100) : 0,
-      maiorFluxo: maiorFluxo || {},
-      bloqueados,
-      restritos,
-    };
-  }, [setores]);
+  const stats = useMemo(() => ({
+    total: setores.length,
+    ativos: setores.filter(s => s.status === "ativo").length,
+    restritos: setores.filter(s => s.acesso === "restrito").length,
+    bloqueados: setores.filter(s => s.acesso === "bloqueado").length,
+  }), [setores]);
 
-  const fluxoMax = useMemo(() => Math.max(...setores.map((s) => s.fluxo || 0), 1), [setores]);
+  const fluxoMax = useMemo(() => Math.max(...setores.map(s => s.fluxo || 0), 1), [setores]);
 
-  function handleSalvar(resultado, isEdicao) {
+  const handleSave = (data, isEdicao) => {
     if (isEdicao) {
-      setSetores((p) => p.map((s) => s.id === resultado.id ? { ...s, ...resultado } : s));
+      setSetores(prev => prev.map(s => s.id === data.id ? data : s));
     } else {
-      setSetores((p) => [resultado, ...p]);
+      setSetores(prev => [data, ...prev]);
     }
-  }
+  };
 
-  async function handleExcluir() {
-    if (!modalExcluir) return;
+  const handleExcluir = async () => {
+    const id = modalExcluir.data?.id;
+    if (!id) return;
     try {
-      const response = await api.delete(`/dep/${modalExcluir.id}`);
+      const response = await api.delete(`/dep/${id}`);
       if (response.sucesso) {
-        setSetores((p) => p.filter((s) => s.id !== modalExcluir.id));
-        setModalExcluir(null);
-      } else {
-        alert(response.mensagem || "Erro ao excluir setor.");
+        setSetores(prev => prev.filter(s => s.id !== id));
+        setModalExcluir({ open: false, data: null });
       }
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
       alert("Erro ao excluir setor.");
     }
-  }
+  };
+
+  const aplicarFiltros = () => {
+    setStatusFiltro(tempStatusFiltro);
+    setAcessoFiltro(tempAcessoFiltro);
+  };
+
+  const limparFiltros = () => {
+    setTempStatusFiltro("Todos");
+    setTempAcessoFiltro("Todos");
+    setStatusFiltro("Todos");
+    setAcessoFiltro("Todos");
+    setBusca("");
+  };
 
   return (
-    <>
-      {modalSetor !== null && (
-        <ModalSetor
-          setor={modalSetor?.id ? modalSetor : null}
-          onClose={() => setModalSetor(null)}
-          onSave={handleSalvar}
-        />
-      )}
-
-      {modalExcluir && (
-        <ModalConfirmarExclusao
-          setor={modalExcluir}
-          onConfirm={handleExcluir}
-          onClose={() => setModalExcluir(null)}
-        />
-      )}
-
-      <div className="flex flex-col gap-5">
-
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Setores</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Gestão de setores e departamentos da empresa
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadCSV(filtrados)}>
-              <Download size={13} /> Exportar
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setModalSetor({})}>
-              <Plus size={13} /> Novo Setor
-            </Button>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-4 gap-4">
-          <StatCard
-            label="Total de Setores"
-            value={stats.total}
-            icon={<Layers size={17} className="text-primary" />}
-            sub="cadastrados"
-            accentVar="var(--primary)"
-          />
-          <StatCard
-            label="Setores Ativos"
-            value={stats.ativos}
-            valueClassName="text-chart-2"
-            icon={<CheckSquare size={17} className="text-chart-2" />}
-            sub={`${stats.pctAtivos}% do total`}
-            accentVar="var(--chart-2)"
-          />
-          <StatCard
-            label="Maior Fluxo"
-            value={stats.maiorFluxo?.nome || "—"}
-            valueClassName="text-chart-3 font-extrabold text-lg"
-            icon={<Activity size={17} className="text-chart-3" />}
-            sub={`${stats.maiorFluxo?.fluxo || 0} passagens`}
-            accentVar="var(--chart-3)"
-          />
-          <StatCard
-            label="Bloqueados / Restritos"
-            value={stats.bloqueados + stats.restritos}
-            valueClassName="text-destructive"
-            icon={<Lock size={17} className="text-destructive" />}
-            sub={`${stats.bloqueados} bloqueado · ${stats.restritos} restritos`}
-            accentVar="var(--destructive)"
-          />
+    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Gestão de Setores</h1>
+          <p className="text-xs text-muted-foreground mt-1">Controle de departamentos e níveis de segurança</p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Filter size={13} /> Filtros
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Status</label>
-            <div className="relative">
-              <select
-                value={statusFiltro}
-                onChange={(e) => setStatusFiltro(e.target.value)}
-                className="h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-xs text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-              >
-                {STATUS_OPTS.map((s) => (
-                  <option key={s} value={s}>{s === "Todos" ? "Todos" : STATUS_LABEL[s]}</option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">Acesso</label>
-            <div className="relative">
-              <select
-                value={acessoFiltro}
-                onChange={(e) => setAcessoFiltro(e.target.value)}
-                className="h-8 pl-3 pr-7 rounded-lg border border-border bg-background text-xs text-foreground appearance-none focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-              >
-                {ACESSO_OPTS.map((a) => (
-                  <option key={a} value={a}>{a === "Todos" ? "Todos" : ACESSO_LABEL[a]}</option>
-                ))}
-              </select>
-              <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
-          </div>
-
-          <button
-            onClick={() => { setStatusFiltro("Todos"); setAcessoFiltro("Todos"); setBusca(""); }}
-            className="text-xs text-primary hover:text-primary/70 font-medium transition-colors underline underline-offset-2"
-          >
-            Limpar filtros
-          </button>
-
-          <span className="ml-auto text-xs text-muted-foreground">
-            {filtrados.length} registro{filtrados.length !== 1 ? "s" : ""} encontrado{filtrados.length !== 1 ? "s" : ""}
-          </span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => downloadCSV(filtrados)} className="gap-2 rounded-xl">
+            <Download size={14} /> Exportar CSV
+          </Button>
+          <Button size="sm" onClick={() => setModalSetor({ open: true, data: null })} className="gap-1.5 rounded-xl">
+            <Plus size={14} /> Novo Setor
+          </Button>
         </div>
+      </header>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">Registro de Setores</h2>
-            <div className="relative">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="Total" value={stats.total} icon={<Layers size={17} className="text-primary" />} sub="departamentos" accentVar="var(--primary)" />
+        <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="var(--green-500)" />
+        <StatCard label="Acesso Restrito" value={stats.restritos} valueClassName="text-orange-600" icon={<Activity size={17} className="text-orange-600" />} sub="segurança média" accentVar="var(--orange-500)" />
+        <StatCard label="Bloqueados" value={stats.bloqueados} valueClassName="text-red-600" icon={<Lock size={17} className="text-red-600" />} sub="acesso especial" accentVar="var(--destructive)" />
+      </div>
+
+      {/* Barra de Filtros Padronizada */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar setor pelo nome..."
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
-                placeholder="Buscar setor..."
-                className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
               />
               {busca && (
-                <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X size={11} />
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
                 </button>
               )}
             </div>
+            
+            <Button
+              type="button"
+              onClick={() => setModalFiltroAberto(true)}
+              variant="outline"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtros</span>
+              {(statusFiltro !== "Todos" || acessoFiltro !== "Todos") && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  {(statusFiltro !== "Todos" ? 1 : 0) + (acessoFiltro !== "Todos" ? 1 : 0)}
+                </span>
+              )}
+            </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  {["Setor", "Responsável", "Acesso", "Status", "Visitantes", "Fluxo", "Última Atualização", "Ações"].map((col) => (
-                    <th key={col} className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <Loader2 className="animate-spin" size={24} />
-                        <span className="text-sm">Carregando setores...</span>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filtrados.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                      Nenhum setor encontrado com os filtros aplicados.
-                    </td>
-                  </tr>
-                ) : (
-                  filtrados.map((s) => (
-                    <LinhaSetor
-                      key={s.id}
-                      setor={s}
-                      fluxoMax={fluxoMax}
-                      onEditar={(s) => setModalSetor(s)}
-                      onExcluir={(s) => setModalExcluir(s)}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+            {filtrados.length} resultado(s)
           </div>
         </div>
 
+        {(statusFiltro !== "Todos" || acessoFiltro !== "Todos" || busca) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            {busca && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Busca: {busca}
+              </span>
+            )}
+            {statusFiltro !== "Todos" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Status: {STATUS_LABEL[statusFiltro]}
+              </span>
+            )}
+            {acessoFiltro !== "Todos" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Acesso: {ACESSO_LABEL[acessoFiltro]}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={limparFiltros}
+              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar tudo
+            </Button>
+          </div>
+        )}
       </div>
-    </>
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-border bg-muted/20">
+          <h3 className="font-bold text-sm">Lista de Departamentos</h3>
+          <p className="text-xs text-muted-foreground">Monitoramento de fluxo e segurança</p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                <th className="px-4 py-3">Setor / ID</th>
+                <th className="px-4 py-3">Responsável</th>
+                <th className="px-4 py-3">Acesso</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Visitantes</th>
+                <th className="px-4 py-3">Fluxo</th>
+                <th className="px-4 py-3">Última At.</th>
+                <th className="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-20 text-center">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="animate-spin" size={24} />
+                      <span className="text-sm">Carregando setores...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtrados.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-20 text-center text-sm text-muted-foreground">
+                    Nenhum setor encontrado com os filtros aplicados.
+                  </td>
+                </tr>
+              ) : (
+                filtrados.map(s => (
+                  <LinhaSetor
+                    key={s.id}
+                    setor={s}
+                    fluxoMax={fluxoMax}
+                    onEditar={(data) => setModalSetor({ open: true, data })}
+                    onExcluir={(data) => setModalExcluir({ open: true, data })}
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {modalSetor.open && (
+        <ModalSetor
+          setor={modalSetor.data}
+          onClose={() => setModalSetor({ open: false, data: null })}
+          onSave={handleSave}
+        />
+      )}
+      {modalExcluir.open && (
+        <ModalConfirmarExclusao
+          setor={modalExcluir.data}
+          onClose={() => setModalExcluir({ open: false, data: null })}
+          onConfirm={handleExcluir}
+        />
+      )}
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status Operacional
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {STATUS_OPTS.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempStatusFiltro(status)}
+                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                    tempStatusFiltro === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  {STATUS_LABEL[status] || status}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Nível de Acesso
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {ACESSO_OPTS.map((acesso) => (
+                <button
+                  key={acesso}
+                  type="button"
+                  onClick={() => setTempAcessoFiltro(acesso)}
+                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                    tempAcessoFiltro === acesso
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  {ACESSO_LABEL[acesso] || acesso}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-[10px] text-primary/80 leading-relaxed">
+              <strong>Info:</strong> Os filtros de status e acesso podem ser combinados para localizar departamentos com configurações específicas de segurança.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
+    </div>
   );
 }
