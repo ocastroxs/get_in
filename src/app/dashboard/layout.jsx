@@ -3,9 +3,42 @@
 import ParticlesBackground from "@/components/ui/ParticlesBackground";
 import Sidebar from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/AuthContext";
+import Lenis from "lenis";
+import { useEffect, useRef } from "react";
 
 export default function DashboardLayout({ children }) {
   const { isLoading } = useAuth();
+  const wrapperRef = useRef(null);
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+
+    if (!wrapper || !content) {
+      return;
+    }
+
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      autoRaf: false,
+    });
+
+    let frameId = 0;
+
+    const raf = (time) => {
+      lenis.raf(time);
+      frameId = requestAnimationFrame(raf);
+    };
+
+    frameId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      lenis.destroy();
+    };
+  }, []);
 
   if (isLoading) {
     return (
@@ -19,7 +52,12 @@ export default function DashboardLayout({ children }) {
     <div className="flex min-h-screen">
       <ParticlesBackground />
       <Sidebar />
-      <main className="ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">{children}</main>
+      <main
+        ref={wrapperRef}
+        className="dashboard-scroll ml-[0px] h-screen flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6"
+      >
+        <div ref={contentRef}>{children}</div>
+      </main>
     </div>
   );
 }

@@ -7,7 +7,10 @@ import StatusVisitantesChart from "@/components/StatusVisitantesChart";
 import { STATS_TODAY } from "@/lib/mockData";
 import { AlertTriangle, ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
+
 export default function DashboardPage() {
+
+
   const saidasPct =
     STATS_TODAY.visitantes.value > 0
       ? Math.round((STATS_TODAY.saidas.value / STATS_TODAY.visitantes.value) * 100)
