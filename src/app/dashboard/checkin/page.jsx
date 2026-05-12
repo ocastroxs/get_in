@@ -17,11 +17,14 @@ import {
   ArrowRightLeft,
   Eye,
   Loader2,
-  X
+  X,
+  Filter,
+  Check
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -124,6 +127,9 @@ export default function CheckinPage() {
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("Todas");
   const [busca, setBusca] = useState("");
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempFiltroStatus, setTempFiltroStatus] = useState("Todas");
 
   const carregarRegistros = async () => {
     setLoading(true);
@@ -169,8 +175,18 @@ export default function CheckinPage() {
     pendentes: registros.filter((r) => r.status === "Aguard. aprovação").length,
   }), [registros]);
 
+  const aplicarFiltros = () => {
+    setFiltroStatus(tempFiltroStatus);
+  };
+
+  const limparFiltros = () => {
+    setTempFiltroStatus("Todas");
+    setFiltroStatus("Todas");
+    setBusca("");
+  };
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Check-in / Check-out</h1>
@@ -179,18 +195,26 @@ export default function CheckinPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => downloadCSV(registrosFiltrados)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            className="gap-2 rounded-xl"
           >
-            <Download size={16} /> Exportar
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition-colors">
-            <LogOut size={16} /> Check-out
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <UserPlus size={16} /> Check-in
-          </button>
+            <Download size={14} /> Exportar CSV
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white border-none"
+          >
+            <LogOut size={14} /> Check-out
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 rounded-xl"
+          >
+            <UserPlus size={14} /> Check-in
+          </Button>
         </div>
       </header>
 
@@ -229,59 +253,85 @@ export default function CheckinPage() {
         />
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-bold uppercase text-muted-foreground px-2">Status:</span>
-            {["Todas", "Dentro", "Saiu", "Pendente", "Alerta"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFiltroStatus(status)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filtroStatus === status
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
-            {(busca || filtroStatus !== "Todas") && (
-              <button
-                onClick={() => { setBusca(""); setFiltroStatus("Todas"); }}
-                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X size={14} />
-              </button>
-            )}
+      {/* Barra de Filtros Padronizada */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar visitante, CPF, empresa..."
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            
+            <Button
+              type="button"
+              onClick={() => setModalFiltroAberto(true)}
+              variant="outline"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtros</span>
+              {filtroStatus !== "Todas" && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  1
+                </span>
+              )}
+            </Button>
           </div>
 
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
-            <Input
-              placeholder="Buscar visitante, CPF, empresa..."
-              className="pl-9 h-9 text-xs"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+            {registrosFiltrados.length} registro(s) encontrado(s)
           </div>
         </div>
+
+        {(filtroStatus !== "Todas" || busca) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            {busca && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Busca: {busca}
+              </span>
+            )}
+            {filtroStatus !== "Todas" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Status: {filtroStatus}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={limparFiltros}
+              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar tudo
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <div className="p-4 border-b border-border flex items-center justify-between">
+      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-sm">Registro de Movimentação</h3>
-            <p className="text-[10px] text-muted-foreground">{registrosFiltrados.length} registros • mostrando por página</p>
+            <p className="text-[10px] text-muted-foreground">Monitoramento em tempo real</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Clock size={14} />
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => downloadCSV(registrosFiltrados)}>
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => downloadCSV(registrosFiltrados)}>
               <Download size={14} />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8">
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg">
               <Printer size={14} />
             </Button>
           </div>
@@ -326,6 +376,45 @@ export default function CheckinPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status do Movimento
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {["Todas", "Dentro", "Saiu", "Pendente", "Alerta"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempFiltroStatus(status)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                    tempFiltroStatus === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  <span>{status === "Todas" ? "Todos os Status" : status}</span>
+                  {tempFiltroStatus === status && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-[10px] text-primary/80 leading-relaxed">
+              <strong>Info:</strong> O status "Pendente" indica visitantes que aguardam aprovação de um supervisor para entrar.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
     </div>
   );
 }
