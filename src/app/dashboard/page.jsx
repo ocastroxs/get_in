@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import AlertaBanner from "@/components/AlertaBanner";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
@@ -5,11 +9,37 @@ import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
 import { STATS_TODAY } from "@/lib/mockData";
+import { api } from "@/services/api";
 import { AlertTriangle, ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
 
 export default function DashboardPage() {
+  const [visitantesEmAlerta, setVisitantesEmAlerta] = useState([]);
+  const [mostrarBanner, setMostrarBanner] = useState(true);
 
+  useEffect(() => {
+    async function carregarAlertas() {
+      try {
+        const response = await api.get("/requisicao-visitante");
+        if (response.sucesso) {
+          const alertas = (response.data || []).filter((visitante) => visitante.status === "semsaida");
+          setVisitantesEmAlerta(alertas);
+          setMostrarBanner(alertas.length > 0);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar alertas no dashboard:", error);
+        setVisitantesEmAlerta([]);
+        setMostrarBanner(false);
+      }
+    }
+
+    carregarAlertas();
+  }, []);
+
+  const mostrarAlertaBanner = useMemo(
+    () => mostrarBanner && visitantesEmAlerta.length > 0,
+    [mostrarBanner, visitantesEmAlerta.length]
+  );
 
   const saidasPct =
     STATS_TODAY.visitantes.value > 0
@@ -102,6 +132,10 @@ export default function DashboardPage() {
           />
         </section>
 
+        {mostrarAlertaBanner ? (
+          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
+        ) : null}
+
         <EntradasChart mobileLayout />
         <PicoMovimentoChart mobileLayout />
         <TiposVisitanteChart mobileLayout />
@@ -182,6 +216,10 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {mostrarAlertaBanner ? (
+          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
+        ) : null}
+
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
           <EntradasChart />
           <PicoMovimentoChart />
@@ -191,20 +229,6 @@ export default function DashboardPage() {
           <TiposVisitanteChart />
           <div className="space-y-6">
             <StatusVisitantesChart />
-            <div className="rounded-[24px] border border-border bg-card p-5 shadow-md transition-all duration-300 hover:shadow-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                  <AlertTriangle size={18} strokeWidth={1.75} />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Estado Critico</p>
-                  <h3 className="text-lg font-semibold text-foreground">Atencao para permanencia prolongada</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Existem {STATS_TODAY.ativos.alertas} visitante(s) acima da janela prevista. Priorize a validacao de saida.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
       </div>

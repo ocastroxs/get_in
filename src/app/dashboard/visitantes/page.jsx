@@ -13,7 +13,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import AlertaBanner from "@/components/AlertaBanner";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
@@ -241,7 +240,6 @@ export default function VisitantesPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [busca, setBusca] = useState("");
-  const [mostrarBanner, setMostrarBanner] = useState(true);
 
   const carregarVisitantes = async () => {
     setLoading(true);
@@ -265,12 +263,6 @@ export default function VisitantesPage() {
     () => visitantes.filter((visitante) => visitante.status === "semsaida"),
     [visitantes]
   );
-
-  useEffect(() => {
-    if (alertas.length > 0) {
-      setMostrarBanner(true);
-    }
-  }, [alertas.length]);
 
   const filtrados = useMemo(() => {
     return visitantes.filter((visitante) => {
@@ -314,10 +306,6 @@ export default function VisitantesPage() {
           buttonText="Novo Visitante"
           onButtonClick={() => setModalAberto(true)}
         />
-
-        {mostrarBanner && alertas.length > 0 ? (
-          <AlertaBanner alertas={alertas} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard
