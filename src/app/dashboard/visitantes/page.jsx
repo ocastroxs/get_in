@@ -10,7 +10,6 @@ import AlertaBanner from "@/components/AlertaBanner";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
-import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -370,7 +369,7 @@ export default function VisitantesPage() {
                   <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X size={11} />
                   </button>
-                ) : null}
+                )}
               </div>
               <select
                 value={statusFiltro}
