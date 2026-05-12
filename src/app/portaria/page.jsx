@@ -372,7 +372,12 @@ export default function PortariaPage() {
 
   return (
     <>
-      <Topbar title="Portaria" subtitle="Controle de acesso e visitantes presentes" />
+      <Topbar
+        title="Portaria"
+        subtitle="Controle de acesso e visitantes presentes"
+        buttonText="Novo Visitante"
+        buttonHref="/portaria/novo"
+      />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

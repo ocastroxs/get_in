@@ -416,8 +416,8 @@ export default function CrachasPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
-                  <th className="py-3 px-4">ID</th>
-                  <th className="py-3 px-4">Visitante Atual</th>
+                  <th className="py-3 px-4">TAG</th>
+                  <th className="py-3 px-4">Usuário Atual</th>
                   <th className="py-3 px-4">Empresa</th>
                   <th className="py-3 px-4">Setor</th>
                   <th className="py-3 px-4">Entrega</th>

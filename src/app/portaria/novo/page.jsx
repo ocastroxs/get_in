@@ -134,7 +134,7 @@ export default function NovoCadastroPage() {
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header com Navegação */}
-      <div className="p-6 flex items-center justify-between border-b border-white/40 bg-white/72 backdrop-blur-xl">
+      <div className="p-6 flex items-center justify-between border-b border-white/40  backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <Link href="/portaria" className="p-2 hover:bg-muted/60 rounded-lg transition-all duration-200 hover:scale-110">
             <ArrowLeft size={20} className="text-muted-foreground" />
