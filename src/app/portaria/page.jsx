@@ -10,12 +10,14 @@ import {
   QrCode,
   Search,
   Users,
-  X
+  X,
+  SlidersHorizontal
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
+import ModalFiltroPortaria from "@/components/ModalFiltroPortaria";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -262,6 +264,11 @@ export default function PortariaPage() {
   const [filtroStatus, setFiltroStatus] = useState("Todos");
   const [modalCheckoutAberto, setModalCheckoutAberto] = useState(false);
   const [visitanteSelecionado, setVisitanteSelecionado] = useState(null);
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [filtros, setFiltros] = useState({
+    busca: "",
+    status: "Todos"
+  });
 
   useEffect(() => {
     fetchVisitantes();
@@ -316,6 +323,32 @@ export default function PortariaPage() {
     fetchVisitantes();
   }
 
+  function handleAplicarFiltros(novosFiltros) {
+    setBusca(novosFiltros.busca || "");
+    setFiltroStatus(novosFiltros.status || "Todos");
+    setFiltros(novosFiltros);
+  }
+
+  function handleLimparFiltros() {
+    setBusca("");
+    setFiltroStatus("Todos");
+    setFiltros({
+      busca: "",
+      status: "Todos"
+    });
+  }
+
+  const configFiltros = {
+    busca: {
+      label: "Buscar",
+      placeholder: "Nome, CPF ou empresa..."
+    },
+    status: {
+      label: "Status da Visita",
+      opcoes: STATUS_FILTERS
+    }
+  };
+
   return (
     <>
       <Topbar
@@ -365,6 +398,16 @@ export default function PortariaPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setModalFiltroAberto(true)}
+              className="gap-2 rounded-lg"
+              type="button"
+            >
+              <SlidersHorizontal size={14} />
+              Filtros Avançados
+            </Button>
             {STATUS_FILTERS.map((status) => (
               <button
                 key={status.value}
@@ -442,6 +485,15 @@ export default function PortariaPage() {
         onClose={() => setModalCheckoutAberto(false)}
         visitante={visitanteSelecionado}
         onConfirm={handleConfirmacao}
+      />
+
+      <ModalFiltroPortaria
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        filtros={filtros}
+        onFiltrosChange={handleAplicarFiltros}
+        onLimpar={handleLimparFiltros}
+        config={configFiltros}
       />
     </>
   );
