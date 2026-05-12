@@ -5,10 +5,12 @@ import {
   Users, Search, X, Download, Plus,
   Check, Shield, User, Eye, Star,
   Mail, Phone, Building2, Briefcase,
-  Trash2, Edit, Loader2
+  Trash2, Edit, Loader2, Filter
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -116,6 +118,9 @@ export default function FuncionariosPage() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("Todos");
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempFiltroTipo, setTempFiltroTipo] = useState("Todos");
 
   const carregarFuncionarios = async () => {
     setLoading(true);
@@ -153,8 +158,18 @@ export default function FuncionariosPage() {
     portaria: funcionarios.filter(f => f.tipo === 'port').length,
   }), [funcionarios]);
 
+  const aplicarFiltros = () => {
+    setFiltroTipo(tempFiltroTipo);
+  };
+
+  const limparFiltros = () => {
+    setTempFiltroTipo("Todos");
+    setFiltroTipo("Todos");
+    setBusca("");
+  };
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Dashboard Funcionários</h1>
@@ -163,18 +178,23 @@ export default function FuncionariosPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => downloadCSV(filtrados)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            className="gap-2 rounded-xl"
           >
-            <Download size={16} /> Exportar
-          </button>
-          <button
+            <Download size={14} />
+            Exportar CSV
+          </Button>
+          <Button
+            size="sm"
             onClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="gap-1.5 rounded-xl"
           >
-            <Plus size={16} /> Novo Funcionário
-          </button>
+            <Plus size={14} />
+            Novo Funcionário
+          </Button>
         </div>
       </header>
 
@@ -213,56 +233,89 @@ export default function FuncionariosPage() {
         />
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar por nome, CPF ou email..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition"
-            />
+      {/* Barra de Filtros Padronizada */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar por nome, CPF ou email..."
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            
+            <Button
+              type="button"
+              onClick={() => setModalFiltroAberto(true)}
+              variant="outline"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtros</span>
+              {filtroTipo !== "Todos" && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  1
+                </span>
+              )}
+            </Button>
           </div>
-          
-          <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
-            {["Todos", "ger", "sup", "port", "func"].map((tipo) => (
-              <button
-                key={tipo}
-                onClick={() => setFiltroTipo(tipo)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                  filtroTipo === tipo
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {tipo === "Todos" ? "Todos" : TIPO_LABEL[tipo]}
-              </button>
-            ))}
-            {(busca || filtroTipo !== "Todos") && (
-              <button 
-                onClick={() => { setBusca(""); setFiltroTipo("Todos"); }}
-                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                title="Limpar filtros"
-              >
-                <X size={16} />
-              </button>
-            )}
+
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+            {filtrados.length} resultado(s)
           </div>
         </div>
+
+        {(filtroTipo !== "Todos" || busca) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            {busca && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Busca: {busca}
+              </span>
+            )}
+            {filtroTipo !== "Todos" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Nível: {TIPO_LABEL[filtroTipo] || filtroTipo}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={limparFiltros}
+              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar tudo
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-border bg-muted/20">
+          <h3 className="font-bold text-sm">Listagem de Colaboradores</h3>
+          <p className="text-xs text-muted-foreground">Gerenciamento de acessos</p>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="bg-muted/40 border-b border-border">
-                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Funcionário</th>
-                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Contato</th>
-                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Departamento</th>
-                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Nível de Acesso</th>
-                <th className="py-3 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest text-right">Ações</th>
+              <tr className="bg-muted/40 border-b border-border text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <th className="py-3 px-4">Funcionário</th>
+                <th className="py-3 px-4">Contato</th>
+                <th className="py-3 px-4">Departamento</th>
+                <th className="py-3 px-4">Nível de Acesso</th>
+                <th className="py-3 px-4 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -298,6 +351,45 @@ export default function FuncionariosPage() {
           </p>
         </div>
       </div>
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Nível de Acesso
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {["Todos", "ger", "sup", "port", "func"].map((tipo) => (
+                <button
+                  key={tipo}
+                  type="button"
+                  onClick={() => setTempFiltroTipo(tipo)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                    tempFiltroTipo === tipo
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  <span>{tipo === "Todos" ? "Todos os Níveis" : TIPO_LABEL[tipo]}</span>
+                  {tempFiltroTipo === tipo && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
+            <p className="text-[10px] text-purple-600 leading-relaxed">
+              <strong>Info:</strong> Filtrar por nível de acesso ajuda a gerenciar permissões e visualizar grupos específicos de colaboradores.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
     </div>
   );
 }

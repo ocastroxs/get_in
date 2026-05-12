@@ -16,11 +16,14 @@ import {
   Building2,
   Navigation,
   Loader2,
-  X
+  X,
+  Filter,
+  Check
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -102,6 +105,10 @@ export default function CirculacaoPage() {
   const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("Todos");
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
 
   const carregarDados = async () => {
     setLoading(true);
@@ -134,9 +141,12 @@ export default function CirculacaoPage() {
         (reg.pessoa || "").toLowerCase().includes(busca.toLowerCase()) || 
         (reg.origem || "").toLowerCase().includes(busca.toLowerCase()) ||
         (reg.destino || "").toLowerCase().includes(busca.toLowerCase());
-      return matchesBusca;
+      
+      const matchesStatus = filtroStatus === "Todos" || reg.status === filtroStatus;
+      
+      return matchesBusca && matchesStatus;
     });
-  }, [circulacao, busca]);
+  }, [circulacao, busca, filtroStatus]);
 
   const stats = useMemo(() => ({
     totalMovimentos: circulacao.length,
@@ -145,8 +155,18 @@ export default function CirculacaoPage() {
     tempoMedio: "—",
   }), [circulacao]);
 
+  const aplicarFiltros = () => {
+    setFiltroStatus(tempFiltroStatus);
+  };
+
+  const limparFiltros = () => {
+    setTempFiltroStatus("Todos");
+    setFiltroStatus("Todos");
+    setBusca("");
+  };
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Circulação Interna</h1>
@@ -155,15 +175,20 @@ export default function CirculacaoPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={carregarDados}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-foreground hover:bg-accent transition-colors"
+            className="gap-2 rounded-xl"
           >
-            <RefreshCw size={16} /> Atualizar
-          </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Map size={16} /> Ver Mapa de Calor
-          </button>
+            <RefreshCw size={14} /> Atualizar
+          </Button>
+          <Button
+            size="sm"
+            className="gap-1.5 rounded-xl"
+          >
+            <Map size={14} /> Ver Mapa de Calor
+          </Button>
         </div>
       </header>
 
@@ -202,9 +227,77 @@ export default function CirculacaoPage() {
         />
       </div>
 
+      {/* Barra de Filtros Padronizada */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar pessoa ou setor..."
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            
+            <Button
+              type="button"
+              onClick={() => setModalFiltroAberto(true)}
+              variant="outline"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">Filtros</span>
+              {filtroStatus !== "Todos" && (
+                <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  1
+                </span>
+              )}
+            </Button>
+          </div>
+
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+            {registrosFiltrados.length} resultado(s)
+          </div>
+        </div>
+
+        {(filtroStatus !== "Todos" || busca) && (
+          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            {busca && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Busca: {busca}
+              </span>
+            )}
+            {filtroStatus !== "Todos" && (
+              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                Status: {filtroStatus}
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              onClick={limparFiltros}
+              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Limpar tudo
+            </Button>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ocupação por Setor */}
-        <div className="lg:col-span-1 bg-card rounded-xl border border-border p-4 space-y-4">
+        <div className="lg:col-span-1 bg-card rounded-xl border border-border p-4 space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm">Ocupação por Setor</h3>
             <Building2 size={16} className="text-muted-foreground" />
@@ -247,31 +340,23 @@ export default function CirculacaoPage() {
         </div>
 
         {/* Logs de Circulação */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-sm">Logs de Circulação</h3>
               <p className="text-[10px] text-muted-foreground">
                 Últimas movimentações internas detectadas
               </p>
             </div>
-            <div className="relative w-48 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
-              <Input 
-                placeholder="Buscar pessoa ou setor..." 
-                className="pl-8 h-8 text-[10px]"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-              />
-              {busca && (
-                <button 
-                  onClick={() => setBusca("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadCSV(registrosFiltrados)}
+              className="h-8 gap-2 rounded-lg text-xs"
+            >
+              <Download size={14} />
+              Exportar
+            </Button>
           </div>
 
           <div className="overflow-x-auto">
@@ -323,10 +408,49 @@ export default function CirculacaoPage() {
             Todos os visitantes estão dentro do tempo previsto de permanência.
           </p>
         </div>
-        <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/50">
+        <Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-100 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg">
           Verificar
         </Button>
       </div>
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status da Circulação
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {["Todos", "Ativo", "Concluído", "Alerta"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempFiltroStatus(status)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                    tempFiltroStatus === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  <span>{status === "Todos" ? "Todos os Status" : status}</span>
+                  {tempFiltroStatus === status && <Check size={14} />}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-[10px] text-primary/80 leading-relaxed">
+              <strong>Info:</strong> O monitoramento de circulação ajuda a garantir que os visitantes estejam nos locais autorizados dentro do cronograma previsto.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
     </div>
   );
 }

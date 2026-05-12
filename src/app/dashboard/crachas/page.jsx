@@ -7,7 +7,9 @@ import {
   ChevronDown, MoreHorizontal, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -99,9 +101,6 @@ function ModalCadastrarTag({ onClose, onSave }) {
     
     setLoading(true);
     try {
-      // No back-end atual, precisamos criar um crachá e depois uma tag
-      // Ou apenas o crachá se a lógica for simplificada.
-      // Por enquanto, vamos simular a chamada que você integrará.
       const response = await api.post('/cracha', { status: 'disponivel' });
       
       if (response.sucesso) {
@@ -191,7 +190,7 @@ function LinhaCracha({ c }) {
           {STATUS_LABEL[c.status] || c.status}
         </span>
       </td>
-      <td className="py-3 px-4">
+      <td className="py-3 px-4 text-right">
         <button className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
           <MoreHorizontal size={14} />
         </button>
@@ -208,6 +207,9 @@ export default function CrachasPage() {
   const [modalAberto, setModalAberto] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState("Todas");
   const [busca, setBusca]             = useState("");
+  
+  const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
+  const [tempStatusFiltro, setTempStatusFiltro] = useState("Todas");
 
   const carregarCrachas = async () => {
     setLoading(true);
@@ -247,6 +249,16 @@ export default function CrachasPage() {
     alertas:    crachas.filter((c) => c.status === "alerta").length,
   }), [crachas]);
 
+  const aplicarFiltros = () => {
+    setStatusFiltro(tempStatusFiltro);
+  };
+
+  const limparFiltros = () => {
+    setTempStatusFiltro("Todas");
+    setStatusFiltro("Todas");
+    setBusca("");
+  };
+
   return (
     <>
       {modalAberto && (
@@ -256,7 +268,7 @@ export default function CrachasPage() {
         />
       )}
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 animate-in fade-in duration-700">
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Dashboard Crachás</h1>
@@ -264,12 +276,12 @@ export default function CrachasPage() {
               Gestão de inventário de crachás e status de TAGs
             </p>
           </div>
-          <button
+          <Button
             onClick={() => setModalAberto(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="gap-2 rounded-xl"
           >
             <Plus size={16} /> Cadastrar Crachá
-          </button>
+          </Button>
         </header>
 
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -292,123 +304,142 @@ export default function CrachasPage() {
           <StatCard
             label="Disponíveis"
             value={stats.disponiveis}
-            valueClassName="text-blue-600"
-            icon={<Check size={17} className="text-blue-600" />}
-            sub="prontos para uso"
-            accentVar="var(--blue-500)"
+            valueClassName="text-gray-600"
+            icon={<Check size={17} className="text-gray-600" />}
+            sub="em estoque"
+            accentVar="var(--gray-500)"
           />
           <StatCard
             label="Perdidos"
             value={stats.perdidos}
-            valueClassName="text-amber-600"
-            icon={<AlertTriangle size={17} className="text-amber-600" />}
-            sub="requerem reposição"
-            accentVar="var(--amber-500)"
+            valueClassName="text-red-600"
+            icon={<Undo2 size={17} className="text-red-600" />}
+            sub="precisam reposição"
+            accentVar="var(--destructive)"
           />
           <StatCard
             label="Alertas"
             value={stats.alertas}
-            valueClassName="text-red-600"
-            icon={<AlertTriangle size={17} className="text-red-600" />}
-            sub="atenção necessária"
-            accentVar="var(--red-500)"
+            valueClassName="text-amber-600"
+            icon={<AlertTriangle size={17} className="text-amber-600" />}
+            sub="tempo excedido"
+            accentVar="var(--warning)"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
-          <span className="text-xs font-medium text-muted-foreground">Filtrar:</span>
-          {STATUS_FILTER_OPTS.map((opt) => {
-            const isAlerta = opt === "alerta" || opt === "perdido";
-            const isActive = statusFiltro === opt;
-            return (
-              <button
-                key={opt}
-                onClick={() => setStatusFiltro(opt)}
-                className={`
-                  inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors
-                  ${isActive
-                    ? isAlerta
-                      ? "bg-red-600 text-white border border-red-600"
-                      : "bg-foreground text-background border border-foreground"
-                    : isAlerta
-                      ? "text-red-600 border border-red-200 bg-red-50 hover:bg-red-100"
-                      : "text-muted-foreground border border-border hover:bg-accent"
-                  }
-                `}
+        {/* Barra de Filtros Padronizada */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 items-center gap-3 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input
+                  placeholder="Buscar por ID, visitante ou empresa..."
+                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                />
+                {busca && (
+                  <button
+                    type="button"
+                    onClick={() => setBusca("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              
+              <Button
+                type="button"
+                onClick={() => setModalFiltroAberto(true)}
+                variant="outline"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
               >
-                {isAlerta && <AlertTriangle size={11} />}
-                {STATUS_LABEL[opt] || opt}
-              </button>
-            );
-          })}
-          <div className="ml-auto relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por ID ou visitante…"
-              className="h-8 pl-8 pr-3 w-52 rounded-lg border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            />
+                <Filter size={16} />
+                <span className="hidden sm:inline">Filtros</span>
+                {statusFiltro !== "Todas" && (
+                  <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                    1
+                  </span>
+                )}
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+                {filtrados.length} resultado(s)
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadCSV(filtrados)}
+                className="h-11 gap-2 rounded-xl border-border/60"
+              >
+                <Download size={14} />
+                Exportar CSV
+              </Button>
+            </div>
           </div>
+
+          {(statusFiltro !== "Todas" || busca) && (
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+              {busca && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Busca: {busca}
+                </span>
+              )}
+              {statusFiltro !== "Todas" && (
+                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
+                  Status: {STATUS_LABEL[statusFiltro] || statusFiltro}
+                </span>
+              )}
+              <Button
+                variant="ghost"
+                onClick={limparFiltros}
+                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                Limpar tudo
+              </Button>
+            </div>
+          )}
         </div>
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden min-h-[300px] flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">Registro de Crachás</h2>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                {loading ? "Carregando dados..." : `${crachas.length} crachás encontrados`}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={carregarCrachas}
-                className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Recarregar"
-              >
-                <Undo2 size={13} className={loading ? "animate-spin" : ""} />
-              </button>
-              <button
-                onClick={() => downloadCSV(filtrados)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              >
-                <Download size={13} />
-              </button>
-            </div>
+        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h3 className="font-bold text-sm">Inventário de Crachás</h3>
+            <p className="text-xs text-muted-foreground">Controle de TAGs e vinculações</p>
           </div>
 
-          <div className="overflow-x-auto flex-1">
+          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-border bg-muted/40">
-                  {["ID", "Visitante Atual", "Empresa", "Setor", "Entrega", "Devolução", "Status", ""].map((col) => (
-                    <th
-                      key={col}
-                      className="py-2.5 px-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest whitespace-nowrap"
-                    >
-                      {col}
-                    </th>
-                  ))}
+                <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="py-3 px-4">ID</th>
+                  <th className="py-3 px-4">Visitante Atual</th>
+                  <th className="py-3 px-4">Empresa</th>
+                  <th className="py-3 px-4">Setor</th>
+                  <th className="py-3 px-4">Entrega</th>
+                  <th className="py-3 px-4">Devolução</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                        <span className="text-sm text-muted-foreground">Sincronizando com o servidor...</span>
+                    <td colSpan={8} className="py-12 text-center">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Loader2 className="animate-spin" size={24} />
+                        <span className="text-sm">Carregando crachás...</span>
                       </div>
                     </td>
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <CreditCard className="w-8 h-8 text-muted-foreground/30" />
-                        <span className="text-sm text-muted-foreground">Nenhum crachá encontrado.</span>
-                      </div>
+                    <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                      Nenhum crachá encontrado com os filtros aplicados.
                     </td>
                   </tr>
                 ) : (
@@ -419,6 +450,44 @@ export default function CrachasPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Filtro Padronizado */}
+      <ModalFiltro
+        isOpen={modalFiltroAberto}
+        onClose={() => setModalFiltroAberto(false)}
+        onApply={aplicarFiltros}
+        onClear={limparFiltros}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Status do Crachá
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {STATUS_FILTER_OPTS.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setTempStatusFiltro(status)}
+                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                    tempStatusFiltro === status
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                  }`}
+                >
+                  {status === "Todas" ? "Todos os Status" : STATUS_LABEL[status] || status}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-[10px] text-primary/80 leading-relaxed">
+              <strong>Info:</strong> Crachás com status "Alerta" ou "Perdido" devem ser revisados imediatamente para evitar brechas de segurança.
+            </p>
+          </div>
+        </div>
+      </ModalFiltro>
     </>
   );
 }
