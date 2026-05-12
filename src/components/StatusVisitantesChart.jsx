@@ -30,10 +30,11 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
   const mobileChartSize = 132;
 
   return (
-    <div className={`bg-card text-card-foreground rounded-xl border border-border flex flex-col shadow-sm hover:shadow-md transition-all hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 ${compactMobile ? "gap-4 p-4" : "gap-4 p-5 min-h-[320px]"}`}>
+    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 ${compactMobile ? "gap-4 p-5" : "gap-4 p-5 min-h-[320px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
-        <h3 className={`${compactMobile ? "text-base" : "text-sm"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-        <p className="text-xs text-muted-foreground">Situacao atual - tempo real</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
+        <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
+        <p className="text-sm text-muted-foreground">Situacao atual com leitura imediata de risco e permanencia.</p>
       </div>
 
       {compactMobile ? (
@@ -65,7 +66,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-foreground">{ativos}</span>
+              <span className="font-mono text-2xl font-semibold text-foreground">{ativos}</span>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">ativos</span>
             </div>
           </div>
@@ -116,7 +117,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-bold text-foreground">{ativos}</span>
+              <span className="font-mono text-3xl font-semibold text-foreground">{ativos}</span>
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">ativos</span>
             </div>
           </div>
@@ -125,7 +126,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             {STATUS_VISITANTES.map((item, index) => (
               <div
                 key={item.name}
-                className="flex items-center justify-between gap-3 rounded-lg p-2.5 hover:bg-muted/50 transition-all hover:translate-x-1 animate-in fade-in slide-in-from-right-2 duration-700"
+                className="flex items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
                 style={{ animationDelay: `${600 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
