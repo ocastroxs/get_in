@@ -21,6 +21,7 @@ import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 const STATUS_LABEL = {
   ativo: "Dentro",
@@ -333,37 +334,44 @@ export default function PortariaPage() {
     setBusca("");
   };
 
-  const exportarCSV = () => {
+  const exportarPDF = async () => {
     if (visitantesFiltrados.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const headers = ["Nome", "CPF", "Empresa", "Setor", "Entrada", "Duração", "Status"];
-    const rows = visitantesFiltrados.map(v => [
-      v.nome,
-      v.cpf,
-      v.empresa,
-      getSetorLabel(v),
-      formatDateTime(v.dataEntrada),
-      formatDuration(v.dataEntrada),
-      STATUS_LABEL[v.status] || "Dentro"
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `visitantes_presentes_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      await exportTableToPdf({
+        title: "Visitantes presentes",
+        subtitle: "Controle de acesso da portaria",
+        fileName: `visitantes_presentes_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "Todos" ? `Status: ${STATUS_LABEL[filtroStatus] || filtroStatus}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Nome", weight: 1.4 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.2 },
+          { header: "Setor", weight: 1.2 },
+          { header: "Entrada", weight: 1 },
+          { header: "Duração", weight: 0.8 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: visitantesFiltrados.map((v) => [
+          v.nome,
+          v.cpf,
+          v.empresa,
+          getSetorLabel(v),
+          formatDateTime(v.dataEntrada),
+          formatDuration(v.dataEntrada),
+          STATUS_LABEL[v.status] || "Dentro",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
   };
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
@@ -445,12 +453,12 @@ export default function PortariaPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                onClick={exportarCSV}
+                onClick={exportarPDF}
                 variant="outline"
                 className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
               >
                 <Download size={16} />
-                <span className="hidden sm:inline">Exportar CSV</span>
+                <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
               <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
                 {visitantesFiltrados.length} presente(s)

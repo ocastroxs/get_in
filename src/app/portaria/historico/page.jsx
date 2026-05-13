@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 const STATUS_OPTIONS = ["Todos", "Ativo", "Finalizado"];
 
@@ -236,20 +237,45 @@ export default function HistoricoPage() {
     setBusca("");
   };
 
-  function downloadCSV() {
-    const cols = ["Visitante", "CPF", "Empresa", "Setor", "Entrada", "Saída", "Status"];
-    const lines = registrosFiltrados.map((r) =>
-      [r.visitante, r.cpf, r.empresa, r.setor, r.dataEntrada, r.dataSaida || "—", r.dataSaida ? "Finalizado" : "Ativo"].join(";")
-    );
-    const csv = [cols.join(";"), ...lines].join("\n");
-    
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "historico_portaria.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadPDF() {
+    if (registrosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Histórico da portaria",
+        subtitle: "Registro completo de entradas e saídas",
+        fileName: `historico_portaria_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "Todos" ? `Status: ${filtroStatus}` : null,
+          filtroData ? `Data: ${filtroData}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.4 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.2 },
+          { header: "Setor", weight: 1.1 },
+          { header: "Entrada", weight: 1.1 },
+          { header: "Saída", weight: 1.1 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: registrosFiltrados.map((r) => [
+          r.visitante,
+          r.cpf,
+          r.empresa,
+          r.setor,
+          r.dataEntrada,
+          r.dataSaida || "-",
+          r.dataSaida ? "Finalizado" : "Ativo",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
   }
 
   return (
@@ -301,12 +327,12 @@ export default function HistoricoPage() {
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              onClick={downloadCSV}
+              onClick={downloadPDF}
               variant="outline"
               className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
             >
               <Download size={16} />
-              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="hidden sm:inline">Exportar PDF</span>
             </Button>
             <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
               {registrosFiltrados.length} resultado(s)

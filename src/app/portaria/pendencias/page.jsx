@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 // ─── MODAL DE APROVAÇÃO ──────────────────────────────────────────────────────
 function ModalAprovacao({ isOpen, onClose, requisicao, onConfirm }) {
@@ -259,36 +260,42 @@ export default function PendenciasPage() {
     setBusca("");
   };
 
-  const exportarCSV = () => {
+  const exportarPDF = async () => {
     if (requisicoesFiltradas.length === 0) {
       alert("Não há dados para exportar.");
       return;
     }
 
-    const headers = ["Visitante", "CPF", "Empresa", "Setor", "Motivo", "Solicitação"];
-    const rows = requisicoesFiltradas.map(r => [
-      r.visitante,
-      r.cpf,
-      r.empresa,
-      r.setor,
-      r.motivo,
-      r.solicitacao
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `pendencias_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      await exportTableToPdf({
+        title: "Pendências da portaria",
+        subtitle: "Requisições de visita aguardando aprovação",
+        fileName: `pendencias_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroSetor !== "Todos" ? `Setor: ${filtroSetor}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.4 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.2 },
+          { header: "Setor", weight: 1.1 },
+          { header: "Motivo", weight: 1.5 },
+          { header: "Solicitação", weight: 1 },
+        ],
+        rows: requisicoesFiltradas.map((r) => [
+          r.visitante,
+          r.cpf,
+          r.empresa,
+          r.setor,
+          r.motivo,
+          r.solicitacao,
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
   };
 
   return (
@@ -351,12 +358,12 @@ export default function PendenciasPage() {
 
             <div className="flex items-center gap-2">
               <Button
-                onClick={exportarCSV}
+                onClick={exportarPDF}
                 variant="outline"
                 className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
               >
                 <Download size={16} />
-                <span className="hidden sm:inline">Exportar CSV</span>
+                <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
               <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
                 {requisicoesFiltradas.length} registro(s)

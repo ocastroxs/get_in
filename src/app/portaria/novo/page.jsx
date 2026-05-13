@@ -1,12 +1,136 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Circle } from "lucide-react";
+import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Circle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
+
+const sexoOptions = [
+  { value: "M", label: "Masculino" },
+  { value: "F", label: "Feminino" },
+  { value: "O", label: "Outro" },
+];
+
+const motivoOptions = [
+  { value: "Visita", label: "Visita" },
+  { value: "Entrega", label: "Entrega" },
+  { value: "Manutenção", label: "Manutenção" },
+  { value: "Reunião", label: "Reunião" },
+  { value: "Outro", label: "Outro" },
+];
+
+const empresaOptions = [
+  { value: "Nutrilab", label: "Nutrilab" },
+  { value: "FiltraTec", label: "FiltraTec" },
+  { value: "ConsTech", label: "ConsTech" },
+  { value: "LogiMax", label: "LogiMax" },
+  { value: "TechFix Ltda", label: "TechFix Ltda" },
+  { value: "SupriTec", label: "SupriTec" },
+];
+
+function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = options.find((option) => option.value === value);
+
+  return (
+    <div
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+        className={`group flex h-11 w-full items-center gap-3 rounded-xl border bg-card px-3 text-left text-sm shadow-xs transition-all duration-200 ${
+          isOpen
+            ? "border-primary/50 ring-3 ring-primary/15 shadow-md"
+            : "border-border/60 hover:border-primary/30 hover:bg-accent/50"
+        }`}
+      >
+        <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${
+          selectedOption || isOpen
+            ? "bg-primary/10 text-primary"
+            : "bg-muted text-muted-foreground"
+        }`}>
+          <Icon size={15} />
+        </span>
+        <span className={`min-w-0 flex-1 truncate font-medium ${
+          selectedOption ? "text-foreground" : "text-muted-foreground"
+        }`}>
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-muted-foreground transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-primary" : "group-hover:text-primary"
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border/60 bg-popover p-1.5 text-popover-foreground shadow-[0_18px_45px_rgba(15,58,125,0.14)]"
+        >
+          <button
+            type="button"
+            role="option"
+            aria-selected={!value}
+            onClick={() => {
+              onChange("");
+              setIsOpen(false);
+            }}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+              !value ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+            }`}
+          >
+            <span className="size-2 rounded-full bg-border" />
+            <span className="flex-1 truncate font-medium">{placeholder}</span>
+          </button>
+
+          {options.map((option) => {
+            const isSelected = option.value === value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+                  isSelected
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/70"
+                }`}
+              >
+                <span className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150 ${
+                  isSelected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background"
+                }`}>
+                  {isSelected && <Check size={12} />}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function NovoCadastroPage() {
   const { user } = useAuth();
@@ -24,15 +148,6 @@ export default function NovoCadastroPage() {
     telefone: "",
     email: "",
     setoresAcesso: [],
-    tagRFID: "",
-  });
-
-  const [checklist, setChecklist] = useState({
-    tipoCartaIdentificacao: false,
-    testeCompleto: false,
-    documentoCPFRG: false,
-    empresaAcessivel: false,
-    telefoneContato: false
   });
 
   const setoresDisponiveis = [
@@ -69,8 +184,18 @@ export default function NovoCadastroPage() {
       .replace(/(\d{3})(\d{1,2})/, "$1-$2")
       .replace(/(-\d{2})\d+?$/, "$1");
 
+  const maskPhone = (v) =>
+    v.replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4,5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
+
   const handleCPFChange = (e) => {
     setForm({ ...form, cpf: maskCPF(e.target.value) });
+  };
+
+  const handlePhoneChange = (e) => {
+    setForm({ ...form, telefone: maskPhone(e.target.value) });
   };
 
   const toggleSetorAcesso = (setor) => {
@@ -79,13 +204,6 @@ export default function NovoCadastroPage() {
       setoresAcesso: prev.setoresAcesso.includes(setor)
         ? prev.setoresAcesso.filter((s) => s !== setor)
         : [...prev.setoresAcesso, setor]
-    }));
-  };
-
-  const toggleChecklistItem = (itemKey) => {
-    setChecklist((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey]
     }));
   };
 
@@ -131,6 +249,20 @@ export default function NovoCadastroPage() {
     setStep(1);
   };
 
+  const cpfCompleto = form.cpf.replace(/\D/g, "").length === 11;
+  const telefoneCompleto = form.telefone.replace(/\D/g, "").length >= 10;
+  const requisitos = [
+    { key: "tipoIdentificacao", label: "Identificação do visitante", completed: Boolean(form.nome.trim()) },
+    {
+      key: "cadastroCompleto",
+      label: "Cadastro completo",
+      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.motivo && telefoneCompleto)
+    },
+    { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
+    { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
+    { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto }
+  ];
+
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header com Navegação */}
@@ -152,7 +284,7 @@ export default function NovoCadastroPage() {
             </h1>
             {step === 2 && (
               <p className="text-sm text-muted-foreground mt-1">
-                Notificação enviada ao supervisor. Aguarde a confirmação para liberar o crachá.
+                Notificação enviada ao supervisor. Aguarde a confirmação para liberar o acesso.
               </p>
             )}
           </div>
@@ -248,16 +380,13 @@ export default function NovoCadastroPage() {
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       Sexo
                     </label>
-                    <select
+                    <PrettySelect
                       value={form.sexo}
-                      onChange={(e) => setForm({ ...form, sexo: e.target.value })}
-                      className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="M">Masculino</option>
-                      <option value="F">Feminino</option>
-                      <option value="O">Outro</option>
-                    </select>
+                      onChange={(sexo) => setForm({ ...form, sexo })}
+                      placeholder="Selecione..."
+                      options={sexoOptions}
+                      Icon={User}
+                    />
                   </div>
 
                 </div>
@@ -277,47 +406,39 @@ export default function NovoCadastroPage() {
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       Empresa <span className="text-red-500">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      placeholder="Nome da empresa"
+                    <PrettySelect
                       value={form.empresa}
-                      onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      onChange={(empresa) => setForm({ ...form, empresa })}
+                      placeholder="Selecione a empresa..."
+                      options={empresaOptions}
+                      Icon={Building2}
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                         Setor de Destino
                       </label>
-                      <select
+                      <PrettySelect
                         value={form.setor}
-                        onChange={(e) => setForm({ ...form, setor: e.target.value })}
-                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                      >
-                        <option value="">Selecione...</option>
-                        {setoresDisponiveis.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                        onChange={(setor) => setForm({ ...form, setor })}
+                        placeholder="Selecione..."
+                        options={setoresDisponiveis.map((setor) => ({ value: setor, label: setor }))}
+                        Icon={MapPin}
+                      />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                         Motivo da Visita
                       </label>
-                      <select
+                      <PrettySelect
                         value={form.motivo}
-                        onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="Visita">Visita</option>
-                        <option value="Entrega">Entrega</option>
-                        <option value="Manutenção">Manutenção</option>
-                        <option value="Reunião">Reunião</option>
-                        <option value="Outro">Outro</option>
-                      </select>
+                        onChange={(motivo) => setForm({ ...form, motivo })}
+                        placeholder="Selecione..."
+                        options={motivoOptions}
+                        Icon={Info}
+                      />
                     </div>
                   </div>
 
@@ -342,8 +463,9 @@ export default function NovoCadastroPage() {
                       type="tel"
                       placeholder="(11) 99999-9999"
                       value={form.telefone}
-                      onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                      onChange={handlePhoneChange}
                       className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      maxLength="15"
                     />
                   </div>
 
@@ -411,28 +533,15 @@ export default function NovoCadastroPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      TAG RFID / Crachá
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Escanear ou digitar TAG RFID"
-                      value={form.tagRFID}
-                      onChange={(e) => setForm({ ...form, tagRFID: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">Escaneie o crachá ou TAG RFID do visitante</p>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
+            {/* Coluna Direita: Prévia do visitante + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Prévia de Crachá - Design Profissional */}
+              {/* Prévia do visitante - Design Profissional */}
               <div className="relative group">
-                {/* Cartão Principal do Crachá */}
+                {/* Cartão Principal do Visitante */}
                 <div className="bg-card rounded-3xl p-6 text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden relative border border-border h-full flex flex-col">
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Header com Status */}
@@ -442,7 +551,7 @@ export default function NovoCadastroPage() {
                           Visitante
                         </div>
                         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                          Prévia de Crachá
+                          Prévia do Visitante
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
@@ -462,12 +571,6 @@ export default function NovoCadastroPage() {
                         </div>
                         <div className="text-xs text-muted-foreground truncate mb-2">
                           {form.empresa || "Empresa"}
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-muted/50 rounded-sm px-2 py-1 w-fit border border-border/60">
-                          <Tag size={10} className="text-primary" />
-                          <span className="text-[10px] font-semibold text-muted-foreground">
-                            {form.tagRFID ? form.tagRFID.slice(0, 8) + "..." : "TAG: —"}
-                          </span>
                         </div>
                       </div>
                     </div>
@@ -506,7 +609,7 @@ export default function NovoCadastroPage() {
                     <div className="mt-auto pt-3 border-t border-border/60">
                       <div className="flex items-center justify-between">
                         <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                          CPF: {form.cpf ? form.cpf.replace(/\D/g, "").slice(0, 8) : "—"}
+                          CPF: {form.cpf || "—"}
                         </div>
                         {/* QR Code Simulado */}
                         <div className="w-10 h-10 bg-background border border-border rounded-lg flex items-center justify-center shadow-xs">
@@ -525,7 +628,7 @@ export default function NovoCadastroPage() {
                   <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
                     <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"></span>
                     <span className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[10px] font-bold text-primary">
-                      Pronto para emissão
+                      Pronto para envio
                     </span>
                   </div>
                 </div>
@@ -541,38 +644,26 @@ export default function NovoCadastroPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {[
-                    { key: "tipoCartaIdentificacao", label: "Tipo de carta identificação" },
-                    { key: "testeCompleto", label: "Teste completo" },
-                    { key: "documentoCPFRG", label: "Documento CPF/RG" },
-                    { key: "empresaAcessivel", label: "Empresa acessível" },
-                    { key: "telefoneContato", label: "Telefone de contato" }
-                  ].map(({ key, label }) => (
-                    <label
+                  {requisitos.map(({ key, label, completed }) => (
+                    <div
                       key={key}
-                      htmlFor={`checklist-${key}`}
-                      className={`flex items-center gap-3 cursor-pointer group p-2.5 rounded-lg transition-all duration-200 ${
-                        checklist[key] ? "bg-primary/5" : "hover:bg-muted/50"
+                      className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 ${
+                        completed ? "bg-primary/5" : "bg-transparent"
                       }`}
                     >
-                      <input
-                        id={`checklist-${key}`}
-                        type="checkbox"
-                        checked={checklist[key]}
-                        onChange={() => toggleChecklistItem(key)}
-                        className="sr-only"
-                      />
                       <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
-                        checklist[key]
+                        completed
                           ? "bg-primary border-primary shadow-md shadow-primary/30"
-                          : "border-border/60 group-hover:border-primary/50"
+                          : "border-border/60"
                       }`}>
-                        {checklist[key] && <Check size={14} className="text-white" />}
+                        {completed && <Check size={14} className="text-white" />}
                       </div>
-                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors duration-200">
+                      <span className={`text-sm font-medium transition-colors duration-200 ${
+                        completed ? "text-primary" : "text-foreground"
+                      }`}>
                         {label}
                       </span>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -593,11 +684,11 @@ export default function NovoCadastroPage() {
                   </li>
                   <li className="flex gap-2">
                     <span className="text-amber-600 font-bold">•</span>
-                    <span>Confirme os setores permitidos antes de gerar o crachá</span>
+                    <span>Confirme os setores permitidos antes de enviar a solicitação</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-amber-600 font-bold">•</span>
-                    <span>Escaneie a TAG RFID para vincular ao cadastro</span>
+                    <span>Confira empresa, telefone e motivo antes de avançar</span>
                   </li>
                 </ul>
               </div>
@@ -678,7 +769,6 @@ export default function NovoCadastroPage() {
                 { label: "Tipo", value: form.motivo || "—" },
                 { label: "CPF", value: form.cpf || "—" },
                 { label: "Período", value: "Acesso imediato" },
-                { label: "Crachá / TAG", value: form.tagRFID || "Pendente" },
               ].map((item, i) => (
                 <div key={i} className="flex justify-between items-center border-b border-border/40 pb-3">
                   <span className="text-xs text-muted-foreground font-medium">{item.label}</span>
