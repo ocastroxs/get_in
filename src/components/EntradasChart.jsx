@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ENTRADAS_POR_HORA } from "@/lib/mockData";
+import { ENTRADAS_POR_HORA, ENTRADAS_POR_SEMANA } from "@/lib/mockData";
 
 export default function EntradasChart({
   title = "Entradas por Periodo",
@@ -25,7 +25,14 @@ export default function EntradasChart({
   mobileLayout = false,
 }) {
   const [view, setView] = useState("hoje");
-  const chartData = mobileLayout ? data.slice(0, 8) : data.slice(0, 9);
+  const chartData = useMemo(() => {
+    const baseData = view === "semana" ? ENTRADAS_POR_SEMANA : data;
+    return mobileLayout && view === "hoje"
+      ? baseData.slice(0, 8)
+      : !mobileLayout && view === "hoje"
+        ? baseData.slice(0, 9)
+        : baseData;
+  }, [data, mobileLayout, view]);
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
@@ -53,7 +60,7 @@ export default function EntradasChart({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="rounded-2xl border border-border bg-muted/60 px-4 py-3">
+          <div className="min-w-[136px] rounded-2xl border border-border bg-muted/50 px-4 py-3 shadow-sm shadow-slate-200/40">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pico do periodo</p>
             <p className="mt-1 font-mono text-xl font-semibold text-foreground">
               {chartMeta.peakItem?.[dataKey] ?? 0}
@@ -61,14 +68,16 @@ export default function EntradasChart({
             </p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/60 p-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground shadow-sm shadow-slate-200/30">
             {["hoje", "semana"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-3 py-2 transition-colors",
-                  view === item ? "bg-card text-foreground shadow-sm" : "hover:text-foreground",
+                  "rounded-lg px-3 py-2 transition-all duration-300",
+                  view === item
+                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
+                    : "hover:bg-white/80 hover:text-foreground",
                 ].join(" ")}
               >
                 {item}
@@ -108,12 +117,12 @@ export default function EntradasChart({
               width={30}
             />
             <Tooltip
-              cursor={{ fill: "rgba(15,58,125,0.06)" }}
+              cursor={{ fill: "rgba(15,58,125,0.035)" }}
               contentStyle={{
                 borderRadius: "16px",
                 border: "1px solid var(--border)",
                 background: "rgba(255,255,255,0.96)",
-                boxShadow: "0 2px 8px rgba(15, 58, 125, 0.10)",
+                boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
               }}
             />
             <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={mobileLayout ? 32 : 42}>
@@ -131,10 +140,10 @@ export default function EntradasChart({
               type="monotone"
               dataKey={dataKey}
               stroke={barColor}
-              strokeOpacity={0.35}
+              strokeOpacity={0.32}
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4, fill: barColor, stroke: "var(--card)", strokeWidth: 2 }}
+              activeDot={{ r: 3, fill: "var(--card)", stroke: barColor, strokeWidth: 2 }}
             />
           </ComposedChart>
         </ResponsiveContainer>

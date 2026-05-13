@@ -9,6 +9,7 @@ import {
   AlertTriangle, Check, Loader2,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -254,7 +255,7 @@ function LinhaSetor({ setor, fluxoMax, onEditar, onExcluir }) {
   
   const AcessoIcon = ACESSO_ICON[setor.acesso] ?? ShieldCheck;
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
+    <tr className="group border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]">
@@ -281,10 +282,10 @@ function LinhaSetor({ setor, fluxoMax, onEditar, onExcluir }) {
       <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">{setor.ultimaAtualizacao}</td>
       <td className="py-3 px-4 text-right">
         <div className="flex items-center justify-end gap-1">
-          <button onClick={() => onEditar(setor)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+          <button onClick={() => onEditar(setor)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
             <Pencil size={14} />
           </button>
-          <button onClick={() => onExcluir(setor)} className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+          <button onClick={() => onExcluir(setor)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
             <Trash2 size={14} />
           </button>
         </div>
@@ -390,23 +391,17 @@ export default function SetoresPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Gestão de Setores</h1>
-          <p className="text-xs text-muted-foreground mt-1">Controle de departamentos e níveis de segurança</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => downloadCSV(filtrados)} className="gap-2 rounded-xl">
-            <Download size={14} /> Exportar CSV
-          </Button>
-          <Button size="sm" onClick={() => setModalSetor({ open: true, data: null })} className="gap-1.5 rounded-xl">
-            <Plus size={14} /> Novo Setor
-          </Button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <Topbar
+        title="Gestão de Setores"
+        subtitle="Controle de departamentos, fluxo e níveis de segurança com a mesma linguagem visual do dashboard."
+        secondaryButtonText="Exportar CSV"
+        onSecondaryButtonClick={() => downloadCSV(filtrados)}
+        buttonText="Novo Setor"
+        onButtonClick={() => setModalSetor({ open: true, data: null })}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total" value={stats.total} icon={<Layers size={17} className="text-primary" />} sub="departamentos" accentVar="var(--primary)" />
         <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="var(--green-500)" />
         <StatCard label="Acesso Restrito" value={stats.restritos} valueClassName="text-orange-600" icon={<Activity size={17} className="text-orange-600" />} sub="segurança média" accentVar="var(--orange-500)" />
@@ -414,14 +409,14 @@ export default function SetoresPage() {
       </div>
 
       {/* Barra de Filtros Padronizada */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-3 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar setor pelo nome..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -440,7 +435,7 @@ export default function SetoresPage() {
               type="button"
               onClick={() => setModalFiltroAberto(true)}
               variant="outline"
-              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
@@ -452,7 +447,7 @@ export default function SetoresPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+          <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
             {filtrados.length} resultado(s)
           </div>
         </div>
@@ -478,7 +473,7 @@ export default function SetoresPage() {
             <Button
               variant="ghost"
               onClick={limparFiltros}
-              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
             >
               Limpar tudo
             </Button>
@@ -486,7 +481,7 @@ export default function SetoresPage() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] overflow-hidden shadow-md">
         <div className="p-4 border-b border-border bg-muted/20">
           <h3 className="font-bold text-sm">Lista de Departamentos</h3>
           <p className="text-xs text-muted-foreground">Monitoramento de fluxo e segurança</p>

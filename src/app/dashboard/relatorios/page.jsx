@@ -8,6 +8,7 @@ import HistoricoVisitas from "@/components/HistoricoVisitas";
 import SetoresMaisVisitados from "@/components/SetoresMaisVisitados";
 import EmpresasMaisVisitas from "@/components/EmpresasMaisVisitas";
 import FiltrosRelatorio from "@/components/FiltrosRelatorio";
+import Topbar from "@/components/Topbar";
 import { Users, ArrowRightLeft, Clock, AlertTriangle, FileText, Download, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
@@ -81,42 +82,26 @@ export default function RelatoriosPage() {
   return (
     <div className="flex w-full flex-col gap-6 overflow-x-hidden pb-10 animate-in fade-in duration-700">
       
-      {/* HEADER */}
-      <header className="mb-2 flex flex-col gap-4 border-b border-border px-2 pb-4 md:flex-row md:items-center md:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold text-foreground">Relatórios e Análises</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Consulte o histórico e métricas detalhadas de acessos</p>
-        </div>
+      <Topbar
+        title="Relatórios e Análises"
+        subtitle="Consulte o histórico e métricas detalhadas de acessos com o mesmo padrão visual do dashboard."
+        secondaryButtonText="Exportar PDF"
+        onSecondaryButtonClick={handleExportarPDF}
+        buttonText="Gerar Relatório Mensal"
+        onButtonClick={handleGerarRelatorio}
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-1.5 rounded-xl"
-            onClick={handleCompartilhar}
-          >
-            <Share2 size={14} />
-            Compartilhar
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-1.5 rounded-xl"
-            onClick={handleExportarPDF}
-          >
-            <Download size={14} />
-            Exportar PDF
-          </Button>
-          <Button 
-            size="sm" 
-            className="gap-1.5 rounded-xl bg-primary hover:bg-primary/90"
-            onClick={handleGerarRelatorio}
-          >
-            <FileText size={14} />
-            Gerar Relatório Mensal
-          </Button>
-        </div>
-      </header>
+      <div className="flex justify-end px-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="gap-1.5 rounded-xl border-border/70 bg-white/75 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-md hover:shadow-slate-200/40"
+          onClick={handleCompartilhar}
+        >
+          <Share2 size={14} />
+          Compartilhar
+        </Button>
+      </div>
 
       {/* FILTROS DE PESQUISA */}
       <FiltrosRelatorio />
@@ -169,20 +154,20 @@ export default function RelatoriosPage() {
                 <StatCard
                   label="Taxa de Check-out"
                   value={stats.checkoutRate}
-                  valueClassName="text-emerald-600 dark:text-emerald-400"
-                  icon={<ArrowRightLeft size={17} className="text-emerald-600" />}
+                  valueClassName="text-secondary"
+                  icon={<ArrowRightLeft size={17} className="text-secondary" />}
                   sub="Visitas com saída registrada"
                   accentVar="var(--chart-2)"
                 />
                 <StatCard
                   label="Tempo Médio de Estadia"
                   value={stats.permanencia.value}
-                  valueClassName="text-sky-600 dark:text-sky-400"
-                  icon={<Clock size={17} className="text-sky-600" />}
+                  valueClassName="text-foreground"
+                  icon={<Clock size={17} className="text-foreground" />}
                   delta={stats.permanencia.delta}
                   deltaDir={stats.permanencia.deltaDir}
                   sub={stats.permanencia.sub}
-                  accentVar="var(--chart-3)"
+                  accentVar="var(--chart-4)"
                 />
                 <StatCard
                   label="Incidentes / Alertas"
@@ -214,7 +199,7 @@ export default function RelatoriosPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-2">
                   <h3 className="font-bold text-lg text-foreground">Registros Detalhados</h3>
-                  <Button variant="ghost" size="sm" className="text-primary text-xs">Ver todos os registros</Button>
+                  <Button variant="ghost" size="sm" className="text-primary text-xs transition-colors hover:bg-transparent hover:text-primary/80">Ver todos os registros</Button>
                 </div>
                 <HistoricoVisitas data={historico} title="" />
               </div>

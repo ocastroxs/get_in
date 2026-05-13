@@ -21,6 +21,7 @@ import {
   Check
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -68,7 +69,7 @@ function LinhaCirculacao({ reg }) {
   if (!reg) return null;
 
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
+    <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035] group">
       <td className="px-4 py-3">
         <p className="text-xs font-bold leading-none">{reg.pessoa || "—"}</p>
         <p className="text-[10px] text-muted-foreground mt-1">{reg.tipo || "—"}</p>
@@ -90,7 +91,7 @@ function LinhaCirculacao({ reg }) {
         </span>
       </td>
       <td className="px-4 py-3 text-right">
-        <Button variant="ghost" size="icon" className="h-7 w-7">
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
           <MoreHorizontal size={12} className="text-muted-foreground" />
         </Button>
       </td>
@@ -166,76 +167,60 @@ export default function CirculacaoPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Circulação Interna</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Monitoramento de fluxo e ocupação em tempo real
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={carregarDados}
-            className="gap-2 rounded-xl"
-          >
-            <RefreshCw size={14} /> Atualizar
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-xl"
-          >
-            <Map size={14} /> Ver Mapa de Calor
-          </Button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <Topbar
+        title="Circulação Interna"
+        subtitle="Monitoramento de fluxo e ocupação em tempo real"
+        secondaryButtonText="Atualizar"
+        onSecondaryButtonClick={carregarDados}
+        buttonText="Ver Mapa de Calor"
+        onButtonClick={() => {}}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard
           label="Movimentações"
           value={stats.totalMovimentos}
-          valueClassName="text-blue-600"
-          icon={<Activity size={17} className="text-blue-600" />}
+          valueClassName="text-primary"
+          icon={<Activity size={17} className="text-primary" />}
           sub="hoje"
-          accentVar="var(--blue-500)"
+          accentVar="var(--primary)"
         />
         <StatCard
           label="Ocupação Atual"
           value={stats.ocupacaoAtual}
-          valueClassName="text-green-600"
-          icon={<Users size={17} className="text-green-600" />}
+          valueClassName="text-secondary"
+          icon={<Users size={17} className="text-secondary" />}
           sub="pessoas dentro"
-          accentVar="var(--green-500)"
+          accentVar="var(--chart-2)"
         />
         <StatCard
           label="Setor Mais Ativo"
           value={stats.setorMaisAtivo?.nome || "—"}
-          valueClassName="text-purple-600 font-bold text-sm"
-          icon={<Navigation size={17} className="text-purple-600" />}
+          valueClassName="text-foreground font-bold text-sm"
+          icon={<Navigation size={17} className="text-foreground" />}
           sub="maior fluxo"
-          accentVar="var(--purple-500)"
+          accentVar="var(--chart-4)"
         />
         <StatCard
           label="Tempo Médio"
           value={stats.tempoMedio}
-          valueClassName="text-yellow-600"
-          icon={<Clock size={17} className="text-yellow-600" />}
+          valueClassName="text-muted-foreground"
+          icon={<Clock size={17} className="text-muted-foreground" />}
           sub="por setor"
-          accentVar="var(--yellow-500)"
+          accentVar="var(--border)"
         />
       </div>
 
       {/* Barra de Filtros Padronizada */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-3 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar pessoa ou setor..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -254,7 +239,7 @@ export default function CirculacaoPage() {
               type="button"
               onClick={() => setModalFiltroAberto(true)}
               variant="outline"
-              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
@@ -266,7 +251,7 @@ export default function CirculacaoPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
             {registrosFiltrados.length} resultado(s)
           </div>
         </div>
@@ -287,7 +272,7 @@ export default function CirculacaoPage() {
             <Button
               variant="ghost"
               onClick={limparFiltros}
-              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
             >
               Limpar tudo
             </Button>
@@ -297,7 +282,7 @@ export default function CirculacaoPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Ocupação por Setor */}
-        <div className="lg:col-span-1 bg-card rounded-xl border border-border p-4 space-y-4 shadow-sm">
+        <div className="lg:col-span-1 bg-card rounded-[24px] border border-border p-5 space-y-4 shadow-md">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm">Ocupação por Setor</h3>
             <Building2 size={16} className="text-muted-foreground" />
@@ -324,7 +309,7 @@ export default function CirculacaoPage() {
                       className="h-full rounded-full transition-all duration-500"
                       style={{ 
                         width: "0%",
-                        backgroundColor: "#3b82f6"
+                        backgroundColor: "var(--primary)"
                       }}
                     />
                   </div>
@@ -333,14 +318,14 @@ export default function CirculacaoPage() {
             </div>
           )}
           <div className="pt-2">
-            <Button variant="ghost" className="w-full text-xs text-muted-foreground hover:text-foreground">
+            <Button variant="ghost" className="w-full text-xs text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground">
               Ver detalhes de todos os setores
             </Button>
           </div>
         </div>
 
         {/* Logs de Circulação */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+        <div className="lg:col-span-2 bg-card rounded-[24px] border border-border overflow-hidden shadow-md">
           <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
             <div>
               <h3 className="font-bold text-sm">Logs de Circulação</h3>
@@ -352,7 +337,7 @@ export default function CirculacaoPage() {
               variant="outline"
               size="sm"
               onClick={() => downloadCSV(registrosFiltrados)}
-              className="h-8 gap-2 rounded-lg text-xs"
+              className="h-8 gap-2 rounded-xl border-border/70 bg-white/75 text-xs hover:border-primary/20 hover:bg-white"
             >
               <Download size={14} />
               Exportar
