@@ -12,12 +12,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ENTRADAS_POR_HORA, ENTRADAS_POR_SEMANA } from "@/lib/mockData";
+import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 
 export default function EntradasChart({
   title = "Entradas por Periodo",
   subtitle = "Fluxo registrado ao longo do dia",
   data = ENTRADAS_POR_HORA,
+  weekData = data,
   dataKey = "value",
   nameKey = "hora",
   barColor = "var(--primary)",
@@ -26,25 +27,25 @@ export default function EntradasChart({
 }) {
   const [view, setView] = useState("hoje");
   const chartData = useMemo(() => {
-    const baseData = view === "semana" ? ENTRADAS_POR_SEMANA : data;
+    const baseData = view === "semana" ? weekData : data;
     return mobileLayout && view === "hoje"
       ? baseData.slice(0, 8)
       : !mobileLayout && view === "hoje"
         ? baseData.slice(0, 9)
         : baseData;
-  }, [data, mobileLayout, view]);
+  }, [data, mobileLayout, view, weekData]);
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
     const values = chartData.map((item) => item[dataKey]);
-    const peakValue = Math.max(...values);
+    const peakValue = Math.max(...values, 0);
     const peakItem = chartData.find((item) => item[dataKey] === peakValue);
     const total = values.reduce((sum, value) => sum + value, 0);
     const previous = chartData[Math.max(values.indexOf(peakValue) - 1, 0)]?.[dataKey] ?? peakValue;
     const deltaPct = previous > 0 ? Math.round(((peakValue - previous) / previous) * 100) : 0;
 
     return {
-      peakItem,
+      peakItem: total > 0 ? peakItem : null,
       total,
       deltaPct,
     };
@@ -59,22 +60,22 @@ export default function EntradasChart({
           <p className="max-w-xl text-sm text-muted-foreground">{subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="min-w-[136px] rounded-2xl border border-border bg-muted/50 px-4 py-3 shadow-sm shadow-slate-200/40">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Pico do periodo</p>
-            <p className="mt-1 font-mono text-xl font-semibold text-foreground">
+        <div className="flex items-center gap-2">
+          <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
+            <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
               {chartMeta.peakItem?.[dataKey] ?? 0}
-              <span className="ml-2 text-sm font-sans text-muted-foreground">{chartMeta.peakItem?.[nameKey] ?? "--"}</span>
+              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{chartMeta.peakItem?.[nameKey] ?? "--"}</span>
             </p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground shadow-sm shadow-slate-200/30">
+          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
             {["hoje", "semana"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-3 py-2 transition-all duration-300",
+                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
                   view === item
                     ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
                     : "hover:bg-white/80 hover:text-foreground",

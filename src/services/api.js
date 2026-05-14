@@ -15,13 +15,36 @@ const getHeaders = () => {
   return headers;
 };
 
+const parseResponse = async (response) => {
+  const text = await response.text();
+
+  if (!text) {
+    return { sucesso: response.ok };
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const htmlError = text.match(/<pre>(.*?)<\/pre>/is)?.[1];
+    const mensagem = htmlError
+      ? htmlError.replace(/<[^>]*>/g, '').trim()
+      : text.trim();
+
+    return {
+      sucesso: false,
+      mensagem: mensagem || `Erro ${response.status} ao comunicar com o servidor.`,
+      status: response.status,
+    };
+  }
+};
+
 export const api = {
   async get(endpoint) {
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'GET',
       headers: getHeaders(),
     });
-    return response.json();
+    return parseResponse(response);
   },
 
   async post(endpoint, data) {
@@ -30,7 +53,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    return response.json();
+    return parseResponse(response);
   },
 
   async put(endpoint, data) {
@@ -39,7 +62,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    return response.json();
+    return parseResponse(response);
   },
 
   async delete(endpoint) {
@@ -47,7 +70,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    return response.json();
+    return parseResponse(response);
   },
 };
 

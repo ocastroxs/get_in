@@ -401,7 +401,7 @@ export default function CheckinPage() {
           
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> O status "Pendente" indica visitantes que aguardam aprovação de um supervisor para entrar.
+              <strong>Info:</strong> O status &quot;Pendente&quot; indica visitantes que aguardam aprovação de um supervisor para entrar.
             </p>
           </div>
         </div>
