@@ -379,7 +379,7 @@ export default function HistoricoPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+              <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Empresa</th>
                 <th className="px-4 py-3">Setor</th>

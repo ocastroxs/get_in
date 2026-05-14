@@ -8,12 +8,6 @@ import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 
-const sexoOptions = [
-  { value: "M", label: "Masculino" },
-  { value: "F", label: "Feminino" },
-  { value: "O", label: "Outro" },
-];
-
 const motivoOptions = [
   { value: "Visita", label: "Visita" },
   { value: "Entrega", label: "Entrega" },
@@ -140,8 +134,6 @@ export default function NovoCadastroPage() {
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
-    dataNascimento: "",
-    sexo: "",
     empresa: "",
     setor: "",
     motivo: "",
@@ -349,43 +341,17 @@ export default function NovoCadastroPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        CPF <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="000.000.000-00"
-                        value={form.cpf}
-                        onChange={handleCPFChange}
-                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                        maxLength="14"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        Data de Nascimento
-                      </label>
-                      <Input
-                        type="date"
-                        value={form.dataNascimento}
-                        onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
-                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                      />
-                    </div>
-                  </div>
-
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      Sexo
+                      CPF <span className="text-red-500">*</span>
                     </label>
-                    <PrettySelect
-                      value={form.sexo}
-                      onChange={(sexo) => setForm({ ...form, sexo })}
-                      placeholder="Selecione..."
-                      options={sexoOptions}
-                      Icon={User}
+                    <Input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      value={form.cpf}
+                      onChange={handleCPFChange}
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      maxLength="14"
                     />
                   </div>
 

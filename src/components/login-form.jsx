@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 import { authService } from "@/services/api";
-import { useAuth } from "@/lib/AuthContext";
+import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext";
 
 export function LoginForm({ className, ...props }) {
   const { login: updateAuthContext } = useAuth();
@@ -54,8 +54,20 @@ export function LoginForm({ className, ...props }) {
 
     // 3. Verifique se o back-end autorizou
     if (resultado.sucesso && resultado.token) {
+      const funcionario =
+        resultado.data?.funcionario ||
+        resultado.funcionario ||
+        (resultado.data?.tipo ? resultado.data : null);
+      const usuario = resultado.data?.usuario || resultado.data?.user || resultado.data;
+      const tipo = getAuthTipo(funcionario, usuario);
+
+      if (getFlowRouteByTipo(tipo) === "/") {
+        setGeneralError("Seu usuario nao possui perfil de acesso para este sistema.");
+        return;
+      }
+
       // 4. Salva no Contexto Global (isso dispara o redirecionamento)
-      updateAuthContext(resultado.data, resultado.token);
+      updateAuthContext(resultado, resultado.token, funcionario, { remember });
     } else {
       // 5. Exibe erro caso a senha/email estejam errados
       setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");

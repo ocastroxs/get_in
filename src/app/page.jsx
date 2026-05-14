@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
-import { useAuth } from "@/lib/AuthContext"
+import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext"
 import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
 import { publicService } from "@/services/api"
 
@@ -207,7 +207,7 @@ function StatItem({ value, suffix, label, icon: Icon }) {
    Página de Login
 ───────────────────────────────────────────── */
 export default function LoginPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, funcionario, user } = useAuth();
   const router = useRouter();
   
   // Estados para estatísticas reais
@@ -220,9 +220,13 @@ export default function LoginPage() {
   // Se já estiver autenticado, redireciona para o dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      router.push("/dashboard");
+      const redirectTo = getFlowRouteByTipo(getAuthTipo(funcionario, user));
+
+      if (redirectTo !== "/") {
+        router.replace(redirectTo);
+      }
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, authLoading, funcionario, router, user]);
 
   // Busca estatísticas reais do back-end
   useEffect(() => {

@@ -2,12 +2,13 @@
 
 import ParticlesBackground from "@/components/ui/ParticlesBackground";
 import PortariaSidebar from "@/components/PortariaSidebar";
-import { useAuth } from "@/lib/AuthContext";
+import { getAuthTipo, useAuth } from "@/lib/AuthContext";
 
 export default function PortariaLayout({ children }) {
-  const { isLoading } = useAuth();
+  const { isAuthenticated, isLoading, funcionario, user } = useAuth();
+  const tipo = getAuthTipo(funcionario, user);
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated || tipo !== "port") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
