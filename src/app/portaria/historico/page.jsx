@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Calendar, Clock, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check
+  Calendar, Clock, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,80 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 
-const STATUS_OPTIONS = ["Todos", "Ativo", "Finalizado"];
+const STATUS_OPTIONS = ["Todos", "Pendente", "Aprovado", "Recusado"];
+
+const STATUS_LABEL = {
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado",
+  ativo: "Ativo",
+  finalizado: "Finalizado"
+};
+
+const STATUS_STYLE = {
+  pendente: "bg-amber-100 text-amber-700",
+  aprovado: "bg-green-100 text-green-700",
+  recusado: "bg-red-100 text-red-600",
+  ativo: "bg-green-100 text-green-700",
+  finalizado: "bg-blue-100 text-blue-700"
+};
+
+function pickFirst(...values) {
+  return (
+    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
+    ""
+  );
+}
+
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function normalizeRegistro(registro) {
+  const usuario = registro?.usuario || {};
+  const departamento = registro?.departamento || registro?.setores || {};
+  const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
+  const descricao = registro?.descricao || "";
+
+  return {
+    ...registro,
+    visitante: pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
+    cpf: pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
+    telefone: pickFirst(
+      registro?.telefone,
+      registro?.celular,
+      usuario?.celular,
+      usuario?.telefone,
+      getDescricaoValue(descricao, "Telefone")
+    ),
+    email: pickFirst(registro?.email, usuario?.email, getDescricaoValue(descricao, "Email"), getDescricaoValue(descricao, "E-mail")),
+    empresa: pickFirst(registro?.empresa, registro?.empresa_visitante, usuario?.empresa, getDescricaoValue(descricao, "Empresa")),
+    setor: pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
+    dataEntrada: pickFirst(registro?.dataEntrada, registro?.dataDaRequisicao, registro?.dataDeEntrada),
+    dataSaida: pickFirst(registro?.dataSaida, registro?.dataDeSaida),
+    status: registro?.status || (registro?.dataSaida || registro?.dataDeSaida ? "finalizado" : "ativo"),
+    observacoes: pickFirst(registro?.observacoes, descricao)
+  };
+}
 
 // ─── MODAL DE DETALHES ───────────────────────────────────────────────────────
 function ModalDetalhes({ isOpen, onClose, registro }) {
@@ -56,6 +129,28 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
+                  <Phone size={16} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Telefone</p>
+                  <p className="text-sm font-semibold text-foreground">{registro.telefone || "—"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
+                  <Mail size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">E-mail</p>
+                  <p className="truncate text-sm font-semibold text-foreground">{registro.email || "—"}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
                 <MapPin size={16} />
@@ -73,7 +168,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entrada</p>
-                  <p className="text-xs font-semibold text-foreground">{registro.dataEntrada}</p>
+                  <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataEntrada)}</p>
                 </div>
               </div>
 
@@ -84,7 +179,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                   </div>
                   <div className="flex-1">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saída</p>
-                    <p className="text-xs font-semibold text-foreground">{registro.dataSaida}</p>
+                    <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataSaida)}</p>
                   </div>
                 </div>
               )}
@@ -126,23 +221,33 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
 
 // ─── LINHA DO HISTÓRICO ─────────────────────────────────────────────────────
 function LinhaHistorico({ registro, onDetalhes }) {
-  const status = registro.dataSaida ? "Finalizado" : "Ativo";
-  const statusClass = registro.dataSaida 
-    ? "bg-blue-100 text-blue-700" 
-    : "bg-green-100 text-green-700";
+  const status = STATUS_LABEL[registro.status] || registro.status || "Ativo";
+  const statusClass = STATUS_STYLE[registro.status] || "bg-muted text-muted-foreground";
 
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-foreground">{registro.visitante}</p>
-          <p className="text-xs text-muted-foreground font-mono">{registro.cpf}</p>
+          <p className="text-sm font-medium text-foreground">{registro.visitante || "—"}</p>
+          <p className="text-xs text-muted-foreground font-mono">{registro.cpf || "—"}</p>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{registro.empresa}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{registro.setor}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{registro.dataEntrada}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{registro.dataSaida || "—"}</td>
+      <td className="px-4 py-3">
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 whitespace-nowrap">
+            <Phone size={12} />
+            <span>{registro.telefone || "—"}</span>
+          </p>
+          <p className="flex max-w-[220px] items-center gap-1.5 truncate">
+            <Mail size={12} className="shrink-0" />
+            <span className="truncate">{registro.email || "—"}</span>
+          </p>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "—"}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataSaida)}</td>
       <td className="px-4 py-3">
         <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass}`}>
           {status}
@@ -183,10 +288,10 @@ export default function HistoricoPage() {
   async function fetchHistorico() {
     try {
       setLoading(true);
-      const response = await api.get('/portaria/historico');
+      const response = await api.get('/requisicao-visitante');
 
-      if (response.sucesso && response.data) {
-        setRegistros(response.data);
+      if (response.sucesso && Array.isArray(response.data)) {
+        setRegistros(response.data.map(normalizeRegistro));
       }
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -197,17 +302,19 @@ export default function HistoricoPage() {
 
   const registrosFiltrados = useMemo(() => {
     return registros.filter(r => {
+      const termoBusca = busca.toLowerCase();
+      const status = STATUS_LABEL[r.status] || r.status;
       const matchBusca = busca === "" ||
-        r.visitante.toLowerCase().includes(busca.toLowerCase()) ||
-        r.cpf.includes(busca) ||
-        r.empresa.toLowerCase().includes(busca.toLowerCase());
+        (r.visitante || "").toLowerCase().includes(termoBusca) ||
+        (r.cpf || "").includes(busca) ||
+        (r.empresa || "").toLowerCase().includes(termoBusca) ||
+        (r.telefone || "").toLowerCase().includes(termoBusca) ||
+        (r.email || "").toLowerCase().includes(termoBusca);
 
-      const matchStatus = filtroStatus === "Todos" || 
-        (filtroStatus === "Finalizado" && r.dataSaida) ||
-        (filtroStatus === "Ativo" && !r.dataSaida);
+      const matchStatus = filtroStatus === "Todos" || status === filtroStatus;
 
       const matchData = filtroData === "" ||
-        r.dataEntrada.includes(filtroData);
+        String(r.dataEntrada || "").includes(filtroData);
 
       return matchBusca && matchStatus && matchData;
     });
@@ -215,8 +322,9 @@ export default function HistoricoPage() {
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
-    Ativo: registros.filter((r) => !r.dataSaida).length,
-    Finalizado: registros.filter((r) => Boolean(r.dataSaida)).length,
+    Pendente: registros.filter((r) => r.status === "pendente").length,
+    Aprovado: registros.filter((r) => r.status === "aprovado").length,
+    Recusado: registros.filter((r) => r.status === "recusado").length,
   }), [registros]);
 
   function handleDetalhes(registro) {
@@ -256,6 +364,8 @@ export default function HistoricoPage() {
         columns: [
           { header: "Visitante", weight: 1.4 },
           { header: "CPF", weight: 1 },
+          { header: "Telefone", weight: 1 },
+          { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
           { header: "Setor", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
@@ -265,11 +375,13 @@ export default function HistoricoPage() {
         rows: registrosFiltrados.map((r) => [
           r.visitante,
           r.cpf,
+          r.telefone,
+          r.email,
           r.empresa,
           r.setor,
-          r.dataEntrada,
-          r.dataSaida || "-",
-          r.dataSaida ? "Finalizado" : "Ativo",
+          formatDateTime(r.dataEntrada),
+          formatDateTime(r.dataSaida),
+          STATUS_LABEL[r.status] || r.status,
         ]),
       });
     } catch (error) {
@@ -292,7 +404,7 @@ export default function HistoricoPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
-                placeholder="Buscar por nome, CPF ou empresa..."
+                placeholder="Buscar por nome, CPF, telefone, e-mail ou empresa..."
                 className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
@@ -381,6 +493,7 @@ export default function HistoricoPage() {
             <thead>
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Visitante</th>
+                <th className="px-4 py-3">Contato</th>
                 <th className="px-4 py-3">Empresa</th>
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Entrada</th>
@@ -392,7 +505,7 @@ export default function HistoricoPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center">
+                  <td colSpan={8} className="py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="animate-spin" size={24} />
                       <span className="text-sm">Carregando histórico...</span>
@@ -401,7 +514,7 @@ export default function HistoricoPage() {
                 </tr>
               ) : registrosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                     Nenhum registro encontrado com os filtros aplicados.
                   </td>
                 </tr>

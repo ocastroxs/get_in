@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Circle } from "lucide-react";
+import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Circle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +16,67 @@ const motivoOptions = [
   { value: "Outro", label: "Outro" },
 ];
 
-const empresaOptions = [
-  { value: "Nutrilab", label: "Nutrilab" },
-  { value: "FiltraTec", label: "FiltraTec" },
-  { value: "ConsTech", label: "ConsTech" },
-  { value: "LogiMax", label: "LogiMax" },
-  { value: "TechFix Ltda", label: "TechFix Ltda" },
-  { value: "SupriTec", label: "SupriTec" },
+const setoresPadrao = [
+  "Produção",
+  "Almoxarifado",
+  "Administrativo",
+  "Laboratório",
+  "Diretoria",
+  "Recepção"
 ];
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function getEmpresaNome(registro) {
+  return String(
+    registro?.empresa ||
+      registro?.empresa_visitante ||
+      registro?.usuario?.empresa ||
+      registro?.usuario?.empresas?.nome ||
+      registro?.empresas?.nome ||
+      registro?.empresa_nome ||
+      registro?.nomeFantasia ||
+      registro?.razaoSocial ||
+      registro?.razao_social ||
+      registro?.nome ||
+      ""
+  ).trim();
+}
+
+function getEmpresaNomeFromRegistro(registro) {
+  return String(
+    registro?.empresa ||
+      registro?.empresa_visitante ||
+      registro?.usuario?.empresa ||
+      registro?.usuario?.empresas?.nome ||
+      registro?.empresas?.nome ||
+      registro?.empresa_nome ||
+      registro?.nomeFantasia ||
+      registro?.razaoSocial ||
+      registro?.razao_social ||
+      ""
+  ).trim();
+}
+
+function buildEmpresasOptions(registros) {
+  const empresasUnicas = new Map();
+
+  registros.forEach((registro) => {
+    const nome = getEmpresaNomeFromRegistro(registro);
+
+    if (nome) {
+      empresasUnicas.set(nome.toLowerCase(), { nome });
+    }
+  });
+
+  return Array.from(empresasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
 
 function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -127,10 +180,13 @@ function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
 }
 
 export default function NovoCadastroPage() {
-  const { user } = useAuth();
+  const { user, funcionario } = useAuth();
   const [step, setStep] = useState(1);
   const [tempoEspera, setTempoEspera] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [empresas, setEmpresas] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
@@ -142,14 +198,69 @@ export default function NovoCadastroPage() {
     setoresAcesso: [],
   });
 
-  const setoresDisponiveis = [
-    "Produção",
-    "Almoxarifado",
-    "Administrativo",
-    "Laboratório",
-    "Diretoria",
-    "Recepção"
-  ];
+  const setoresDisponiveis = departamentos.length > 0
+    ? departamentos.map((departamento) => departamento.nome).filter(Boolean)
+    : setoresPadrao;
+
+  const empresaOptions = empresas
+    .map((empresa) => {
+      const label = getEmpresaNome(empresa);
+
+      return label ? { value: label, label } : null;
+    })
+    .filter(Boolean);
+
+  useEffect(() => {
+    async function fetchEmpresas() {
+      setLoadingEmpresas(true);
+
+      try {
+        const response = await api.get("/empresas");
+
+        if (response.sucesso && Array.isArray(response.data) && response.data.length > 0) {
+          setEmpresas(response.data);
+          return;
+        }
+
+        const [usuariosResponse, requisicoesResponse] = await Promise.all([
+          api.get("/user"),
+          api.get("/requisicao-visitante"),
+        ]);
+
+        const usuarios = usuariosResponse.sucesso && Array.isArray(usuariosResponse.data)
+          ? usuariosResponse.data
+          : [];
+        const requisicoes = requisicoesResponse.sucesso && Array.isArray(requisicoesResponse.data)
+          ? requisicoesResponse.data
+          : [];
+
+        setEmpresas(buildEmpresasOptions([...usuarios, ...requisicoes]));
+      } catch (error) {
+        console.error("Erro ao carregar empresas:", error);
+        setEmpresas([]);
+      } finally {
+        setLoadingEmpresas(false);
+      }
+    }
+
+    fetchEmpresas();
+  }, []);
+
+  useEffect(() => {
+    async function fetchDepartamentos() {
+      try {
+        const response = await api.get("/dep");
+
+        if (response.sucesso && Array.isArray(response.data)) {
+          setDepartamentos(response.data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar departamentos:", error);
+      }
+    }
+
+    fetchDepartamentos();
+  }, []);
 
   useEffect(() => {
     if (step !== 2) {
@@ -199,9 +310,63 @@ export default function NovoCadastroPage() {
     }));
   };
 
+  const getDepartamentoId = () => {
+    const departamentoSelecionado = departamentos.find((departamento) => departamento.nome === form.setor);
+
+    return Number(
+      departamentoSelecionado?.id ||
+        funcionario?.idDepartamento ||
+        funcionario?.idSetor ||
+        user?.idDepartamento ||
+        user?.idSetor ||
+        user?.idDep ||
+        user?.funcionario?.idDepartamento ||
+        user?.funcionario?.idSetor ||
+        1
+    );
+  };
+
+  const getOrCreateVisitanteUsuario = async () => {
+    const cpfLimpo = onlyDigits(form.cpf);
+    const email = form.email.trim().toLowerCase();
+    const usuarioPayload = {
+      nome: form.nome.trim(),
+      cpf: form.cpf,
+      cel: form.telefone,
+      celular: form.telefone,
+      email,
+      empresa: form.empresa
+    };
+
+    const usuariosResponse = await api.get("/user");
+
+    if (usuariosResponse.sucesso && Array.isArray(usuariosResponse.data)) {
+      const usuarioExistente = usuariosResponse.data.find((usuario) => onlyDigits(usuario.cpf) === cpfLimpo);
+
+      if (usuarioExistente) {
+        const updateResponse = await api.put(`/user/${usuarioExistente.id}`, usuarioPayload);
+        return updateResponse.sucesso
+          ? updateResponse.data || { ...usuarioExistente, ...usuarioPayload, celular: form.telefone }
+          : usuarioExistente;
+      }
+    }
+
+    const createResponse = await api.post("/user", usuarioPayload);
+
+    if (createResponse.sucesso && createResponse.data) {
+      return createResponse.data;
+    }
+
+    throw new Error(createResponse.mensagem || "Erro ao cadastrar dados do visitante.");
+  };
+
   const handleProximoStep = async () => {
-    if (!form.nome || !form.cpf || !form.empresa) {
-      alert("Preencha os campos obrigatórios");
+    const cpfCompletoForm = onlyDigits(form.cpf).length === 11;
+    const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
+    const emailValidoForm = isValidEmail(form.email);
+
+    if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !telefoneCompletoForm || !emailValidoForm) {
+      alert("Preencha nome, CPF, empresa, telefone e e-mail validos.");
       return;
     }
     
@@ -212,13 +377,30 @@ export default function NovoCadastroPage() {
     
     setLoading(true);
     try {
+      const visitanteUsuario = await getOrCreateVisitanteUsuario();
+      const idDepartamento = getDepartamentoId();
+      const setoresPermitidos = form.setoresAcesso.length > 0 ? form.setoresAcesso.join(", ") : "Nenhum";
+      const descricao = [
+        `Visitante: ${form.nome.trim()}`,
+        `CPF: ${form.cpf}`,
+        `Telefone: ${form.telefone}`,
+        `Email: ${form.email.trim().toLowerCase()}`,
+        `Empresa: ${form.empresa}`,
+        `Setor: ${form.setor || "Nao informado"}`,
+        `Setores permitidos: ${setoresPermitidos}`
+      ].join(" | ");
+
       const payload = {
-        idUsuario: user.id,
-        idDepartamento: user.idDepartamento || 1,
+        idUsuario: visitanteUsuario.id,
+        idDepartamento,
+        idSetor: idDepartamento,
         motivo: form.motivo || "Visita",
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        descricao: `Visitante: ${form.nome} | CPF: ${form.cpf} | Empresa: ${form.empresa}`,
-        empresa: form.empresa
+        descricao,
+        empresa: form.empresa,
+        telefone: form.telefone,
+        email: form.email.trim().toLowerCase(),
+        setoresAcesso: form.setoresAcesso
       };
       
       const response = await api.post('/requisicao-visitante', payload);
@@ -231,7 +413,7 @@ export default function NovoCadastroPage() {
       }
     } catch (error) {
       console.error(error);
-      alert("Erro ao conectar com o servidor");
+      alert(error.message || "Erro ao conectar com o servidor");
     } finally {
       setLoading(false);
     }
@@ -243,16 +425,18 @@ export default function NovoCadastroPage() {
 
   const cpfCompleto = form.cpf.replace(/\D/g, "").length === 11;
   const telefoneCompleto = form.telefone.replace(/\D/g, "").length >= 10;
+  const emailValido = isValidEmail(form.email);
   const requisitos = [
     { key: "tipoIdentificacao", label: "Identificação do visitante", completed: Boolean(form.nome.trim()) },
     {
       key: "cadastroCompleto",
       label: "Cadastro completo",
-      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.motivo && telefoneCompleto)
+      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.motivo && telefoneCompleto && emailValido)
     },
     { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
     { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
-    { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto }
+    { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
+    { key: "emailContato", label: "E-mail de contato", completed: emailValido }
   ];
 
   return (
@@ -375,7 +559,7 @@ export default function NovoCadastroPage() {
                     <PrettySelect
                       value={form.empresa}
                       onChange={(empresa) => setForm({ ...form, empresa })}
-                      placeholder="Selecione a empresa..."
+                      placeholder={loadingEmpresas ? "Carregando empresas..." : "Selecione a empresa..."}
                       options={empresaOptions}
                       Icon={Building2}
                     />
@@ -423,7 +607,7 @@ export default function NovoCadastroPage() {
                 <div className="space-y-5">
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      Telefone
+                      Telefone <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="tel"
@@ -437,7 +621,7 @@ export default function NovoCadastroPage() {
 
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      E-mail
+                      E-mail <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="email"
@@ -734,6 +918,8 @@ export default function NovoCadastroPage() {
                 { label: "Empresa", value: form.empresa || "—" },
                 { label: "Tipo", value: form.motivo || "—" },
                 { label: "CPF", value: form.cpf || "—" },
+                { label: "Telefone", value: form.telefone || "—" },
+                { label: "E-mail", value: form.email || "—" },
                 { label: "Período", value: "Acesso imediato" },
               ].map((item, i) => (
                 <div key={i} className="flex justify-between items-center border-b border-border/40 pb-3">

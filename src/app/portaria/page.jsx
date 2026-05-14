@@ -7,6 +7,8 @@ import {
   Clock,
   Loader2,
   LogOut,
+  Mail,
+  Phone,
   QrCode,
   Search,
   Users,
@@ -27,29 +29,103 @@ const STATUS_LABEL = {
   ativo: "Dentro",
   saida: "Saída",
   pendente: "Pendente",
-  alerta: "Alerta"
+  alerta: "Alerta",
+  recusado: "Recusado"
 };
 
 const STATUS_STYLE = {
   ativo: "bg-green-100 text-green-700",
   saida: "bg-blue-100 text-blue-700",
   pendente: "bg-amber-100 text-amber-700",
-  alerta: "bg-red-100 text-red-600"
+  alerta: "bg-red-100 text-red-600",
+  recusado: "bg-red-100 text-red-600"
 };
 
 const STATUS_DOT = {
   ativo: "bg-green-500",
   saida: "bg-blue-500",
   pendente: "bg-amber-500",
-  alerta: "bg-red-500"
+  alerta: "bg-red-500",
+  recusado: "bg-red-500"
 };
 
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
   { label: "Dentro", value: "ativo" },
   { label: "Pendente", value: "pendente" },
+  { label: "Recusado", value: "recusado" },
   { label: "Saída", value: "saida" }
 ];
+
+const BACKEND_STATUS_TO_PORTARIA = {
+  aprovado: "ativo",
+  pendente: "pendente",
+  recusado: "recusado"
+};
+
+function pickFirst(...values) {
+  return (
+    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
+    ""
+  );
+}
+
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function normalizeVisitante(visitante) {
+  const usuario = visitante?.usuario || {};
+  const departamento = visitante?.departamento || visitante?.setores || {};
+  const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
+  const descricao = visitante?.descricao || "";
+  const status = BACKEND_STATUS_TO_PORTARIA[visitante?.status] || visitante?.status || "pendente";
+  const dataEntrada = pickFirst(
+    visitante?.dataEntrada,
+    visitante?.dataDaRequisicao,
+    visitante?.entrada,
+    visitante?.dataDeEntrada
+  );
+
+  return {
+    ...visitante,
+    nome: pickFirst(visitante?.nome, visitante?.visitante, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
+    cpf: pickFirst(visitante?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
+    telefone: pickFirst(
+      visitante?.telefone,
+      visitante?.celular,
+      visitante?.cel,
+      usuario?.celular,
+      usuario?.telefone,
+      getDescricaoValue(descricao, "Telefone")
+    ),
+    email: pickFirst(
+      visitante?.email,
+      usuario?.email,
+      getDescricaoValue(descricao, "Email"),
+      getDescricaoValue(descricao, "E-mail")
+    ),
+    empresa: pickFirst(
+      visitante?.empresa,
+      visitante?.empresa_visitante,
+      usuario?.empresa,
+      getDescricaoValue(descricao, "Empresa")
+    ),
+    setor: pickFirst(visitante?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
+    dataEntrada,
+    status,
+    statusOriginal: visitante?.status,
+    podeCheckout: Boolean(
+      visitante?.podeCheckout ||
+        (visitante?.dataEntrada && !visitante?.dataSaida && status === "ativo" && !visitante?.dataDaRequisicao)
+    )
+  };
+}
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -222,6 +298,18 @@ function LinhaVisitante({ visitante, onCheckout }) {
           <p className="text-[11px] text-muted-foreground">{visitante.cpf || "CPF não informado"}</p>
         </div>
       </td>
+      <td className="px-4 py-3">
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 whitespace-nowrap">
+            <Phone size={12} />
+            <span>{visitante.telefone || "Telefone nao informado"}</span>
+          </p>
+          <p className="flex max-w-[220px] items-center gap-1.5 truncate">
+            <Mail size={12} className="shrink-0" />
+            <span className="truncate">{visitante.email || "E-mail nao informado"}</span>
+          </p>
+        </div>
+      </td>
       <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{getSetorLabel(visitante)}</td>
       <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
@@ -243,7 +331,7 @@ function LinhaVisitante({ visitante, onCheckout }) {
             <span className="hidden xl:inline">Crachá</span>
           </Button>
 
-          {status === "ativo" && (
+          {status === "ativo" && visitante.podeCheckout && (
             <Button
               size="sm"
               onClick={() => onCheckout(visitante)}
@@ -280,10 +368,10 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      const response = await api.get("/portaria/visitantes-presentes");
+      const response = await api.get("/requisicao-visitante");
 
-      if (response && typeof response === "object" && response.sucesso && response.data) {
-        setVisitantes(response.data);
+      if (response && typeof response === "object" && response.sucesso && Array.isArray(response.data)) {
+        setVisitantes(response.data.map(normalizeVisitante));
       } else if (!response || typeof response !== "object") {
         console.warn("Back-end não está pronto. Exibindo lista vazia.");
         setVisitantes([]);
@@ -301,13 +389,17 @@ export default function PortariaPage() {
       const nome = visitante?.nome?.toLowerCase() || "";
       const cpf = visitante?.cpf || "";
       const empresa = visitante?.empresa?.toLowerCase() || "";
+      const telefone = visitante?.telefone?.toLowerCase() || "";
+      const email = visitante?.email?.toLowerCase() || "";
       const termoBusca = busca.toLowerCase();
 
       const matchBusca =
         busca === "" ||
         nome.includes(termoBusca) ||
         cpf.includes(busca) ||
-        empresa.includes(termoBusca);
+        empresa.includes(termoBusca) ||
+        telefone.includes(termoBusca) ||
+        email.includes(termoBusca);
 
       const matchStatus = filtroStatus === "Todos" || visitante.status === filtroStatus;
 
@@ -352,6 +444,8 @@ export default function PortariaPage() {
         columns: [
           { header: "Nome", weight: 1.4 },
           { header: "CPF", weight: 1 },
+          { header: "Telefone", weight: 1 },
+          { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
           { header: "Setor", weight: 1.2 },
           { header: "Entrada", weight: 1 },
@@ -361,6 +455,8 @@ export default function PortariaPage() {
         rows: visitantesFiltrados.map((v) => [
           v.nome,
           v.cpf,
+          v.telefone,
+          v.email,
           v.empresa,
           getSetorLabel(v),
           formatDateTime(v.dataEntrada),
@@ -376,7 +472,7 @@ export default function PortariaPage() {
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
   const countPendentes = visitantes.filter((v) => v.status === "pendente").length;
-  const countAlerta = visitantes.filter((v) => v.status === "alerta").length;
+  const countRecusados = visitantes.filter((v) => v.status === "recusado").length;
 
   return (
     <>
@@ -404,11 +500,11 @@ export default function PortariaPage() {
             sub="Na recepção"
           />
           <StatCard
-            label="Alertas"
-            value={countAlerta}
+            label="Recusados"
+            value={countRecusados}
             icon={<AlertTriangle size={20} className="text-red-600" />}
             accentVar="#dc2626"
-            sub="Tempo excedido"
+            sub="Acesso negado"
           />
         </div>
 
@@ -419,7 +515,7 @@ export default function PortariaPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF ou empresa..."
+                  placeholder="Buscar por nome, CPF, telefone, e-mail ou empresa..."
                   className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -501,6 +597,7 @@ export default function PortariaPage() {
               <thead>
                 <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
+                  <th className="px-4 py-3">Contato</th>
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Entrada</th>
@@ -512,7 +609,7 @@ export default function PortariaPage() {
               <tbody className="divide-y divide-border">
                 {loading && visitantes.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-20 text-center">
+                    <td colSpan={8} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
                         <span className="text-sm">Carregando visitantes...</span>
@@ -521,7 +618,7 @@ export default function PortariaPage() {
                   </tr>
                 ) : visitantesFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="py-20 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Users className="h-12 w-12 text-muted/30" />
                         <p>Nenhum visitante presente no momento.</p>
