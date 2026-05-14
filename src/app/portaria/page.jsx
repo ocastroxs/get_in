@@ -397,7 +397,7 @@ export default function PortariaPage() {
             sub="Acesso liberado"
           />
           <StatCard
-            label="Aguardando"
+            label="Pendentes"
             value={countPendentes}
             icon={<Clock size={20} className="text-amber-600" />}
             accentVar="#d97706"
