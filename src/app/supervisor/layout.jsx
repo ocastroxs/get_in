@@ -1,14 +1,15 @@
 'use client';
 
-import { useAuth } from '@/lib/AuthContext';
+import { getAuthTipo, useAuth } from '@/lib/AuthContext';
 import SupervisorSidebar from '@/components/supervisor/SupervisorSidebar';
 import ParticlesBackground from '@/components/ui/ParticlesBackground';
 import { Loader2 } from 'lucide-react';
 
 export default function SupervisorLayout({ children }) {
-  const { isLoading } = useAuth();
+  const { isAuthenticated, isLoading, funcionario, user } = useAuth();
+  const tipo = getAuthTipo(funcionario, user);
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated || tipo !== 'sup') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

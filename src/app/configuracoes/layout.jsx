@@ -1,12 +1,13 @@
 "use client";
 import ParticlesBackground from "@/components/ui/ParticlesBackground";
 import Sidebar from "@/components/ui/sidebar";
-import { useAuth } from "@/lib/AuthContext";
+import { getAuthTipo, useAuth } from "@/lib/AuthContext";
 
 export default function ConfiguracoesLayout({ children }) {
-  const { isLoading } = useAuth();
+  const { isAuthenticated, isLoading, funcionario, user } = useAuth();
+  const tipo = getAuthTipo(funcionario, user);
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated || tipo !== "adm") {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
