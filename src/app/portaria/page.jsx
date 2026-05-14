@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   Building2,
   Clock,
   Loader2,
@@ -53,14 +52,23 @@ const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
   { label: "Dentro", value: "ativo" },
   { label: "Pendente", value: "pendente" },
-  { label: "Recusado", value: "recusado" },
   { label: "Saída", value: "saida" }
 ];
 
 const BACKEND_STATUS_TO_PORTARIA = {
   aprovado: "ativo",
+  ativo: "ativo",
+  dentro: "ativo",
+  liberado: "ativo",
   pendente: "pendente",
-  recusado: "recusado"
+  recusado: "recusado",
+  rejeitado: "recusado",
+  negado: "recusado",
+  saida: "saida",
+  saiu: "saida",
+  finalizado: "saida",
+  concluido: "saida",
+  alerta: "alerta"
 };
 
 function pickFirst(...values) {
@@ -79,21 +87,67 @@ function getDescricaoValue(descricao, label) {
   return match?.[1]?.trim() || "";
 }
 
+function normalizeStatus(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized.includes("aguard")) {
+    return "pendente";
+  }
+
+  return BACKEND_STATUS_TO_PORTARIA[normalized] || normalized || "pendente";
+}
+
+function getResponseArray(response, keys = []) {
+  if (!response || typeof response !== "object" || !response.sucesso) {
+    return [];
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(response.data?.[key])) {
+      return response.data[key];
+    }
+
+    if (Array.isArray(response[key])) {
+      return response[key];
+    }
+  }
+
+  return [];
+}
+
 function normalizeVisitante(visitante) {
   const usuario = visitante?.usuario || {};
   const departamento = visitante?.departamento || visitante?.setores || {};
   const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
   const descricao = visitante?.descricao || "";
-  const status = BACKEND_STATUS_TO_PORTARIA[visitante?.status] || visitante?.status || "pendente";
   const dataEntrada = pickFirst(
     visitante?.dataEntrada,
-    visitante?.dataDaRequisicao,
     visitante?.entrada,
-    visitante?.dataDeEntrada
+    visitante?.dataDeEntrada,
+    visitante?.dataDaEntrada,
+    visitante?.dataDaRequisicao
   );
+  const dataSaida = pickFirst(
+    visitante?.dataSaida,
+    visitante?.saida,
+    visitante?.dataDeSaida,
+    visitante?.dataDaSaida
+  );
+  const status = !visitante?.status && dataEntrada && !dataSaida
+    ? "ativo"
+    : normalizeStatus(visitante?.status);
 
   return {
     ...visitante,
+    id: pickFirst(visitante?.id, visitante?.idLog, visitante?.idRegistro, visitante?.idRequisicao),
     nome: pickFirst(visitante?.nome, visitante?.visitante, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
     cpf: pickFirst(visitante?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
     telefone: pickFirst(
@@ -118,11 +172,12 @@ function normalizeVisitante(visitante) {
     ),
     setor: pickFirst(visitante?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
     dataEntrada,
+    dataSaida,
     status,
     statusOriginal: visitante?.status,
     podeCheckout: Boolean(
       visitante?.podeCheckout ||
-        (visitante?.dataEntrada && !visitante?.dataSaida && status === "ativo" && !visitante?.dataDaRequisicao)
+        (dataEntrada && !dataSaida && status === "ativo")
     )
   };
 }
@@ -293,30 +348,24 @@ function LinhaVisitante({ visitante, onCheckout }) {
   return (
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
-        <div>
-          <p className="text-sm font-bold text-foreground">{visitante.nome || "—"}</p>
-          <p className="text-[11px] text-muted-foreground">{visitante.cpf || "CPF não informado"}</p>
-        </div>
-      </td>
-      <td className="px-4 py-3">
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p className="flex items-center gap-1.5 whitespace-nowrap">
-            <Phone size={12} />
-            <span>{visitante.telefone || "Telefone nao informado"}</span>
-          </p>
-          <p className="flex max-w-[220px] items-center gap-1.5 truncate">
-            <Mail size={12} className="shrink-0" />
-            <span className="truncate">{visitante.email || "E-mail nao informado"}</span>
-          </p>
-        </div>
+        <p className="text-sm font-bold text-foreground">{visitante.nome || "—"}</p>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{getSetorLabel(visitante)}</td>
       <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
         {formatDateTime(visitante.dataEntrada)}
       </td>
-      <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
-        {formatDuration(visitante.dataEntrada)}
+      <td className="px-4 py-3">
+        <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+          <Phone size={12} />
+          <span>{visitante.telefone || "—"}</span>
+        </p>
+      </td>
+      <td className="px-4 py-3">
+        <p className="flex max-w-[240px] items-center gap-1.5 truncate text-xs text-muted-foreground">
+          <Mail size={12} className="shrink-0" />
+          <span className="truncate">{visitante.email || "—"}</span>
+        </p>
       </td>
       <td className="px-4 py-3">
         <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
@@ -368,12 +417,13 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      const response = await api.get("/requisicao-visitante");
+      const response = await api.get("/portaria/vlocal");
+      const visitantesPortaria = getResponseArray(response, ["dados", "visitantes"]);
 
-      if (response && typeof response === "object" && response.sucesso && Array.isArray(response.data)) {
-        setVisitantes(response.data.map(normalizeVisitante));
-      } else if (!response || typeof response !== "object") {
-        console.warn("Back-end não está pronto. Exibindo lista vazia.");
+      if (response?.sucesso) {
+        setVisitantes(visitantesPortaria.map(normalizeVisitante));
+      } else {
+        console.warn("Back-end nao retornou visitantes da portaria.");
         setVisitantes([]);
       }
     } catch (error) {
@@ -389,6 +439,7 @@ export default function PortariaPage() {
       const nome = visitante?.nome?.toLowerCase() || "";
       const cpf = visitante?.cpf || "";
       const empresa = visitante?.empresa?.toLowerCase() || "";
+      const setor = getSetorLabel(visitante).toLowerCase();
       const telefone = visitante?.telefone?.toLowerCase() || "";
       const email = visitante?.email?.toLowerCase() || "";
       const termoBusca = busca.toLowerCase();
@@ -398,6 +449,7 @@ export default function PortariaPage() {
         nome.includes(termoBusca) ||
         cpf.includes(busca) ||
         empresa.includes(termoBusca) ||
+        setor.includes(termoBusca) ||
         telefone.includes(termoBusca) ||
         email.includes(termoBusca);
 
@@ -442,25 +494,21 @@ export default function PortariaPage() {
           filtroStatus !== "Todos" ? `Status: ${STATUS_LABEL[filtroStatus] || filtroStatus}` : null,
         ].filter(Boolean),
         columns: [
-          { header: "Nome", weight: 1.4 },
-          { header: "CPF", weight: 1 },
-          { header: "Telefone", weight: 1 },
-          { header: "E-mail", weight: 1.4 },
+          { header: "Nome", weight: 1.5 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor", weight: 1.2 },
-          { header: "Entrada", weight: 1 },
-          { header: "Duração", weight: 0.8 },
+          { header: "Setor", weight: 1 },
+          { header: "Entrada", weight: 1.1 },
+          { header: "Celular", weight: 1 },
+          { header: "E-mail", weight: 1.4 },
           { header: "Status", weight: 0.8 },
         ],
         rows: visitantesFiltrados.map((v) => [
           v.nome,
-          v.cpf,
-          v.telefone,
-          v.email,
           v.empresa,
           getSetorLabel(v),
           formatDateTime(v.dataEntrada),
-          formatDuration(v.dataEntrada),
+          v.telefone,
+          v.email,
           STATUS_LABEL[v.status] || "Dentro",
         ]),
       });
@@ -472,7 +520,7 @@ export default function PortariaPage() {
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
   const countPendentes = visitantes.filter((v) => v.status === "pendente").length;
-  const countRecusados = visitantes.filter((v) => v.status === "recusado").length;
+  const countSaidas = visitantes.filter((v) => v.status === "saida").length;
 
   return (
     <>
@@ -490,21 +538,21 @@ export default function PortariaPage() {
             value={countDentro}
             icon={<Users size={20} className="text-green-600" />}
             accentVar="#16a34a"
-            sub="Acesso liberado"
+            sub="No local agora"
           />
           <StatCard
             label="Pendentes"
             value={countPendentes}
             icon={<Clock size={20} className="text-amber-600" />}
             accentVar="#d97706"
-            sub="Na recepção"
+            sub="Aguardando aprovação"
           />
           <StatCard
-            label="Recusados"
-            value={countRecusados}
-            icon={<AlertTriangle size={20} className="text-red-600" />}
-            accentVar="#dc2626"
-            sub="Acesso negado"
+            label="Saídas"
+            value={countSaidas}
+            icon={<LogOut size={20} className="text-blue-600" />}
+            accentVar="#2563eb"
+            sub="Com saída registrada"
           />
         </div>
 
@@ -515,7 +563,7 @@ export default function PortariaPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF, telefone, e-mail ou empresa..."
+                  placeholder="Buscar por nome, empresa, setor, celular ou e-mail..."
                   className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -597,11 +645,11 @@ export default function PortariaPage() {
               <thead>
                 <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
-                  <th className="px-4 py-3">Contato</th>
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Entrada</th>
-                  <th className="px-4 py-3">Duração</th>
+                  <th className="px-4 py-3">Celular</th>
+                  <th className="px-4 py-3">E-mail</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -626,8 +674,12 @@ export default function PortariaPage() {
                     </td>
                   </tr>
                 ) : (
-                  visitantesFiltrados.map((v) => (
-                    <LinhaVisitante key={v.id} visitante={v} onCheckout={handleCheckout} />
+                  visitantesFiltrados.map((v, index) => (
+                    <LinhaVisitante
+                      key={`${v.id || "visitante"}-${v.dataEntrada || v.status || index}`}
+                      visitante={v}
+                      onCheckout={handleCheckout}
+                    />
                   ))
                 )}
               </tbody>
