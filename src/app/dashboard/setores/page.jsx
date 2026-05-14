@@ -142,10 +142,10 @@ function ModalSetor({ setor, onClose, onSave }) {
     }
     setSaving(true);
     try {
-      const payload = { nome: form.nome, idGestor: null };
+      const payload = { nome: form.nome, idGestor: null, acesso: form.acesso, status: form.status, responsavel: form.responsavel };
       
       if (isEdicao) {
-        const response = await api.put(`/dep/${setor.id}`, payload);
+        const response = await api.put(`/setores/${setor.id}`, payload);
         if (response.sucesso) {
           onSave({ ...setor, ...form }, true);
           onClose();
@@ -153,7 +153,7 @@ function ModalSetor({ setor, onClose, onSave }) {
           setErro(response.mensagem || "Erro ao salvar.");
         }
       } else {
-        const response = await api.post('/dep', payload);
+        const response = await api.post('/setores', payload);
         if (response.sucesso) {
           onSave({ ...form, id: response.data?.id || Math.random() }, false);
           onClose();
@@ -314,7 +314,7 @@ export default function SetoresPage() {
   const carregarSetores = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/dep');
+      const response = await api.get('/setores');
       if (response.sucesso) {
         // Mock de dados adicionais para visualização
         const data = (response.data || []).map(s => ({
@@ -367,7 +367,7 @@ export default function SetoresPage() {
     const id = modalExcluir.data?.id;
     if (!id) return;
     try {
-      const response = await api.delete(`/dep/${id}`);
+      const response = await api.delete(`/setores/${id}`);
       if (response.sucesso) {
         setSetores(prev => prev.filter(s => s.id !== id));
         setModalExcluir({ open: false, data: null });
@@ -402,9 +402,9 @@ export default function SetoresPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total" value={stats.total} icon={<Layers size={17} className="text-primary" />} sub="departamentos" accentVar="var(--primary)" />
-        <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="var(--green-500)" />
-        <StatCard label="Acesso Restrito" value={stats.restritos} valueClassName="text-orange-600" icon={<Activity size={17} className="text-orange-600" />} sub="segurança média" accentVar="var(--orange-500)" />
+        <StatCard label="Total" value={stats.total} valueClassName="text-primary" icon={<Layers size={17} className="text-primary" />} sub="departamentos" accentVar="var(--primary)" />
+        <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="#16a34a" />
+        <StatCard label="Acesso Restrito" value={stats.restritos} valueClassName="text-orange-600" icon={<Activity size={17} className="text-orange-600" />} sub="segurança média" accentVar="#ea580c" />
         <StatCard label="Bloqueados" value={stats.bloqueados} valueClassName="text-red-600" icon={<Lock size={17} className="text-red-600" />} sub="acesso especial" accentVar="var(--destructive)" />
       </div>
 

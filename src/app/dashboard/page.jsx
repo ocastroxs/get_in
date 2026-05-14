@@ -98,37 +98,37 @@ export default function DashboardPage() {
             compact
             label="Entradas"
             value={STATS_TODAY.entradas.value}
-            valueClassName="text-primary"
-            icon={<ArrowRightLeft size={16} className="text-primary" strokeWidth={1.75} />}
+            valueClassName="text-secondary"
+            icon={<ArrowRightLeft size={16} className="text-secondary" strokeWidth={1.75} />}
             delta={STATS_TODAY.entradas.pct}
             deltaDir="up"
             sub="Registros validados"
             insight="100% confirmadas"
-            accentVar="var(--primary)"
+            accentVar="var(--secondary)"
           />
           <StatCard
             compact
             label="Saidas"
             value={STATS_TODAY.saidas.value}
-            valueClassName="text-secondary"
-            icon={<LogOut size={16} className="text-secondary" strokeWidth={1.75} />}
+            valueClassName="text-red-600"
+            icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
             delta={saidasPct}
             deltaDir="up"
             sub="Check-outs concluidos"
             insight={`${STATS_TODAY.saidas.aindaDentro} ainda dentro`}
-            accentVar="var(--secondary)"
+            accentVar="#dc2626"
           />
           <StatCard
             compact
             label="Ativos Agora"
             value={STATS_TODAY.ativos.value}
-            valueClassName="text-foreground"
-            icon={<Clock3 size={16} className="text-foreground" strokeWidth={1.75} />}
+            valueClassName="text-blue-900"
+            icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
             delta={ativosDelta}
             deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
             sub="Permanencia ativa"
             insight={`${STATS_TODAY.ativos.alertas} alerta(s)`}
-            accentVar="var(--destructive)"
+            accentVar="#1e3a8a"
           />
         </section>
 
@@ -183,35 +183,35 @@ export default function DashboardPage() {
             <StatCard
               label="Entradas"
               value={STATS_TODAY.entradas.value}
-              valueClassName="text-primary"
-              icon={<ArrowRightLeft size={17} className="text-primary" strokeWidth={1.75} />}
+              valueClassName="text-secondary"
+              icon={<ArrowRightLeft size={17} className="text-secondary" strokeWidth={1.75} />}
               delta={STATS_TODAY.entradas.pct}
               deltaDir="up"
               sub="Registros confirmados hoje"
               insight="100% das entradas validadas"
-              accentVar="var(--primary)"
+              accentVar="var(--secondary)"
             />
             <StatCard
               label="Saidas"
               value={STATS_TODAY.saidas.value}
-              valueClassName="text-secondary"
-              icon={<LogOut size={17} className="text-secondary" strokeWidth={1.75} />}
+              valueClassName="text-red-600"
+              icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
               delta={saidasPct}
               deltaDir="up"
               sub="Check-outs concluidos"
               insight={`${STATS_TODAY.saidas.aindaDentro} pessoas ainda dentro`}
-              accentVar="var(--secondary)"
+              accentVar="#dc2626"
             />
             <StatCard
               label="Ativos Agora"
               value={STATS_TODAY.ativos.value}
-              valueClassName="text-foreground"
-              icon={<Clock3 size={17} className="text-foreground" strokeWidth={1.75} />}
+              valueClassName="text-blue-900"
+              icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
               delta={ativosDelta}
               deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
               sub="Pessoas em permanencia ativa"
               insight={`${STATS_TODAY.ativos.alertas} alerta(s) exigem revisao`}
-              accentVar="var(--destructive)"
+              accentVar="#1e3a8a"
             />
           </div>
         </section>
