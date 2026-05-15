@@ -74,16 +74,14 @@ function normalizarSetor(setor) {
 }
 
 function payloadSetor(form, { incluirCamposDeTela = false } = {}) {
-  const payload = {
+   return{
     nome: form.nome.trim(),
+    idGestor: form.idGestor || null,
+    acesso: normalizarAcesso(form.acesso, "liberado"),
+    status: normalizarStatus(form.status, "ativo"),
   };
-
-  if (incluirCamposDeTela) {
-    payload.idGestor = null;
-    payload.responsavel = form.responsavel?.trim() || null;
-    payload.acesso = normalizarAcesso(form.acesso, "liberado");
-    payload.status = normalizarStatus(form.status, "ativo");
-  }
+  
+  if (!incluirCamposDeTela) { payload.idGestor = null; }
 
   return payload;
 }
@@ -173,6 +171,8 @@ function ModalSetor({ setor, onClose, onSave }) {
   const [form, setForm] = useState(() => ({
     ...SETOR_VAZIO,
     ...(setor ?? {}),
+    nome: setor?.nome || "",
+    idGestor: setor?.idGestor || null,
     acesso: setor?.acesso || SETOR_VAZIO.acesso,
     status: setor?.status || SETOR_VAZIO.status,
   }));
@@ -204,7 +204,7 @@ function ModalSetor({ setor, onClose, onSave }) {
           onSave(response.data ? normalizarSetor(montarSetorLocal(form, response.data)) : null, false);
           onClose();
         } else {
-          console.error("Erro ao criar setor:", { payload, response });
+          console.error("Erro ao criar setor:", JSON.stringify(payload), JSON.stringify(response));
           setErro(mensagemErroSetor(response, "criar"));
         }
       }
