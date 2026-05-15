@@ -17,8 +17,8 @@ import { api } from "@/services/api";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
 
-const ACESSO_OPTS   = ["Todos", "liberado", "restrito", "bloqueado"];
-const STATUS_OPTS   = ["Todos", "ativo", "restrito", "inativo"];
+const ACESSO_OPTS   = ["Todos", "Liberado", "Restrito", "Bloqueado"];
+const STATUS_OPTS   = ["Todos", "Ativo", "Restrito", "Inativo"];
 
 const ACESSO_LABEL  = { liberado: "Liberado", restrito: "Restrito", bloqueado: "Bloqueado" };
 const STATUS_LABEL  = { ativo: "Ativo",       restrito: "Restrito", inativo: "Inativo" };
@@ -50,18 +50,26 @@ const ACESSO_ICON_COLOR = {
 };
 
 const SETOR_VAZIO = {
-  nome: "", responsavel: "", acesso: "liberado",
-  status: "ativo",
+  nome: "", responsavel: "", acesso: "Liberado",
+  status: "Ativo",
 };
 
+function acessoKey(acesso) {
+  return String(acesso || "").toLowerCase();
+}
+
 function normalizarAcesso(acesso, fallback = null) {
-  const valor = String(acesso || "").toLowerCase();
-  return ACESSO_LABEL[valor] ? valor : fallback;
+  const key = acessoKey(acesso);
+  return ACESSO_LABEL[key] || fallback;
+}
+
+function statusKey(status) {
+  return String(status || "").toLowerCase();
 }
 
 function normalizarStatus(status, fallback = null) {
-  const valor = String(status || "").toLowerCase();
-  return STATUS_LABEL[valor] ? valor : fallback;
+  const key = statusKey(status);
+  return STATUS_LABEL[key] || fallback;
 }
 
 function normalizarSetor(setor) {
@@ -74,11 +82,11 @@ function normalizarSetor(setor) {
 }
 
 function payloadSetor(form, { incluirCamposDeTela = false } = {}) {
-   return{
+  const payload = {
     nome: form.nome.trim(),
     idGestor: form.idGestor || null,
-    acesso: normalizarAcesso(form.acesso, "liberado"),
-    status: normalizarStatus(form.status, "ativo"),
+    acesso: normalizarAcesso(form.acesso, "Liberado"),
+    status: normalizarStatus(form.status, "Ativo"),
   };
   
   if (!incluirCamposDeTela) { payload.idGestor = null; }
@@ -91,8 +99,8 @@ function montarSetorLocal(form, data) {
     ...form,
     ...data,
     responsavel: form.responsavel?.trim() || null,
-    acesso: normalizarAcesso(form.acesso, "liberado"),
-    status: normalizarStatus(form.status, "ativo"),
+    acesso: normalizarAcesso(form.acesso, "Liberado"),
+    status: normalizarStatus(form.status, "Ativo"),
   };
 }
 
@@ -113,7 +121,7 @@ function mensagemErroSetor(response, acao) {
 function toCSV(rows) {
   const cols = ["ID", "Nome", "Responsável", "Acesso", "Status"];
   const lines = rows.map((r) =>
-    [r.id, r.nome, r.responsavel || "—", ACESSO_LABEL[r.acesso] || "—", STATUS_LABEL[r.status] || "—"].join(";")
+    [r.id, r.nome, r.responsavel || "—", ACESSO_LABEL[acessoKey(r.acesso)] || "—", STATUS_LABEL[statusKey(r.status)] || "—"].join(";")
   );
   return [cols.join(";"), ...lines].join("\n");
 }
@@ -265,8 +273,8 @@ function ModalSetor({ setor, onClose, onSave }) {
               onChange={set("acesso")}
               className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             >
-              {["liberado", "restrito", "bloqueado"].map(a => (
-                <option key={a} value={a}>{ACESSO_LABEL[a]}</option>
+              {["Liberado", "Restrito", "Bloqueado"].map(a => (
+                <option key={a} value={a}>{ACESSO_LABEL[acessoKey(a)]}</option>
               ))}
             </select>
           </div>
@@ -277,8 +285,8 @@ function ModalSetor({ setor, onClose, onSave }) {
               onChange={set("status")}
               className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
             >
-              {["ativo", "restrito", "inativo"].map(s => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+              {["Ativo", "Restrito", "Inativo"].map(s => (
+                <option key={s} value={s}>{STATUS_LABEL[statusKey(s)]}</option>
               ))}
             </select>
           </div>
@@ -315,9 +323,9 @@ function LinhaSetor({ setor, onEditar, onExcluir }) {
       <td className="py-3 px-4 text-xs font-medium text-muted-foreground">{setor.responsavel || "—"}</td>
       <td className="py-3 px-4">
         {setor.acesso ? (
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${ACESSO_STYLE[setor.acesso]}`}>
-            <AcessoIcon size={12} className={ACESSO_ICON_COLOR[setor.acesso]} />
-            {ACESSO_LABEL[setor.acesso]}
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${ACESSO_STYLE[acessoKey(setor.acesso)]}`}>
+            <AcessoIcon size={12} className={ACESSO_ICON_COLOR[acessoKey(setor.acesso)]} />
+            {ACESSO_LABEL[acessoKey(setor.acesso)]}
           </div>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
@@ -325,9 +333,9 @@ function LinhaSetor({ setor, onEditar, onExcluir }) {
       </td>
       <td className="py-3 px-4">
         {setor.status ? (
-          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${STATUS_STYLE[setor.status]}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[setor.status]}`} />
-            {STATUS_LABEL[setor.status]}
+          <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${STATUS_STYLE[statusKey(setor.status)]}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[statusKey(setor.status)]}`} />
+            {STATUS_LABEL[statusKey(setor.status)]}
           </span>
         ) : (
           <span className="text-xs text-muted-foreground">—</span>
@@ -392,9 +400,9 @@ export default function SetoresPage() {
 
   const stats = useMemo(() => ({
     total: setores.length,
-    ativos: setores.filter(s => s.status === "ativo").length,
-    restritos: setores.filter(s => s.acesso === "restrito").length,
-    bloqueados: setores.filter(s => s.acesso === "bloqueado").length,
+    ativos: setores.filter(s => statusKey(s.status) === "ativo").length,
+    restritos: setores.filter(s => statusKey(s.status) === "restrito").length,
+    bloqueados: setores.filter(s => acessoKey(s.acesso) === "bloqueado").length,
   }), [setores]);
 
   const handleSave = (data, isEdicao) => {
@@ -509,7 +517,7 @@ export default function SetoresPage() {
             )}
             {statusFiltro !== "Todos" && (
               <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                Status: {STATUS_LABEL[statusFiltro]}
+                Status: {STATUS_LABEL[statusKey(statusFiltro)] || statusFiltro}
               </span>
             )}
             {acessoFiltro !== "Todos" && (
@@ -615,7 +623,7 @@ export default function SetoresPage() {
                       : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  {STATUS_LABEL[status] || status}
+                  {STATUS_LABEL[statusKey(status)] || status}
                 </button>
               ))}
             </div>
@@ -637,7 +645,7 @@ export default function SetoresPage() {
                       : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  {ACESSO_LABEL[acesso] || acesso}
+                  {ACESSO_LABEL[acessoKey(acesso)] || acesso}
                 </button>
               ))}
             </div>
