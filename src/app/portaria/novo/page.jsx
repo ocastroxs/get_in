@@ -599,7 +599,7 @@ export default function NovoCadastroPage() {
                       placeholder="Digite o nome completo"
                       value={form.nome}
                       onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      className="h-11 rounded-xl border-border/60 bg-card focus:border-primary/50 focus:ring-3 focus:ring-primary/15 transition-all duration-200 text-sm hover:border-primary/30 hover:bg-accent/50 shadow-xs"
                     />
                   </div>
 
@@ -612,7 +612,7 @@ export default function NovoCadastroPage() {
                       placeholder="000.000.000-00"
                       value={form.cpf}
                       onChange={handleCPFChange}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      className="h-11 rounded-xl border-border/60 bg-card focus:border-primary/50 focus:ring-3 focus:ring-primary/15 transition-all duration-200 text-sm hover:border-primary/30 hover:bg-accent/50 shadow-xs"
                       maxLength="14"
                     />
                   </div>
@@ -692,7 +692,7 @@ export default function NovoCadastroPage() {
                       placeholder="(11) 99999-9999"
                       value={form.telefone}
                       onChange={handlePhoneChange}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      className="h-11 rounded-xl border-border/60 bg-card focus:border-primary/50 focus:ring-3 focus:ring-primary/15 transition-all duration-200 text-sm hover:border-primary/30 hover:bg-accent/50 shadow-xs"
                       maxLength="15"
                     />
                   </div>
@@ -706,7 +706,7 @@ export default function NovoCadastroPage() {
                       placeholder="email@exemplo.com"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      className="h-11 rounded-xl border-border/60 bg-card focus:border-primary/50 focus:ring-3 focus:ring-primary/15 transition-all duration-200 text-sm hover:border-primary/30 hover:bg-accent/50 shadow-xs"
                     />
                   </div>
                 </div>

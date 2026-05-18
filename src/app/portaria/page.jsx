@@ -60,7 +60,10 @@ const STATUS_FILTERS = [
 ];
 
 const EDIT_INPUT_CLASS =
-  "h-10 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15";
+  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15";
+
+const SEARCH_INPUT_CLASS =
+  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15 pl-10";
 
 const BACKEND_STATUS_TO_PORTARIA = {
   aprovado: "ativo",
@@ -1247,7 +1250,7 @@ export default function PortariaPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
                   placeholder="Buscar por nome, empresa, setor, celular ou e-mail..."
-                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  className={SEARCH_INPUT_CLASS}
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                 />
