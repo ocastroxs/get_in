@@ -56,9 +56,11 @@ const STATUS_DOT = {
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
   { label: "Dentro", value: "ativo" },
-  { label: "Pendente", value: "pendente" },
   { label: "Saída", value: "saida" }
 ];
+
+const EDIT_INPUT_CLASS =
+  "h-10 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15";
 
 const BACKEND_STATUS_TO_PORTARIA = {
   aprovado: "ativo",
@@ -260,6 +262,62 @@ function formatDuration(startDate) {
   return `${hours}h ${minutes.toString().padStart(2, "0")}min`;
 }
 
+function getVisitanteIdentity(registro) {
+  const usuario = registro?.usuario || {};
+  const idUsuario = pickFirst(registro?.idUsuario, usuario?.id);
+  const cpf = onlyDigits(pickFirst(registro?.cpf, usuario?.cpf));
+  const email = String(pickFirst(registro?.email, usuario?.email)).trim().toLowerCase();
+  const nome = String(pickFirst(registro?.nome, registro?.visitante, usuario?.nome)).trim().toLowerCase();
+  const id = pickFirst(registro?.id, registro?.idVisitante);
+
+  if (idUsuario) return `usuario:${idUsuario}`;
+  if (cpf) return `cpf:${cpf}`;
+  if (email) return `email:${email}`;
+  if (nome) return `nome:${nome}`;
+
+  return `registro:${id || ""}`;
+}
+
+function getVisitanteTimestamp(registro) {
+  const datas = [
+    registro?.dataSaida,
+    registro?.saida,
+    registro?.dataEntrada,
+    registro?.entrada,
+    registro?.dataDaRequisicao,
+    registro?.validade
+  ];
+
+  for (const data of datas) {
+    const timestamp = new Date(data).getTime();
+
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  return Number(registro?.id || registro?.idRequisicao || 0);
+}
+
+function dedupeVisitantesPorIdentidade(registros) {
+  const porVisitante = new Map();
+
+  registros.forEach((registro) => {
+    const key = getVisitanteIdentity(registro);
+    const atual = porVisitante.get(key);
+
+    if (!atual || getVisitanteTimestamp(registro) >= getVisitanteTimestamp(atual)) {
+      porVisitante.set(key, registro);
+    }
+  });
+
+  return Array.from(porVisitante.values());
+}
+
+function isRequisicaoPendente(registro) {
+  return normalizeStatus(pickFirst(registro?.status, registro?.solicitacao)) === "pendente";
+}
+
 function getSetorLabel(visitante) {
   if (Array.isArray(visitante?.setoresAcesso) && visitante.setoresAcesso.length > 0) {
     return visitante.setoresAcesso.join(", ");
@@ -433,33 +491,109 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
 }
 
 function SelectField({ value, onChange, placeholder, options, Icon, loading, emptyLabel }) {
+  const [isOpen, setIsOpen] = useState(false);
   const hasOptions = options.length > 0;
   const hasSelectedValue = options.some((option) => option.value === value);
   const placeholderText = loading ? "Carregando..." : hasOptions ? placeholder : emptyLabel;
+  const selectedOption = options.find((option) => option.value === value);
+  const disabled = loading || !hasOptions;
 
   return (
-    <div className="relative">
-      <Icon
-        size={15}
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-      />
-      <select
-        value={hasSelectedValue ? value : ""}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={loading || !hasOptions}
-        className="h-10 w-full appearance-none rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+    <div
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setIsOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        disabled={disabled}
+        onClick={() => setIsOpen((current) => !current)}
+        className={`group flex h-10 w-full items-center gap-3 rounded-xl border bg-card px-3 text-left text-sm shadow-xs transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${
+          isOpen
+            ? "border-primary/50 ring-3 ring-primary/15 shadow-md"
+            : "border-border/60 hover:border-primary/30 hover:bg-accent/50"
+        }`}
       >
-        <option value="">{placeholderText}</option>
-        {options.map((option) => (
-          <option key={`${option.id || option.value}-${option.value}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        size={15}
-        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-      />
+        <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${
+          selectedOption || isOpen
+            ? "bg-primary/10 text-primary"
+            : "bg-muted text-muted-foreground"
+        }`}>
+          <Icon size={15} />
+        </span>
+        <span className={`min-w-0 flex-1 truncate font-medium ${
+          selectedOption ? "text-foreground" : "text-muted-foreground"
+        }`}>
+          {selectedOption?.label || placeholderText}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-muted-foreground transition-transform duration-200 ${
+            isOpen ? "rotate-180 text-primary" : "group-hover:text-primary"
+          }`}
+        />
+      </button>
+
+      {isOpen && !disabled && (
+        <div
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-2xl border border-border/60 bg-popover p-1.5 text-popover-foreground shadow-[0_18px_45px_rgba(15,58,125,0.14)]"
+        >
+          <button
+            type="button"
+            role="option"
+            aria-selected={!hasSelectedValue}
+            onClick={() => {
+              onChange("");
+              setIsOpen(false);
+            }}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+              !hasSelectedValue
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+            }`}
+          >
+            <span className="size-2 rounded-full bg-border" />
+            <span className="flex-1 truncate font-medium">{placeholder}</span>
+          </button>
+
+          {options.map((option) => {
+            const isSelected = option.value === value;
+
+            return (
+              <button
+                key={`${option.id || option.value}-${option.value}`}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-all duration-150 ${
+                  isSelected
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/70"
+                }`}
+              >
+                <span className={`flex size-5 shrink-0 items-center justify-center rounded-full border transition-all duration-150 ${
+                  isSelected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background"
+                }`}>
+                  {isSelected && <Check size={12} />}
+                </span>
+                <span className="min-w-0 flex-1 truncate font-semibold">{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -588,7 +722,7 @@ function ModalEditarVisitante({
               <Input
                 value={form.nome}
                 onChange={(event) => setField("nome", event.target.value)}
-                className="h-10 rounded-lg"
+                className={EDIT_INPUT_CLASS}
               />
             </div>
 
@@ -597,7 +731,7 @@ function ModalEditarVisitante({
               <Input
                 value={form.cpf}
                 onChange={(event) => setField("cpf", maskCPF(event.target.value))}
-                className="h-10 rounded-lg"
+                className={EDIT_INPUT_CLASS}
                 maxLength={14}
               />
             </div>
@@ -633,7 +767,7 @@ function ModalEditarVisitante({
               <Input
                 value={form.telefone}
                 onChange={(event) => setField("telefone", maskPhone(event.target.value))}
-                className="h-10 rounded-lg"
+                className={EDIT_INPUT_CLASS}
                 maxLength={15}
               />
             </div>
@@ -644,7 +778,7 @@ function ModalEditarVisitante({
                 type="email"
                 value={form.email}
                 onChange={(event) => setField("email", event.target.value)}
-                className="h-10 rounded-lg"
+                className={EDIT_INPUT_CLASS}
               />
             </div>
           </div>
@@ -858,6 +992,7 @@ function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
 
 export default function PortariaPage() {
   const [visitantes, setVisitantes] = useState([]);
+  const [pendencias, setPendencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("Todos");
@@ -882,18 +1017,34 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      const response = await api.get("/portaria/vlocal");
-      const visitantesPortaria = getResponseArray(response, ["dados", "visitantes"]);
+      const [visitantesResult, pendenciasResult] = await Promise.allSettled([
+        api.get("/portaria/vlocal"),
+        api.get("/portaria/pendencias")
+      ]);
 
-      if (response?.sucesso) {
-        setVisitantes(visitantesPortaria.map(normalizeVisitante));
+      const visitantesResponse =
+        visitantesResult.status === "fulfilled" ? visitantesResult.value : null;
+      const pendenciasResponse =
+        pendenciasResult.status === "fulfilled" ? pendenciasResult.value : null;
+
+      if (visitantesResponse?.sucesso) {
+        const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
+        setVisitantes(dedupeVisitantesPorIdentidade(visitantesPortaria.map(normalizeVisitante)));
       } else {
         console.warn("Back-end nao retornou visitantes da portaria.");
         setVisitantes([]);
       }
+
+      if (pendenciasResponse?.sucesso) {
+        const pendenciasPortaria = getResponseArray(pendenciasResponse, ["dados", "requisicoes"]);
+        setPendencias(dedupeVisitantesPorIdentidade(pendenciasPortaria.filter(isRequisicaoPendente)));
+      } else {
+        setPendencias([]);
+      }
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
       setVisitantes([]);
+      setPendencias([]);
     } finally {
       setLoading(false);
     }
@@ -1051,7 +1202,7 @@ export default function PortariaPage() {
   };
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
-  const countPendentes = visitantes.filter((v) => v.status === "pendente").length;
+  const countPendentes = pendencias.length;
   const countSaidas = visitantes.filter((v) => v.status === "saida").length;
 
   return (

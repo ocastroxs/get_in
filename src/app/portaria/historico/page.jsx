@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Calendar, Clock, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
+  Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,14 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function maskCPF(value) {
+  return onlyDigits(value)
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
 function normalizeRegistro(registro) {
   const usuario = registro?.usuario || {};
   const departamento = registro?.departamento || registro?.setores || {};
@@ -90,13 +98,70 @@ function normalizeRegistro(registro) {
   };
 }
 
-// ─── MODAL DE DETALHES ───────────────────────────────────────────────────────
+// Helpers do historico
+function getRegistroIdentity(registro) {
+  const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
+  const cpf = onlyDigits(registro?.cpf);
+  const email = String(registro?.email || "").trim().toLowerCase();
+  const nome = String(registro?.visitante || "").trim().toLowerCase();
+  const idRegistro = pickFirst(registro?.id, registro?.idRequisicao);
+
+  if (idUsuario) return `usuario:${idUsuario}`;
+  if (cpf) return `cpf:${cpf}`;
+  if (email) return `email:${email}`;
+  if (nome) return `nome:${nome}`;
+
+  return `registro:${idRegistro || registro?.dataEntrada || ""}`;
+}
+
+function getRegistroTimestamp(registro) {
+  const datas = [
+    registro?.dataSaida,
+    registro?.dataEntrada,
+    registro?.dataDaRequisicao,
+    registro?.validade
+  ];
+
+  for (const data of datas) {
+    const timestamp = new Date(data).getTime();
+
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  return 0;
+}
+
+function compareRegistroRecency(a, b) {
+  const timestampA = getRegistroTimestamp(a);
+  const timestampB = getRegistroTimestamp(b);
+
+  if (timestampA !== timestampB) {
+    return timestampA - timestampB;
+  }
+
+  return Number(a?.id || a?.idRequisicao || 0) - Number(b?.id || b?.idRequisicao || 0);
+}
+
+function dedupeRegistrosPorVisitante(registros) {
+  const registrosPorVisitante = new Map();
+
+  registros.forEach((registro) => {
+    const key = getRegistroIdentity(registro);
+    const registroAtual = registrosPorVisitante.get(key);
+
+    if (!registroAtual || compareRegistroRecency(registro, registroAtual) >= 0) {
+      registrosPorVisitante.set(key, registro);
+    }
+  });
+
+  return Array.from(registrosPorVisitante.values()).sort((a, b) => compareRegistroRecency(b, a));
+}
+
+// Modal de detalhes
 function ModalDetalhes({ isOpen, onClose, registro }) {
   if (!isOpen || !registro) return null;
-
-  const tempoPermanen = registro.dataSaida 
-    ? Math.round((new Date(registro.dataSaida) - new Date(registro.dataEntrada)) / 60000)
-    : "—";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
@@ -120,7 +185,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
               <div className="flex-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Visitante</p>
                 <p className="text-sm font-semibold text-foreground">{registro.visitante}</p>
-                <p className="text-xs text-muted-foreground font-mono">{registro.cpf}</p>
+                <p className="text-xs text-muted-foreground font-mono">{maskCPF(registro.cpf) || "—"}</p>
               </div>
             </div>
 
@@ -189,26 +254,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 </div>
               )}
             </div>
-
-            <div className="flex items-start gap-3 pt-2">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                <Clock size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Permanência</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {tempoPermanen === "—" ? "—" : `${tempoPermanen} minutos`}
-                </p>
-              </div>
-            </div>
           </div>
-
-          {registro.observacoes && (
-            <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4">
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Observações</p>
-              <p className="text-sm text-amber-800/80 leading-relaxed">{registro.observacoes}</p>
-            </div>
-          )}
         </div>
 
         <div className="p-5 border-t border-border bg-muted/10">
@@ -234,7 +280,7 @@ function LinhaHistorico({ registro, onDetalhes }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-medium text-foreground">{registro.visitante || "—"}</p>
-          <p className="text-xs text-muted-foreground font-mono">{registro.cpf || "—"}</p>
+          <p className="text-xs text-muted-foreground font-mono">{maskCPF(registro.cpf) || "—"}</p>
         </div>
       </td>
       <td className="px-4 py-3">
@@ -252,7 +298,6 @@ function LinhaHistorico({ registro, onDetalhes }) {
       <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataSaida)}</td>
       <td className="px-4 py-3">
         <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass}`}>
           {status}
@@ -296,7 +341,7 @@ export default function HistoricoPage() {
       const response = await api.get('/requisicao-visitante');
 
       if (response.sucesso && Array.isArray(response.data)) {
-        setRegistros(response.data.map(normalizeRegistro));
+        setRegistros(dedupeRegistrosPorVisitante(response.data.map(normalizeRegistro)));
       }
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -311,10 +356,14 @@ export default function HistoricoPage() {
       const telefoneFormatado = formatPhone(r.telefone).toLowerCase();
       const telefoneDigitos = onlyDigits(r.telefone);
       const termoBuscaDigitos = onlyDigits(busca);
+      const cpfFormatado = maskCPF(r.cpf).toLowerCase();
+      const cpfDigitos = onlyDigits(r.cpf);
       const status = STATUS_LABEL[r.status] || r.status;
       const matchBusca = busca === "" ||
         (r.visitante || "").toLowerCase().includes(termoBusca) ||
-        (r.cpf || "").includes(busca) ||
+        (r.cpf || "").toLowerCase().includes(termoBusca) ||
+        cpfFormatado.includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && cpfDigitos.includes(termoBuscaDigitos)) ||
         (r.empresa || "").toLowerCase().includes(termoBusca) ||
         (r.telefone || "").toLowerCase().includes(termoBusca) ||
         telefoneFormatado.includes(termoBusca) ||
@@ -384,7 +433,7 @@ export default function HistoricoPage() {
         ],
         rows: registrosFiltrados.map((r) => [
           r.visitante,
-          r.cpf,
+          maskCPF(r.cpf),
           formatPhone(r.telefone),
           r.email,
           r.empresa,
@@ -507,7 +556,6 @@ export default function HistoricoPage() {
                 <th className="px-4 py-3">Empresa</th>
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Entrada</th>
-                <th className="px-4 py-3">Saída</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
@@ -515,7 +563,7 @@ export default function HistoricoPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
+                  <td colSpan={7} className="py-12 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="animate-spin" size={24} />
                       <span className="text-sm">Carregando histórico...</span>
@@ -524,7 +572,7 @@ export default function HistoricoPage() {
                 </tr>
               ) : registrosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                     Nenhum registro encontrado com os filtros aplicados.
                   </td>
                 </tr>

@@ -16,15 +16,6 @@ const motivoOptions = [
   { value: "Outro", label: "Outro" },
 ];
 
-const setoresPadrao = [
-  "Produção",
-  "Almoxarifado",
-  "Administrativo",
-  "Laboratório",
-  "Diretoria",
-  "Recepção"
-];
-
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -60,6 +51,16 @@ function getEmpresaNomeFromRegistro(registro) {
       registro?.nomeFantasia ||
       registro?.razaoSocial ||
       registro?.razao_social ||
+      ""
+  ).trim();
+}
+
+function getSetorNome(registro) {
+  return String(
+    registro?.nome ||
+      registro?.setor ||
+      registro?.setores?.nome ||
+      registro?.departamento?.nome ||
       ""
   ).trim();
 }
@@ -185,8 +186,9 @@ export default function NovoCadastroPage() {
   const [tempoEspera, setTempoEspera] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [loadingSetores, setLoadingSetores] = useState(true);
   const [empresas, setEmpresas] = useState([]);
-  const [departamentos, setDepartamentos] = useState([]);
+  const [setores, setSetores] = useState([]);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
@@ -198,9 +200,24 @@ export default function NovoCadastroPage() {
     setoresAcesso: [],
   });
 
-  const setoresDisponiveis = departamentos.length > 0
-    ? departamentos.map((departamento) => departamento.nome).filter(Boolean)
-    : setoresPadrao;
+  const setorOptions = setores
+    .map((setor) => {
+      const label = getSetorNome(setor);
+      const id = Number(setor?.id || setor?.idSetor);
+
+      return label && id
+        ? {
+            id,
+            idDep: setor?.idDep || setor?.idDepartamento,
+            value: label,
+            label
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
+  const setoresDisponiveis = setorOptions;
 
   const empresaOptions = empresas
     .map((empresa) => {
@@ -247,19 +264,27 @@ export default function NovoCadastroPage() {
   }, []);
 
   useEffect(() => {
-    async function fetchDepartamentos() {
+    async function fetchSetores() {
+      setLoadingSetores(true);
+
       try {
-        const response = await api.get("/dep");
+        const response = await api.get("/setores");
 
         if (response.sucesso && Array.isArray(response.data)) {
-          setDepartamentos(response.data);
+          setSetores(response.data);
+          return;
         }
+
+        setSetores([]);
       } catch (error) {
-        console.error("Erro ao carregar departamentos:", error);
+        console.error("Erro ao carregar setores:", error);
+        setSetores([]);
+      } finally {
+        setLoadingSetores(false);
       }
     }
 
-    fetchDepartamentos();
+    fetchSetores();
   }, []);
 
   useEffect(() => {
@@ -310,11 +335,64 @@ export default function NovoCadastroPage() {
     }));
   };
 
-  const getDepartamentoId = () => {
-    const departamentoSelecionado = departamentos.find((departamento) => departamento.nome === form.setor);
+  const getSetorSelecionado = () => {
+    return setorOptions.find((setor) => setor.value === form.setor) || null;
+  };
 
+  const getSetoresSelecionados = () => {
+    const setoresSelecionados = new Map();
+    const setorDestino = getSetorSelecionado();
+
+    if (setorDestino?.id) {
+      setoresSelecionados.set(setorDestino.id, setorDestino);
+    }
+
+    form.setoresAcesso.forEach((setorNome) => {
+      const setor = setorOptions.find((option) => option.value === setorNome);
+
+      if (setor?.id) {
+        setoresSelecionados.set(setor.id, setor);
+      }
+    });
+
+    return Array.from(setoresSelecionados.values());
+  };
+
+  const getUsuarioDepartamentoId = () => {
+    const setorSelecionado = getSetorSelecionado();
+    const id = Number(
+      setorSelecionado?.idDep ||
+        funcionario?.idDep ||
+        funcionario?.idDepartamento ||
+        user?.idDep ||
+        user?.idDepartamento ||
+        user?.funcionario?.idDep ||
+        user?.funcionario?.idDepartamento
+    );
+
+    return Number.isInteger(id) && id > 0 ? id : undefined;
+  };
+
+  const getUsuarioPayload = () => {
+    const idDep = getUsuarioDepartamentoId();
+    const payload = {
+      nome: form.nome.trim(),
+      cpf: form.cpf,
+      cel: form.telefone,
+      celular: form.telefone,
+      email: form.email.trim().toLowerCase()
+    };
+
+    if (idDep) {
+      payload.idDep = idDep;
+    }
+
+    return payload;
+  };
+
+  const getDepartamentoId = () => {
     return Number(
-      departamentoSelecionado?.id ||
+      getUsuarioDepartamentoId() ||
         funcionario?.idDepartamento ||
         funcionario?.idSetor ||
         user?.idDepartamento ||
@@ -328,15 +406,7 @@ export default function NovoCadastroPage() {
 
   const getOrCreateVisitanteUsuario = async () => {
     const cpfLimpo = onlyDigits(form.cpf);
-    const email = form.email.trim().toLowerCase();
-    const usuarioPayload = {
-      nome: form.nome.trim(),
-      cpf: form.cpf,
-      cel: form.telefone,
-      celular: form.telefone,
-      email,
-      empresa: form.empresa
-    };
+    const usuarioPayload = getUsuarioPayload();
 
     const usuariosResponse = await api.get("/user");
 
@@ -364,9 +434,15 @@ export default function NovoCadastroPage() {
     const cpfCompletoForm = onlyDigits(form.cpf).length === 11;
     const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
     const emailValidoForm = isValidEmail(form.email);
+    const setoresSelecionados = getSetoresSelecionados();
 
-    if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !telefoneCompletoForm || !emailValidoForm) {
-      alert("Preencha nome, CPF, empresa, telefone e e-mail validos.");
+    if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !form.setor || !form.motivo || !telefoneCompletoForm || !emailValidoForm) {
+      alert("Preencha nome, CPF, empresa, setor de destino, motivo, telefone e e-mail validos.");
+      return;
+    }
+
+    if (loadingSetores || setorOptions.length === 0 || setoresSelecionados.length === 0) {
+      alert("Nao foi possivel carregar os setores. Atualize a pagina e tente novamente.");
       return;
     }
     
@@ -393,7 +469,8 @@ export default function NovoCadastroPage() {
       const payload = {
         idUsuario: visitanteUsuario.id,
         idDepartamento,
-        idSetor: idDepartamento,
+        idSetor: setoresSelecionados.map((setor) => setor.id),
+        status: "pendente",
         motivo: form.motivo || "Visita",
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         descricao,
@@ -431,10 +508,11 @@ export default function NovoCadastroPage() {
     {
       key: "cadastroCompleto",
       label: "Cadastro completo",
-      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.motivo && telefoneCompleto && emailValido)
+      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.setor && form.motivo && telefoneCompleto && emailValido)
     },
     { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
     { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
+    { key: "setorDestino", label: "Setor de destino", completed: Boolean(form.setor) },
     { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
     { key: "emailContato", label: "E-mail de contato", completed: emailValido }
   ];
@@ -573,8 +651,8 @@ export default function NovoCadastroPage() {
                       <PrettySelect
                         value={form.setor}
                         onChange={(setor) => setForm({ ...form, setor })}
-                        placeholder="Selecione..."
-                        options={setoresDisponiveis.map((setor) => ({ value: setor, label: setor }))}
+                        placeholder={loadingSetores ? "Carregando setores..." : "Selecione..."}
+                        options={setoresDisponiveis}
                         Icon={MapPin}
                       />
                     </div>
@@ -650,12 +728,13 @@ export default function NovoCadastroPage() {
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {setoresDisponiveis.map((setor, index) => {
-                        const isSelected = form.setoresAcesso.includes(setor);
+                        const setorValue = setor.value;
+                        const isSelected = form.setoresAcesso.includes(setorValue);
 
                         return (
                           <label
-                            key={setor}
-                            htmlFor={`setor-acesso-${index}`}
+                            key={setor.id || setorValue}
+                            htmlFor={`setor-acesso-${setor.id || index}`}
                             className={`flex items-center gap-3 cursor-pointer p-3 rounded-lg transition-all duration-200 border ${
                               isSelected
                                 ? "bg-primary/5 border-primary/30 shadow-sm"
@@ -663,10 +742,10 @@ export default function NovoCadastroPage() {
                             }`}
                           >
                             <input
-                              id={`setor-acesso-${index}`}
+                              id={`setor-acesso-${setor.id || index}`}
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => toggleSetorAcesso(setor)}
+                              onChange={() => toggleSetorAcesso(setorValue)}
                               className="sr-only"
                             />
                             <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
@@ -676,7 +755,7 @@ export default function NovoCadastroPage() {
                             }`}>
                               {isSelected && <Check size={14} className="text-white" />}
                             </div>
-                            <span className="text-sm font-medium text-foreground">{setor}</span>
+                            <span className="text-sm font-medium text-foreground">{setor.label}</span>
                           </label>
                         );
                       })}
@@ -884,7 +963,7 @@ export default function NovoCadastroPage() {
               Aguardando aprovação do supervisor
             </h2>
             <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
-              A notificação foi enviada via app mobile. O visitante ficará em espera até a confirmação de acesso.
+              A notificação foi enviada. O visitante ficará em espera até a confirmação de acesso.
             </p>
 
             <div className="flex flex-col items-center gap-4">
