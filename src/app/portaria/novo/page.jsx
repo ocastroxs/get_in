@@ -1,6 +1,5 @@
-"use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, Camera, User, Building2, MapPin, Phone, Mail, AlertCircle, ChevronRight, Lock, Lightbulb, Tag, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Zap, Circle } from "lucide-react";
+import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, RefreshCw, Circle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,41 +7,190 @@ import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 
+const motivoOptions = [
+  { value: "Visita", label: "Visita" },
+  { value: "Entrega", label: "Entrega" },
+  { value: "Manutenção", label: "Manutenção" },
+  { value: "Reunião", label: "Reunião" },
+  { value: "Outro", label: "Outro" },
+];
+
+const setoresPadrao = [
+  "Produção",
+  "Almoxarifado",
+  "Administrativo",
+  "Laboratório",
+  "Diretoria",
+  "Recepção"
+];
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function getEmpresaNome(registro) {
+  return String(
+    registro?.empresa ||
+      registro?.empresa_visitante ||
+      registro?.usuario?.empresa ||
+      registro?.usuario?.empresas?.nome ||
+      registro?.empresas?.nome ||
+      registro?.empresa_nome ||
+      registro?.nomeFantasia ||
+      registro?.razaoSocial ||
+      registro?.razao_social ||
+      registro?.nome ||
+      ""
+  ).trim();
+}
+
+function getEmpresaNomeFromRegistro(registro) {
+  return String(
+    registro?.empresa ||
+      registro?.empresa_visitante ||
+      registro?.usuario?.empresa ||
+      registro?.usuario?.empresas?.nome ||
+      registro?.empresas?.nome ||
+      registro?.empresa_nome ||
+      registro?.nomeFantasia ||
+      registro?.razaoSocial ||
+      registro?.razao_social ||
+      ""
+  ).trim();
+}
+
+function buildEmpresasOptions(registros) {
+  const empresasUnicas = new Map();
+
+  registros.forEach((registro) => {
+    const nome = getEmpresaNomeFromRegistro(registro);
+
+    if (nome) {
+      empresasUnicas.set(nome.toLowerCase(), { nome });
+    }
+  });
+
+  return Array.from(empresasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+function SelectField({ value, onChange, placeholder, options, Icon, loading, emptyLabel }) {
+  const hasOptions = options.length > 0;
+  const hasSelectedValue = options.some((option) => option.value === value);
+  const placeholderText = loading ? "Carregando..." : hasOptions ? placeholder : emptyLabel;
+
+  return (
+    <div className="relative">
+      <Icon
+        size={15}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <select
+        value={hasSelectedValue ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={loading || !hasOptions}
+        className="h-10 w-full appearance-none rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <option value="">{placeholderText}</option>
+        {options.map((option) => (
+          <option key={`${option.value}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        size={15}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+    </div>
+  );
+}
+
 export default function NovoCadastroPage() {
-  const { user } = useAuth();
+  const { user, funcionario } = useAuth();
   const [step, setStep] = useState(1);
   const [tempoEspera, setTempoEspera] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+  const [empresas, setEmpresas] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
-    dataNascimento: "",
-    sexo: "",
     empresa: "",
     setor: "",
     motivo: "",
     telefone: "",
     email: "",
     setoresAcesso: [],
-    tagRFID: "",
   });
 
-  const [checklist, setChecklist] = useState({
-    tipoCartaIdentificacao: false,
-    testeCompleto: false,
-    documentoCPFRG: false,
-    empresaAcessivel: false,
-    telefoneContato: false
-  });
+  const setoresDisponiveis = departamentos.length > 0
+    ? departamentos.map((departamento) => departamento.nome).filter(Boolean)
+    : setoresPadrao;
 
-  const setoresDisponiveis = [
-    "Produção",
-    "Almoxarifado",
-    "Administrativo",
-    "Laboratório",
-    "Diretoria",
-    "Recepção"
-  ];
+  const empresaOptions = empresas
+    .map((empresa) => {
+      const label = getEmpresaNome(empresa);
+
+      return label ? { value: label, label } : null;
+    })
+    .filter(Boolean);
+
+  useEffect(() => {
+    async function fetchEmpresas() {
+      setLoadingEmpresas(true);
+
+      try {
+        const response = await api.get("/empresas");
+
+        if (response.sucesso && Array.isArray(response.data) && response.data.length > 0) {
+          setEmpresas(response.data);
+          return;
+        }
+
+        const [usuariosResponse, requisicoesResponse] = await Promise.all([
+          api.get("/user"),
+          api.get("/requisicao-visitante"),
+        ]);
+
+        const usuarios = usuariosResponse.sucesso && Array.isArray(usuariosResponse.data)
+          ? usuariosResponse.data
+          : [];
+        const requisicoes = requisicoesResponse.sucesso && Array.isArray(requisicoesResponse.data)
+          ? requisicoesResponse.data
+          : [];
+
+        setEmpresas(buildEmpresasOptions([...usuarios, ...requisicoes]));
+      } catch (error) {
+        console.error("Erro ao carregar empresas:", error);
+        setEmpresas([]);
+      } finally {
+        setLoadingEmpresas(false);
+      }
+    }
+
+    fetchEmpresas();
+  }, []);
+
+  useEffect(() => {
+    async function fetchDepartamentos() {
+      try {
+        const response = await api.get("/dep");
+
+        if (response.sucesso && Array.isArray(response.data)) {
+          setDepartamentos(response.data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar departamentos:", error);
+      }
+    }
+
+    fetchDepartamentos();
+  }, []);
 
   useEffect(() => {
     if (step !== 2) {
@@ -69,8 +217,18 @@ export default function NovoCadastroPage() {
       .replace(/(\d{3})(\d{1,2})/, "$1-$2")
       .replace(/(-\d{2})\d+?$/, "$1");
 
+  const maskPhone = (v) =>
+    v.replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4,5})(\d)/, "$1-$2")
+      .replace(/(-\d{4})\d+?$/, "$1");
+
   const handleCPFChange = (e) => {
     setForm({ ...form, cpf: maskCPF(e.target.value) });
+  };
+
+  const handlePhoneChange = (e) => {
+    setForm({ ...form, telefone: maskPhone(e.target.value) });
   };
 
   const toggleSetorAcesso = (setor) => {
@@ -82,16 +240,63 @@ export default function NovoCadastroPage() {
     }));
   };
 
-  const toggleChecklistItem = (itemKey) => {
-    setChecklist((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey]
-    }));
+  const getDepartamentoId = () => {
+    const departamentoSelecionado = departamentos.find((departamento) => departamento.nome === form.setor);
+
+    return Number(
+      departamentoSelecionado?.id ||
+        funcionario?.idDepartamento ||
+        funcionario?.idSetor ||
+        user?.idDepartamento ||
+        user?.idSetor ||
+        user?.idDep ||
+        user?.funcionario?.idDepartamento ||
+        user?.funcionario?.idSetor ||
+        1
+    );
+  };
+
+  const getOrCreateVisitanteUsuario = async () => {
+    const cpfLimpo = onlyDigits(form.cpf);
+    const email = form.email.trim().toLowerCase();
+    const usuarioPayload = {
+      nome: form.nome.trim(),
+      cpf: form.cpf,
+      cel: form.telefone,
+      celular: form.telefone,
+      email,
+      empresa: form.empresa
+    };
+
+    const usuariosResponse = await api.get("/user");
+
+    if (usuariosResponse.sucesso && Array.isArray(usuariosResponse.data)) {
+      const usuarioExistente = usuariosResponse.data.find((usuario) => onlyDigits(usuario.cpf) === cpfLimpo);
+
+      if (usuarioExistente) {
+        const updateResponse = await api.put(`/user/${usuarioExistente.id}`, usuarioPayload);
+        return updateResponse.sucesso
+          ? updateResponse.data || { ...usuarioExistente, ...usuarioPayload, celular: form.telefone }
+          : usuarioExistente;
+      }
+    }
+
+    const createResponse = await api.post("/user", usuarioPayload);
+
+    if (createResponse.sucesso && createResponse.data) {
+      return createResponse.data;
+    }
+
+    throw new Error(createResponse.mensagem || "Erro ao cadastrar dados do visitante.");
   };
 
   const handleProximoStep = async () => {
-    if (!form.nome || !form.cpf || !form.empresa) {
-      alert("Preencha os campos obrigatórios");
+    const cpfCompletoForm = onlyDigits(form.cpf).length === 11;
+    const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
+    const emailValidoForm = isValidEmail(form.email);
+
+    if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !telefoneCompletoForm || !emailValidoForm) {
+      alert("Preencha nome, CPF, empresa, telefone e e-mail validos.");
       return;
     }
     
@@ -102,13 +307,30 @@ export default function NovoCadastroPage() {
     
     setLoading(true);
     try {
+      const visitanteUsuario = await getOrCreateVisitanteUsuario();
+      const idDepartamento = getDepartamentoId();
+      const setoresPermitidos = form.setoresAcesso.length > 0 ? form.setoresAcesso.join(", ") : "Nenhum";
+      const descricao = [
+        `Visitante: ${form.nome.trim()}`,
+        `CPF: ${form.cpf}`,
+        `Telefone: ${form.telefone}`,
+        `Email: ${form.email.trim().toLowerCase()}`,
+        `Empresa: ${form.empresa}`,
+        `Setor: ${form.setor || "Nao informado"}`,
+        `Setores permitidos: ${setoresPermitidos}`
+      ].join(" | ");
+
       const payload = {
-        idUsuario: user.id,
-        idDepartamento: user.idDepartamento || 1,
+        idUsuario: visitanteUsuario.id,
+        idDepartamento,
+        idSetor: idDepartamento,
         motivo: form.motivo || "Visita",
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        descricao: `Visitante: ${form.nome} | CPF: ${form.cpf} | Empresa: ${form.empresa}`,
-        empresa: form.empresa
+        descricao,
+        empresa: form.empresa,
+        telefone: form.telefone,
+        email: form.email.trim().toLowerCase(),
+        setoresAcesso: form.setoresAcesso
       };
       
       const response = await api.post('/requisicao-visitante', payload);
@@ -121,7 +343,7 @@ export default function NovoCadastroPage() {
       }
     } catch (error) {
       console.error(error);
-      alert("Erro ao conectar com o servidor");
+      alert(error.message || "Erro ao conectar com o servidor");
     } finally {
       setLoading(false);
     }
@@ -131,10 +353,26 @@ export default function NovoCadastroPage() {
     setStep(1);
   };
 
+  const cpfCompleto = form.cpf.replace(/\D/g, "").length === 11;
+  const telefoneCompleto = form.telefone.replace(/\D/g, "").length >= 10;
+  const emailValido = isValidEmail(form.email);
+  const requisitos = [
+    { key: "tipoIdentificacao", label: "Identificação do visitante", completed: Boolean(form.nome.trim()) },
+    {
+      key: "cadastroCompleto",
+      label: "Cadastro completo",
+      completed: Boolean(form.nome.trim() && cpfCompleto && form.empresa && form.motivo && telefoneCompleto && emailValido)
+    },
+    { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
+    { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
+    { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
+    { key: "emailContato", label: "E-mail de contato", completed: emailValido }
+  ];
+
   return (
     <div className="min-h-screen bg-transparent">
       {/* Header com Navegação */}
-      <div className="p-6 flex items-center justify-between border-b border-white/40 bg-white/72 backdrop-blur-xl">
+      <div className="p-6 flex items-center justify-between border-b border-white/40  backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <Link href="/portaria" className="p-2 hover:bg-muted/60 rounded-lg transition-all duration-200 hover:scale-110">
             <ArrowLeft size={20} className="text-muted-foreground" />
@@ -152,7 +390,7 @@ export default function NovoCadastroPage() {
             </h1>
             {step === 2 && (
               <p className="text-sm text-muted-foreground mt-1">
-                Notificação enviada ao supervisor. Aguarde a confirmação para liberar o crachá.
+                Notificação enviada ao supervisor. Aguarde a confirmação para liberar o acesso.
               </p>
             )}
           </div>
@@ -217,47 +455,18 @@ export default function NovoCadastroPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        CPF <span className="text-red-500">*</span>
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="000.000.000-00"
-                        value={form.cpf}
-                        onChange={handleCPFChange}
-                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                        maxLength="14"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        Data de Nascimento
-                      </label>
-                      <Input
-                        type="date"
-                        value={form.dataNascimento}
-                        onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
-                        className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                      />
-                    </div>
-                  </div>
-
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      Sexo
+                      CPF <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      value={form.sexo}
-                      onChange={(e) => setForm({ ...form, sexo: e.target.value })}
-                      className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="M">Masculino</option>
-                      <option value="F">Feminino</option>
-                      <option value="O">Outro</option>
-                    </select>
+                    <Input
+                      type="text"
+                      placeholder="000.000.000-00"
+                      value={form.cpf}
+                      onChange={handleCPFChange}
+                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      maxLength="14"
+                    />
                   </div>
 
                 </div>
@@ -277,47 +486,45 @@ export default function NovoCadastroPage() {
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       Empresa <span className="text-red-500">*</span>
                     </label>
-                    <Input
-                      type="text"
-                      placeholder="Nome da empresa"
+                    <SelectField
                       value={form.empresa}
-                      onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      onChange={(empresa) => setForm({ ...form, empresa })}
+                      placeholder="Selecione a empresa"
+                      emptyLabel="Nenhuma empresa cadastrada"
+                      options={empresaOptions}
+                      Icon={Building2}
+                      loading={loadingEmpresas}
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                         Setor de Destino
                       </label>
-                      <select
+                      <SelectField
                         value={form.setor}
-                        onChange={(e) => setForm({ ...form, setor: e.target.value })}
-                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                      >
-                        <option value="">Selecione...</option>
-                        {setoresDisponiveis.map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
+                        onChange={(setor) => setForm({ ...form, setor })}
+                        placeholder="Selecione o setor"
+                        emptyLabel="Nenhum setor disponível"
+                        options={setoresDisponiveis.map((setor) => ({ value: setor, label: setor }))}
+                        Icon={MapPin}
+                        loading={false}
+                      />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                         Motivo da Visita
                       </label>
-                      <select
+                      <SelectField
                         value={form.motivo}
-                        onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-                        className="w-full h-11 px-4 rounded-xl border border-border/60 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-200"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="Visita">Visita</option>
-                        <option value="Entrega">Entrega</option>
-                        <option value="Manutenção">Manutenção</option>
-                        <option value="Reunião">Reunião</option>
-                        <option value="Outro">Outro</option>
-                      </select>
+                        onChange={(motivo) => setForm({ ...form, motivo })}
+                        placeholder="Selecione o motivo"
+                        emptyLabel="Nenhum motivo disponível"
+                        options={motivoOptions}
+                        Icon={Info}
+                        loading={false}
+                      />
                     </div>
                   </div>
 
@@ -336,20 +543,21 @@ export default function NovoCadastroPage() {
                 <div className="space-y-5">
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      Telefone
+                      Telefone <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="tel"
                       placeholder="(11) 99999-9999"
                       value={form.telefone}
-                      onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                      onChange={handlePhoneChange}
                       className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
+                      maxLength="15"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      E-mail
+                      E-mail <span className="text-red-500">*</span>
                     </label>
                     <Input
                       type="email"
@@ -411,100 +619,72 @@ export default function NovoCadastroPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                      TAG RFID / Crachá
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="Escanear ou digitar TAG RFID"
-                      value={form.tagRFID}
-                      onChange={(e) => setForm({ ...form, tagRFID: e.target.value })}
-                      className="h-11 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all duration-200 text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">Escaneie o crachá ou TAG RFID do visitante</p>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Coluna Direita: Prévia de Crachá + Checklist + Dicas */}
+            {/* Coluna Direita: Prévia do visitante + Checklist + Dicas */}
             <div className="lg:col-span-1 space-y-6">
-              {/* Prévia de Crachá - Design Profissional */}
+              {/* Prévia do visitante - Design Profissional */}
               <div className="relative group">
-                {/* Cartão Principal do Crachá */}
-                <div className="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-3xl p-6 text-white shadow-2xl hover:shadow-3xl transition-all duration-300 overflow-hidden relative border border-white/10 h-full flex flex-col">
-                  {/* Efeito de fundo premium */}
-                  <div className="absolute inset-0 opacity-20">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-blue-400 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-cyan-400 rounded-full blur-3xl"></div>
-                  </div>
-
-                  {/* Furo do Crachá (Topo) */}
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-10 h-6 bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-2xl border border-white/5 shadow-lg"></div>
-
+                {/* Cartão Principal do Visitante */}
+                <div className="bg-card rounded-3xl p-6 text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden relative border border-border h-full flex flex-col">
                   <div className="relative z-10 flex flex-col h-full">
                     {/* Header com Status */}
-                    <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/10">
+                    <div className="flex items-start justify-between mb-5 pb-4 border-b border-border/60">
                       <div className="flex-1">
-                        <div className="text-[9px] font-bold uppercase tracking-[0.3em] text-blue-200 opacity-75 mb-1">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary/80 mb-1">
                           Visitante
                         </div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/60">
-                          Prévia de Crachá
+                        <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                          Prévia do Visitante
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/40 rounded-full px-2.5 py-1 backdrop-blur-sm">
-                        <Circle size={6} className="fill-emerald-400 text-emerald-400 animate-pulse" />
-                        <span className="text-[9px] font-bold text-emerald-300">Ativo</span>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                        <Circle size={6} className="fill-emerald-500 text-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-bold text-emerald-700">Ativo</span>
                       </div>
                     </div>
 
                     {/* Avatar + Informações Principais */}
                     <div className="flex gap-4 mb-5">
                       <div className="flex-shrink-0">
-                        <UserAvatar name={form.nome} email="" className="w-14 h-14 text-lg shadow-lg border-2 border-white/20" />
+                        <UserAvatar name={form.nome} email="" className="w-14 h-14 text-lg shadow-sm border-2 border-background ring-1 ring-border" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-white truncate mb-1">
+                        <div className="text-sm font-bold text-foreground truncate mb-1">
                           {form.nome || "Nome do Visitante"}
                         </div>
-                        <div className="text-xs text-blue-200 truncate mb-2">
+                        <div className="text-xs text-muted-foreground truncate mb-2">
                           {form.empresa || "Empresa"}
-                        </div>
-                        <div className="flex items-center gap-1.5 bg-white/5 rounded-full px-2 py-1 w-fit border border-white/10">
-                          <Tag size={10} className="text-blue-300" />
-                          <span className="text-[10px] font-semibold text-blue-200">
-                            {form.tagRFID ? form.tagRFID.slice(0, 8) + "..." : "TAG: —"}
-                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Setor de Destino */}
                     {form.setor && (
-                      <div className="mb-4 pb-4 border-b border-white/10">
-                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2">
+                      <div className="mb-4 pb-4 border-b border-border/60">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
                           Setor de Destino
                         </div>
-                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-violet-500/20 to-purple-500/20 border border-violet-400/40 rounded-full px-3 py-1.5 backdrop-blur-sm">
-                          <div className="w-2 h-2 rounded-full bg-violet-400"></div>
-                          <span className="text-xs font-bold text-violet-200">{form.setor}</span>
+                        <div className="inline-flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-full px-3 py-1.5">
+                          <div className="w-2 h-2 rounded-full bg-primary/70"></div>
+                          <span className="text-xs font-bold text-primary">{form.setor}</span>
                         </div>
                       </div>
                     )}
 
                     {/* Setores de Acesso */}
                     {form.setoresAcesso.length > 0 && (
-                      <div className="mb-4 pb-4 border-b border-white/10">
-                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/60 mb-2">
+                      <div className="mb-4 pb-4 border-b border-border/60">
+                        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
                           Acesso Permitido
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {form.setoresAcesso.map((setor, idx) => (
-                            <div key={idx} className="inline-flex items-center gap-1 bg-white/5 border border-white/10 rounded-full px-2 py-0.5">
-                              <div className="w-1.5 h-1.5 rounded-full bg-cyan-400"></div>
-                              <span className="text-[9px] font-semibold text-white/80">{setor}</span>
+                            <div key={idx} className="inline-flex items-center gap-1 bg-muted/50 border border-border/60 rounded-full px-2 py-0.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+                              <span className="text-[9px] font-semibold text-foreground/75">{setor}</span>
                             </div>
                           ))}
                         </div>
@@ -512,17 +692,17 @@ export default function NovoCadastroPage() {
                     )}
 
                     {/* Rodapé com QR Code Simulado */}
-                    <div className="mt-auto pt-3 border-t border-white/10">
+                    <div className="mt-auto pt-3 border-t border-border/60">
                       <div className="flex items-center justify-between">
-                        <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-white/40">
-                          ID: {form.cpf ? form.cpf.replace(/\D/g, "").slice(0, 8) : "—"}
+                        <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
+                          CPF: {form.cpf || "—"}
                         </div>
                         {/* QR Code Simulado */}
-                        <div className="w-10 h-10 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                        <div className="w-10 h-10 bg-background border border-border rounded-lg flex items-center justify-center shadow-xs">
                           <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
                             {[...Array(9)].map((_, i) => (
                               <div key={i} className={`rounded-sm ${
-                                [0, 2, 4, 6, 8].includes(i) ? "bg-white/60" : "bg-white/20"
+                                [0, 2, 4, 6, 8].includes(i) ? "bg-foreground/55" : "bg-muted"
                               }`}></div>
                             ))}
                           </div>
@@ -534,7 +714,7 @@ export default function NovoCadastroPage() {
                   <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
                     <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground"></span>
                     <span className="rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[10px] font-bold text-primary">
-                      Pronto para emissão
+                      Pronto para envio
                     </span>
                   </div>
                 </div>
@@ -550,38 +730,26 @@ export default function NovoCadastroPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {[
-                    { key: "tipoCartaIdentificacao", label: "Tipo de carta identificação" },
-                    { key: "testeCompleto", label: "Teste completo" },
-                    { key: "documentoCPFRG", label: "Documento CPF/RG" },
-                    { key: "empresaAcessivel", label: "Empresa acessível" },
-                    { key: "telefoneContato", label: "Telefone de contato" }
-                  ].map(({ key, label }) => (
-                    <label
+                  {requisitos.map(({ key, label, completed }) => (
+                    <div
                       key={key}
-                      htmlFor={`checklist-${key}`}
-                      className={`flex items-center gap-3 cursor-pointer group p-2.5 rounded-lg transition-all duration-200 ${
-                        checklist[key] ? "bg-primary/5" : "hover:bg-muted/50"
+                      className={`flex items-center gap-3 p-2.5 rounded-lg transition-all duration-200 ${
+                        completed ? "bg-primary/5" : "bg-transparent"
                       }`}
                     >
-                      <input
-                        id={`checklist-${key}`}
-                        type="checkbox"
-                        checked={checklist[key]}
-                        onChange={() => toggleChecklistItem(key)}
-                        className="sr-only"
-                      />
                       <div className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center ${
-                        checklist[key]
+                        completed
                           ? "bg-primary border-primary shadow-md shadow-primary/30"
-                          : "border-border/60 group-hover:border-primary/50"
+                          : "border-border/60"
                       }`}>
-                        {checklist[key] && <Check size={14} className="text-white" />}
+                        {completed && <Check size={14} className="text-white" />}
                       </div>
-                      <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors duration-200">
+                      <span className={`text-sm font-medium transition-colors duration-200 ${
+                        completed ? "text-primary" : "text-foreground"
+                      }`}>
                         {label}
                       </span>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -602,11 +770,11 @@ export default function NovoCadastroPage() {
                   </li>
                   <li className="flex gap-2">
                     <span className="text-amber-600 font-bold">•</span>
-                    <span>Confirme os setores permitidos antes de gerar o crachá</span>
+                    <span>Confirme os setores permitidos antes de enviar a solicitação</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-amber-600 font-bold">•</span>
-                    <span>Escaneie a TAG RFID para vincular ao cadastro</span>
+                    <span>Confira empresa, telefone e motivo antes de avançar</span>
                   </li>
                 </ul>
               </div>
@@ -668,94 +836,65 @@ export default function NovoCadastroPage() {
             </div>
           </div>
 
-          {/* Dados do Visitante - Ocupando largura total após remoção da timeline */}
+          {/* Dados do Visitante */}
           <div className="bg-white border border-border rounded-[32px] p-8 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
               <div className="p-2 bg-blue-50 rounded-xl">
                 <User size={20} className="text-blue-600" />
               </div>
-              <div>
-                <h3 className="font-bold text-base text-foreground">Dados do Visitante</h3>
-                <p className="text-xs text-muted-foreground">Resumo do cadastro enviado</p>
+              <h3 className="text-lg font-bold text-foreground">Informações do Visitante</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Nome</p>
+                <p className="text-sm font-semibold text-foreground">{form.nome}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">CPF</p>
+                <p className="text-sm font-semibold text-foreground">{form.cpf}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Empresa</p>
+                <p className="text-sm font-semibold text-foreground">{form.empresa}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Setor de Destino</p>
+                <p className="text-sm font-semibold text-foreground">{form.setor || "Não informado"}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-              {[
-                { label: "Nome", value: form.nome || "—" },
-                { label: "Empresa", value: form.empresa || "—" },
-                { label: "Tipo", value: form.motivo || "—" },
-                { label: "CPF", value: form.cpf || "—" },
-                { label: "Período", value: "Acesso imediato" },
-                { label: "Crachá / TAG", value: form.tagRFID || "Pendente" },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-center border-b border-border/40 pb-3">
-                  <span className="text-xs text-muted-foreground font-medium">{item.label}</span>
-                  <span className="text-xs text-foreground font-bold">{item.value}</span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center pt-1 md:col-span-2">
-                <span className="text-xs text-muted-foreground font-medium">Setores de Acesso</span>
-                <div className="flex gap-2">
-                  {form.setoresAcesso.length > 0 ? (
-                    form.setoresAcesso.map((setor, idx) => (
-                      <span key={idx} className="flex items-center gap-1 bg-primary/5 text-primary px-3 py-1 rounded-full text-[10px] font-bold border border-primary/10">
-                        <div className="w-1 h-1 rounded-full bg-primary" /> {setor}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-muted-foreground italic">Nenhum setor selecionado</span>
-                  )}
-                </div>
+            <div className="mt-8 pt-8 border-t border-border/40">
+              <div className="flex flex-wrap gap-2">
+                {form.setoresAcesso.length > 0 ? (
+                  form.setoresAcesso.map((setor, idx) => (
+                    <span key={idx} className="bg-muted/50 text-muted-foreground px-3 py-1 rounded-full text-[10px] font-bold border border-border/60">
+                      {setor}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground italic">Nenhum setor de acesso adicional</span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Seção do Supervisor */}
-          <div className="bg-white border border-border rounded-[32px] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                  CM
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-foreground">Supervisor</h3>
-                  <p className="text-[10px] text-muted-foreground">Gerente de Produção</p>
-                </div>
-              </div>
-              <div className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[9px] font-bold border border-amber-100">
-                Notificado - Aguardando resposta
-              </div>
-            </div>
-
+          {/* Ações do Step 2 */}
+          <div className="flex items-center justify-between pt-4">
+            <Button variant="ghost" onClick={handleVoltarStep} className="text-muted-foreground hover:text-foreground font-bold text-sm">
+              <ArrowLeft size={16} className="mr-2" />
+              Editar Informações
+            </Button>
             
-
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-border/40">
-              <p className="text-[10px] text-muted-foreground font-medium">Não está respondendo? Contate o supervisor:</p>
-              <div className="flex gap-2">
-                <Button variant="outline" className="h-8 rounded-lg text-[10px] font-bold gap-1.5 border-border/60">
-                  <PhoneCall size={12} /> Ligar
-                </Button>
-                <Button variant="outline" className="h-8 rounded-lg text-[10px] font-bold gap-1.5 border-border/60">
-                  <RefreshCw size={12} /> Reenviar Notificação
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer de Ações */}
-          <div className="flex items-center justify-between bg-white border border-border rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-              <RefreshCw size={12} className="animate-spin text-primary" />
-              Atualizado automaticamente a cada 10 segundos
-            </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleVoltarStep} className="h-10 rounded-xl text-[11px] font-bold gap-2 border-border/60 px-5">
-                <X size={14} /> Cancelar Cadastro
+              <Button variant="outline" className="rounded-xl border-border/60 font-bold text-sm h-11 px-6">
+                Imprimir Comprovante
               </Button>
-              <Button className="h-10 rounded-xl text-[11px] font-bold gap-2 bg-blue-500 hover:bg-blue-600 text-white px-8 shadow-lg shadow-blue-500/20">
-                <RefreshCw size={14} /> Voltar
-              </Button>
+              <Link href="/portaria">
+                <Button className="rounded-xl bg-foreground text-background hover:bg-foreground/90 font-bold text-sm h-11 px-6">
+                  Finalizar e Voltar
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
