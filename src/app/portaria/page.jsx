@@ -60,10 +60,10 @@ const STATUS_FILTERS = [
 ];
 
 const EDIT_INPUT_CLASS =
-  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15";
+  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none";
 
 const SEARCH_INPUT_CLASS =
-  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-3 focus:ring-primary/15 pl-10";
+  "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10";
 
 const BACKEND_STATUS_TO_PORTARIA = {
   aprovado: "ativo",
