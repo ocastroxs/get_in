@@ -783,10 +783,7 @@ export default function NovoCadastroPage() {
                           Prévia do Visitante
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
-                        <Circle size={6} className="fill-emerald-500 text-emerald-500 animate-pulse" />
-                        <span className="text-[9px] font-bold text-emerald-700">Ativo</span>
-                      </div>
+
                     </div>
 
                     {/* Avatar + Informações Principais */}
