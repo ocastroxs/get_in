@@ -9,6 +9,7 @@ import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatPhone } from "@/lib/utils";
 
 const STATUS_OPTIONS = ["Todos", "Pendente", "Aprovado", "Recusado"];
 
@@ -56,6 +57,10 @@ function formatDateTime(value) {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);
+}
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
 }
 
 function normalizeRegistro(registro) {
@@ -136,7 +141,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Telefone</p>
-                  <p className="text-sm font-semibold text-foreground">{registro.telefone || "—"}</p>
+                  <p className="text-sm font-semibold text-foreground">{formatPhone(registro.telefone) || "—"}</p>
                 </div>
               </div>
 
@@ -236,7 +241,7 @@ function LinhaHistorico({ registro, onDetalhes }) {
         <div className="space-y-1 text-xs text-muted-foreground">
           <p className="flex items-center gap-1.5 whitespace-nowrap">
             <Phone size={12} />
-            <span>{registro.telefone || "—"}</span>
+            <span>{formatPhone(registro.telefone) || "—"}</span>
           </p>
           <p className="flex max-w-[220px] items-center gap-1.5 truncate">
             <Mail size={12} className="shrink-0" />
@@ -303,12 +308,17 @@ export default function HistoricoPage() {
   const registrosFiltrados = useMemo(() => {
     return registros.filter(r => {
       const termoBusca = busca.toLowerCase();
+      const telefoneFormatado = formatPhone(r.telefone).toLowerCase();
+      const telefoneDigitos = onlyDigits(r.telefone);
+      const termoBuscaDigitos = onlyDigits(busca);
       const status = STATUS_LABEL[r.status] || r.status;
       const matchBusca = busca === "" ||
         (r.visitante || "").toLowerCase().includes(termoBusca) ||
         (r.cpf || "").includes(busca) ||
         (r.empresa || "").toLowerCase().includes(termoBusca) ||
         (r.telefone || "").toLowerCase().includes(termoBusca) ||
+        telefoneFormatado.includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
         (r.email || "").toLowerCase().includes(termoBusca);
 
       const matchStatus = filtroStatus === "Todos" || status === filtroStatus;
@@ -375,7 +385,7 @@ export default function HistoricoPage() {
         rows: registrosFiltrados.map((r) => [
           r.visitante,
           r.cpf,
-          r.telefone,
+          formatPhone(r.telefone),
           r.email,
           r.empresa,
           r.setor,

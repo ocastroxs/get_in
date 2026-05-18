@@ -2,19 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Building2,
+  ChevronDown,
   Clock,
   Loader2,
   LogOut,
   Mail,
+  Pencil,
   Phone,
-  QrCode,
   Search,
+  Trash2,
   Users,
   X,
   Filter,
   Check,
-  Download
+  Download,
+  MapPin
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +27,7 @@ import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatPhone } from "@/lib/utils";
 
 const STATUS_LABEL = {
   ativo: "Dentro",
@@ -123,6 +128,46 @@ function getResponseArray(response, keys = []) {
   return [];
 }
 
+function getEmpresaNome(registro) {
+  return String(
+    registro?.nome ||
+      registro?.empresa ||
+      registro?.empresa_visitante ||
+      registro?.nomeFantasia ||
+      registro?.razaoSocial ||
+      registro?.razao_social ||
+      ""
+  ).trim();
+}
+
+function getSetorNome(registro) {
+  return String(
+    registro?.nome ||
+      registro?.setor ||
+      registro?.setores?.nome ||
+      registro?.departamento?.nome ||
+      ""
+  ).trim();
+}
+
+function buildSelectOptions(registros, getLabel) {
+  const options = new Map();
+
+  registros.forEach((registro) => {
+    const label = getLabel(registro);
+
+    if (label) {
+      options.set(label.toLowerCase(), {
+        id: pickFirst(registro?.id, registro?.idSetor, registro?.idDepartamento),
+        value: label,
+        label
+      });
+    }
+  });
+
+  return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
 function normalizeVisitante(visitante) {
   const usuario = visitante?.usuario || {};
   const departamento = visitante?.departamento || visitante?.setores || {};
@@ -221,6 +266,53 @@ function getSetorLabel(visitante) {
   }
 
   return visitante?.setor || "—";
+}
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function maskCPF(value) {
+  return onlyDigits(value)
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskPhone(value) {
+  return onlyDigits(value)
+    .slice(0, 11)
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{4,5})(\d{4})$/, "$1-$2");
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function getVisitanteForm(visitante) {
+  const setor = visitante?.setor || getSetorLabel(visitante);
+
+  return {
+    nome: visitante?.nome || "",
+    cpf: visitante?.cpf || "",
+    empresa: visitante?.empresa || "",
+    setor: setor === "—" ? "" : setor,
+    telefone: formatPhone(visitante?.telefone) || visitante?.telefone || "",
+    email: visitante?.email || ""
+  };
+}
+
+function buildVisitanteDescricao(form) {
+  return [
+    `Visitante: ${form.nome.trim()}`,
+    `CPF: ${form.cpf.trim()}`,
+    `Telefone: ${form.telefone.trim()}`,
+    `Email: ${form.email.trim().toLowerCase()}`,
+    `Empresa: ${form.empresa.trim()}`,
+    `Setor: ${form.setor.trim() || "Nao informado"}`
+  ].join(" | ");
 }
 
 function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
@@ -340,7 +432,355 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   );
 }
 
-function LinhaVisitante({ visitante, onCheckout }) {
+function SelectField({ value, onChange, placeholder, options, Icon, loading, emptyLabel }) {
+  const hasOptions = options.length > 0;
+  const hasSelectedValue = options.some((option) => option.value === value);
+  const placeholderText = loading ? "Carregando..." : hasOptions ? placeholder : emptyLabel;
+
+  return (
+    <div className="relative">
+      <Icon
+        size={15}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+      <select
+        value={hasSelectedValue ? value : ""}
+        onChange={(event) => onChange(event.target.value)}
+        disabled={loading || !hasOptions}
+        className="h-10 w-full appearance-none rounded-lg border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60"
+      >
+        <option value="">{placeholderText}</option>
+        {options.map((option) => (
+          <option key={`${option.id || option.value}-${option.value}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        size={15}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+function ModalEditarVisitante({
+  isOpen,
+  onClose,
+  visitante,
+  onSave,
+  empresaOptions = [],
+  setorOptions = [],
+  loadingOptions = false
+}) {
+  const [form, setForm] = useState(getVisitanteForm(visitante));
+  const [saving, setSaving] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    setForm(getVisitanteForm(visitante));
+    setErro("");
+  }, [visitante]);
+
+  function setField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (!form.nome.trim()) {
+      setErro("Nome do visitante e obrigatorio.");
+      return;
+    }
+
+    if (!form.email.trim() || !isValidEmail(form.email)) {
+      setErro("Informe um e-mail valido.");
+      return;
+    }
+
+    if (loadingOptions) {
+      setErro("Aguarde o carregamento das empresas e setores.");
+      return;
+    }
+
+    const empresaSelecionada = empresaOptions.find((option) => option.value === form.empresa);
+    const setorSelecionado = setorOptions.find((option) => option.value === form.setor);
+
+    if (!empresaSelecionada) {
+      setErro("Selecione uma empresa cadastrada.");
+      return;
+    }
+
+    if (!setorSelecionado) {
+      setErro("Selecione um setor cadastrado.");
+      return;
+    }
+
+    const idSetor = Number(setorSelecionado.id);
+
+    setSaving(true);
+    setErro("");
+
+    try {
+      const payload = {
+        nome: form.nome.trim(),
+        cpf: form.cpf.trim(),
+        empresa: form.empresa.trim(),
+        setor: form.setor.trim(),
+        idSetor: Number.isInteger(idSetor) && idSetor > 0 ? idSetor : undefined,
+        telefone: form.telefone.trim(),
+        celular: form.telefone.trim(),
+        email: form.email.trim().toLowerCase(),
+        descricao: buildVisitanteDescricao(form)
+      };
+
+      const response = await onSave(payload);
+
+      if (response?.sucesso) {
+        onClose();
+      } else {
+        setErro(response?.mensagem || "Nao foi possivel salvar o visitante.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErro("Erro de conexao com o servidor.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!isOpen || !visitante) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-2xl animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in"
+      >
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Pencil size={15} />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Editar visitante</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 transition-colors hover:bg-muted"
+            type="button"
+          >
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-4">
+          {erro && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
+              <span>{erro}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Nome</label>
+              <Input
+                value={form.nome}
+                onChange={(event) => setField("nome", event.target.value)}
+                className="h-10 rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">CPF</label>
+              <Input
+                value={form.cpf}
+                onChange={(event) => setField("cpf", maskCPF(event.target.value))}
+                className="h-10 rounded-lg"
+                maxLength={14}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Empresa</label>
+              <SelectField
+                value={form.empresa}
+                onChange={(empresa) => setField("empresa", empresa)}
+                placeholder="Selecione a empresa"
+                emptyLabel="Nenhuma empresa cadastrada"
+                options={empresaOptions}
+                Icon={Building2}
+                loading={loadingOptions}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</label>
+              <SelectField
+                value={form.setor}
+                onChange={(setor) => setField("setor", setor)}
+                placeholder="Selecione o setor"
+                emptyLabel="Nenhum setor cadastrado"
+                options={setorOptions}
+                Icon={MapPin}
+                loading={loadingOptions}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Celular</label>
+              <Input
+                value={form.telefone}
+                onChange={(event) => setField("telefone", maskPhone(event.target.value))}
+                className="h-10 rounded-lg"
+                maxLength={15}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(event) => setField("email", event.target.value)}
+                className="h-10 rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 border-t border-border bg-muted/20 p-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+            disabled={saving}
+            type="button"
+          >
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={saving || loadingOptions}
+            type="submit"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={14} className="mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Check size={14} className="mr-2" />
+                Salvar alteracoes
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    setErro("");
+  }, [visitante]);
+
+  async function handleConfirm() {
+    setLoading(true);
+    setErro("");
+
+    try {
+      const response = await onConfirm();
+
+      if (response?.sucesso) {
+        onClose();
+      } else {
+        setErro(response?.mensagem || "Nao foi possivel excluir o visitante.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErro("Erro de conexao com o servidor.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!isOpen || !visitante) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
+              <AlertTriangle size={16} />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">Excluir visitante</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 transition-colors hover:bg-muted"
+            type="button"
+          >
+            <X size={18} className="text-muted-foreground" />
+          </button>
+        </div>
+
+        <div className="space-y-4 p-4">
+          {erro && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
+              <span>{erro}</span>
+            </div>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir <strong className="text-foreground">{visitante.nome || "este visitante"}</strong>?
+            Esta acao remove o cadastro e os registros vinculados.
+          </p>
+        </div>
+
+        <div className="flex gap-2 border-t border-border bg-muted/20 p-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+            disabled={loading}
+            type="button"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            className="flex-1 bg-red-600 hover:bg-red-700"
+            disabled={loading}
+            type="button"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={14} className="mr-2 animate-spin" />
+                Excluindo...
+              </>
+            ) : (
+              <>
+                <Trash2 size={14} className="mr-2" />
+                Excluir
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
   const status = visitante.status || "ativo";
   const statusClass = STATUS_STYLE[status] || STATUS_STYLE.ativo;
   const dotClass = STATUS_DOT[status] || STATUS_DOT.ativo;
@@ -358,7 +798,7 @@ function LinhaVisitante({ visitante, onCheckout }) {
       <td className="px-4 py-3">
         <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
           <Phone size={12} />
-          <span>{visitante.telefone || "—"}</span>
+          <span>{formatPhone(visitante.telefone) || "—"}</span>
         </p>
       </td>
       <td className="px-4 py-3">
@@ -375,9 +815,28 @@ function LinhaVisitante({ visitante, onCheckout }) {
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-[10px] font-bold uppercase rounded-lg" type="button">
-            <QrCode size={12} />
-            <span className="hidden xl:inline">Crachá</span>
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => onEdit(visitante)}
+            className="text-muted-foreground hover:bg-primary/10 hover:text-primary"
+            title="Editar visitante"
+            aria-label={`Editar ${visitante.nome || "visitante"}`}
+            type="button"
+          >
+            <Pencil size={14} />
+          </Button>
+
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            onClick={() => onDelete(visitante)}
+            className="text-muted-foreground hover:bg-red-50 hover:text-red-600"
+            title="Excluir visitante"
+            aria-label={`Excluir ${visitante.nome || "visitante"}`}
+            type="button"
+          >
+            <Trash2 size={14} />
           </Button>
 
           {status === "ativo" && visitante.podeCheckout && (
@@ -403,13 +862,19 @@ export default function PortariaPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("Todos");
   const [modalCheckoutAberto, setModalCheckoutAberto] = useState(false);
+  const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false);
+  const [modalExclusaoAberto, setModalExclusaoAberto] = useState(false);
   const [visitanteSelecionado, setVisitanteSelecionado] = useState(null);
+  const [empresaOptions, setEmpresaOptions] = useState([]);
+  const [setorOptions, setSetorOptions] = useState([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
   
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
 
   useEffect(() => {
     fetchVisitantes();
+    fetchOpcoesEdicao();
     const interval = setInterval(fetchVisitantes, 30 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -434,6 +899,26 @@ export default function PortariaPage() {
     }
   }
 
+  async function fetchOpcoesEdicao() {
+    setLoadingOptions(true);
+
+    try {
+      const [empresasResponse, setoresResponse] = await Promise.all([
+        api.get("/empresas"),
+        api.get("/setores")
+      ]);
+
+      setEmpresaOptions(buildSelectOptions(getResponseArray(empresasResponse), getEmpresaNome));
+      setSetorOptions(buildSelectOptions(getResponseArray(setoresResponse), getSetorNome));
+    } catch (error) {
+      console.error("Erro ao carregar empresas e setores:", error);
+      setEmpresaOptions([]);
+      setSetorOptions([]);
+    } finally {
+      setLoadingOptions(false);
+    }
+  }
+
   const visitantesFiltrados = useMemo(() => {
     return visitantes.filter((visitante) => {
       const nome = visitante?.nome?.toLowerCase() || "";
@@ -441,6 +926,9 @@ export default function PortariaPage() {
       const empresa = visitante?.empresa?.toLowerCase() || "";
       const setor = getSetorLabel(visitante).toLowerCase();
       const telefone = visitante?.telefone?.toLowerCase() || "";
+      const telefoneFormatado = formatPhone(visitante?.telefone).toLowerCase();
+      const telefoneDigitos = onlyDigits(visitante?.telefone);
+      const termoBuscaDigitos = onlyDigits(busca);
       const email = visitante?.email?.toLowerCase() || "";
       const termoBusca = busca.toLowerCase();
 
@@ -451,6 +939,8 @@ export default function PortariaPage() {
         empresa.includes(termoBusca) ||
         setor.includes(termoBusca) ||
         telefone.includes(termoBusca) ||
+        telefoneFormatado.includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
         email.includes(termoBusca);
 
       const matchStatus = filtroStatus === "Todos" || visitante.status === filtroStatus;
@@ -464,8 +954,50 @@ export default function PortariaPage() {
     setModalCheckoutAberto(true);
   }
 
+  function handleEdit(visitante) {
+    if (!loadingOptions && (empresaOptions.length === 0 || setorOptions.length === 0)) {
+      fetchOpcoesEdicao();
+    }
+
+    setVisitanteSelecionado(visitante);
+    setModalEdicaoAberto(true);
+  }
+
+  function handleDelete(visitante) {
+    setVisitanteSelecionado(visitante);
+    setModalExclusaoAberto(true);
+  }
+
   function handleConfirmacao() {
     fetchVisitantes();
+  }
+
+  async function salvarVisitante(payload) {
+    if (!visitanteSelecionado?.id) {
+      return { sucesso: false, mensagem: "Visitante nao identificado." };
+    }
+
+    const response = await api.put(`/portaria/visitante/${visitanteSelecionado.id}`, payload);
+
+    if (response.sucesso) {
+      await fetchVisitantes();
+    }
+
+    return response;
+  }
+
+  async function excluirVisitante() {
+    if (!visitanteSelecionado?.id) {
+      return { sucesso: false, mensagem: "Visitante nao identificado." };
+    }
+
+    const response = await api.delete(`/portaria/visitante/${visitanteSelecionado.id}`);
+
+    if (response.sucesso) {
+      await fetchVisitantes();
+    }
+
+    return response;
   }
 
   const aplicarFiltros = () => {
@@ -507,7 +1039,7 @@ export default function PortariaPage() {
           v.empresa,
           getSetorLabel(v),
           formatDateTime(v.dataEntrada),
-          v.telefone,
+          formatPhone(v.telefone),
           v.email,
           STATUS_LABEL[v.status] || "Dentro",
         ]),
@@ -526,7 +1058,7 @@ export default function PortariaPage() {
     <>
       <Topbar
         title="Portaria"
-        subtitle="Controle de acesso e visitantes presentes"
+        subtitle="Controle de acesso e visitantes"
         buttonText="Novo Visitante"
         buttonHref="/portaria/novo"
       />
@@ -636,7 +1168,7 @@ export default function PortariaPage() {
 
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-border bg-muted/20">
-            <h3 className="font-bold text-sm text-foreground">Visitantes no Local</h3>
+            <h3 className="font-bold text-sm text-foreground">Visitantes</h3>
             <p className="text-xs text-muted-foreground">{visitantesFiltrados.length} visitantes encontrados</p>
           </div>
           
@@ -679,6 +1211,8 @@ export default function PortariaPage() {
                       key={`${v.id || "visitante"}-${v.dataEntrada || v.status || index}`}
                       visitante={v}
                       onCheckout={handleCheckout}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
                     />
                   ))
                 )}
@@ -693,6 +1227,23 @@ export default function PortariaPage() {
         onClose={() => setModalCheckoutAberto(false)}
         visitante={visitanteSelecionado}
         onConfirm={handleConfirmacao}
+      />
+
+      <ModalEditarVisitante
+        isOpen={modalEdicaoAberto}
+        onClose={() => setModalEdicaoAberto(false)}
+        visitante={visitanteSelecionado}
+        onSave={salvarVisitante}
+        empresaOptions={empresaOptions}
+        setorOptions={setorOptions}
+        loadingOptions={loadingOptions}
+      />
+
+      <ModalExcluirVisitante
+        isOpen={modalExclusaoAberto}
+        onClose={() => setModalExclusaoAberto(false)}
+        visitante={visitanteSelecionado}
+        onConfirm={excluirVisitante}
       />
 
       {/* Modal de Filtro Padronizado */}
