@@ -98,8 +98,9 @@ function agruparMotivosSemana(requisicoes) {
     .sort((a, b) => b.value - a.value);
 }
 
-// Helper: Process status counts
-function processarStatusVisitantes(requisicoes) {
+// Helper: Process status counts for today
+function processarStatusHoje(requisicoes) {
+  const hoje = new Date();
   const counts = {
     ativo: 0,
     pendente: 0,
@@ -108,6 +109,43 @@ function processarStatusVisitantes(requisicoes) {
   };
 
   requisicoes.forEach((req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return;
+
+    const mesmoDia = data.toDateString() === hoje.toDateString();
+    if (!mesmoDia) return;
+
+    const status = String(req.status || "").toLowerCase();
+    if (counts.hasOwnProperty(status)) {
+      counts[status] += 1;
+    }
+  });
+
+  return [
+    { name: "Dentro da fábrica", value: counts.ativo, color: "var(--chart-2)" },
+    { name: "Aguard. aprovação", value: counts.pendente, color: "var(--chart-3)" },
+    { name: "Alerta permanência", value: counts.semsaida, color: "var(--chart-5)" },
+    { name: "Check-out realizado", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
+  ];
+}
+
+// Helper: Process status counts for the last 7 days
+function processarStatusSemana(requisicoes) {
+  const hoje = new Date();
+  const counts = {
+    ativo: 0,
+    pendente: 0,
+    semsaida: 0,
+    finalizado: 0,
+  };
+
+  requisicoes.forEach((req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return;
+
+    const diferenca = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
+    if (diferenca < 0 || diferenca >= 7) return;
+
     const status = String(req.status || "").toLowerCase();
     if (counts.hasOwnProperty(status)) {
       counts[status] += 1;
@@ -127,7 +165,8 @@ export default function DashboardPage() {
   const [mostrarBanner, setMostrarBanner] = useState(true);
   const [motivosHoje, setMotivosHoje] = useState([]);
   const [motivosSemana, setMotivosSemana] = useState([]);
-  const [statusData, setStatusData] = useState([]);
+  const [statusHoje, setStatusHoje] = useState([]);
+  const [statusSemana, setStatusSemana] = useState([]);
 
   useEffect(() => {
     async function carregarDados() {
@@ -146,7 +185,8 @@ export default function DashboardPage() {
           setMotivosSemana(agruparMotivosSemana(requisicoes));
           
           // Process status
-          setStatusData(processarStatusVisitantes(requisicoes));
+          setStatusHoje(processarStatusHoje(requisicoes));
+          setStatusSemana(processarStatusSemana(requisicoes));
         }
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
@@ -154,7 +194,8 @@ export default function DashboardPage() {
         setMostrarBanner(false);
         setMotivosHoje([]);
         setMotivosSemana([]);
-        setStatusData([]);
+        setStatusHoje([]);
+        setStatusSemana([]);
       }
     }
 
@@ -264,7 +305,7 @@ export default function DashboardPage() {
         <EntradasChart mobileLayout />
         <PicoMovimentoChart mobileLayout />
         <TiposVisitanteChart mobileLayout data={motivosHoje} weekData={motivosSemana} />
-        <StatusVisitantesChart mobileLayout="list" data={statusData} />
+        <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} />
 
         <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
           <div className="flex items-start gap-3">
@@ -353,7 +394,7 @@ export default function DashboardPage() {
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <TiposVisitanteChart data={motivosHoje} weekData={motivosSemana} />
           <div className="space-y-6">
-            <StatusVisitantesChart data={statusData} />
+            <StatusVisitantesChart data={statusHoje} weekData={statusSemana} />
           </div>
         </section>
       </div>
