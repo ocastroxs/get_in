@@ -1,5 +1,5 @@
 export default function SetoresMaisVisitados({
-  title = "Setores Mais Visitados",
+  title = "Pico de Areas",
   data = [],
   barColorConfig = ["bg-primary", "bg-chart-2", "bg-chart-3", "bg-chart-4", "bg-chart-5"]
 }) {

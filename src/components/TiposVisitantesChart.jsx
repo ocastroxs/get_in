@@ -24,7 +24,7 @@ function PieTooltip({ active, payload }) {
 }
 
 export default function TiposVisitantesChart({
-  title = "Tipos de Visitante",
+  title = "Motivos",
   subtitle = "Por periodo - hoje",
   data = TIPOS_VISITANTE,
   dataKey = "value",

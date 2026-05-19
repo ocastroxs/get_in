@@ -172,9 +172,6 @@ function LinhaCracha({ c }) {
       <td className="py-3 px-4 text-sm font-medium text-foreground whitespace-nowrap">
         {c.visitante || <span className="text-muted-foreground italic text-xs">Nenhum vinculado</span>}
       </td>
-      <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">
-        {c.empresa || "—"}
-      </td>
       <td className="py-3 px-4">
         {c.setor ? (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${SETOR_STYLE[c.setor] ?? "bg-muted text-muted-foreground"}`}>
@@ -236,8 +233,7 @@ export default function CrachasPage() {
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
         String(c.id).includes(q) ||
-        (c.visitante && c.visitante.toLowerCase().includes(q)) ||
-        (c.empresa && c.empresa.toLowerCase().includes(q));
+        (c.visitante && c.visitante.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });
   }, [crachas, statusFiltro, busca]);
@@ -327,7 +323,7 @@ export default function CrachasPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por ID, visitante ou empresa..."
+                  placeholder="Buscar por ID ou visitante..."
                   className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -411,7 +407,6 @@ export default function CrachasPage() {
                 <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="py-3 px-4">TAG</th>
                   <th className="py-3 px-4">Usuário Atual</th>
-                  <th className="py-3 px-4">Empresa</th>
                   <th className="py-3 px-4">Setor</th>
                   <th className="py-3 px-4">Entrega</th>
                   <th className="py-3 px-4">Devolução</th>
@@ -422,7 +417,7 @@ export default function CrachasPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center">
+                    <td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
                         <span className="text-sm">Carregando crachás...</span>
@@ -431,7 +426,7 @@ export default function CrachasPage() {
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                       Nenhum crachá encontrado com os filtros aplicados.
                     </td>
                   </tr>
