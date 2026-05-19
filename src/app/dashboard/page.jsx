@@ -12,28 +12,127 @@ import { STATS_TODAY } from "@/lib/mockData";
 import { api } from "@/services/api";
 import { AlertTriangle, ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
+const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+
+// Helper: Parse data from multiple possible field names
+function parseDataRequisicao(item) {
+  const campos = ["dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao", "validade", "dataDaRequisicao"];
+  
+  for (const campo of campos) {
+    if (item[campo]) {
+      const data = new Date(item[campo]);
+      if (!Number.isNaN(data.getTime())) {
+        return data;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper: Normalize motivo (trim, lowercase for comparison, preserve original for display)
+function normalizarMotivo(motivo) {
+  if (!motivo || typeof motivo !== "string") return null;
+  const trimmed = motivo.trim();
+  if (!trimmed) return null;
+  return trimmed;
+}
+
+// Helper: Group motivos for today
+function agruparMotivosHoje(requisicoes) {
+  const hoje = new Date();
+  const mapa = new Map();
+
+  requisicoes.forEach((req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return;
+
+    const mesmoDia = data.toDateString() === hoje.toDateString();
+    if (!mesmoDia) return;
+
+    const motivo = normalizarMotivo(req.motivo);
+    if (!motivo) return;
+
+    const chaveNormalizada = motivo.toLowerCase();
+    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
+    atual.count += 1;
+    mapa.set(chaveNormalizada, atual);
+  });
+
+  return [...mapa.values()]
+    .map((item, index) => ({
+      name: item.motivo,
+      value: item.count,
+      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+// Helper: Group motivos for the last 7 days
+function agruparMotivosSemana(requisicoes) {
+  const hoje = new Date();
+  const mapa = new Map();
+
+  requisicoes.forEach((req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return;
+
+    const diferenca = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
+    if (diferenca < 0 || diferenca >= 7) return;
+
+    const motivo = normalizarMotivo(req.motivo);
+    if (!motivo) return;
+
+    const chaveNormalizada = motivo.toLowerCase();
+    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
+    atual.count += 1;
+    mapa.set(chaveNormalizada, atual);
+  });
+
+  return [...mapa.values()]
+    .map((item, index) => ({
+      name: item.motivo,
+      value: item.count,
+      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
+    }))
+    .sort((a, b) => b.value - a.value);
+}
 
 export default function DashboardPage() {
   const [visitantesEmAlerta, setVisitantesEmAlerta] = useState([]);
   const [mostrarBanner, setMostrarBanner] = useState(true);
+  const [motivosHoje, setMotivosHoje] = useState([]);
+  const [motivosSemana, setMotivosSemana] = useState([]);
 
   useEffect(() => {
-    async function carregarAlertas() {
+    async function carregarDados() {
       try {
         const response = await api.get("/requisicao-visitante");
         if (response.sucesso) {
-          const alertas = (response.data || []).filter((visitante) => visitante.status === "semsaida");
+          const requisicoes = response.data || [];
+          
+          // Filter alerts
+          const alertas = requisicoes.filter((visitante) => visitante.status === "semsaida");
           setVisitantesEmAlerta(alertas);
           setMostrarBanner(alertas.length > 0);
+          
+          // Process motivos
+          const hoje = agruparMotivosHoje(requisicoes);
+          const semana = agruparMotivosSemana(requisicoes);
+          
+          setMotivosHoje(hoje);
+          setMotivosSemana(semana);
         }
       } catch (error) {
-        console.error("Erro ao carregar alertas no dashboard:", error);
+        console.error("Erro ao carregar dados do dashboard:", error);
         setVisitantesEmAlerta([]);
         setMostrarBanner(false);
+        setMotivosHoje([]);
+        setMotivosSemana([]);
       }
     }
 
-    carregarAlertas();
+    carregarDados();
   }, []);
 
   const mostrarAlertaBanner = useMemo(
@@ -138,7 +237,7 @@ export default function DashboardPage() {
 
         <EntradasChart mobileLayout />
         <PicoMovimentoChart mobileLayout />
-        <TiposVisitanteChart mobileLayout />
+        <TiposVisitanteChart mobileLayout data={motivosHoje} weekData={motivosSemana} />
         <StatusVisitantesChart mobileLayout="list" />
 
         <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
@@ -226,7 +325,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <TiposVisitanteChart />
+          <TiposVisitanteChart data={motivosHoje} weekData={motivosSemana} />
           <div className="space-y-6">
             <StatusVisitantesChart />
           </div>
