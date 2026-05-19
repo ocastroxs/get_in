@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { STATUS_VISITANTES } from "@/lib/mockData";
 
@@ -23,8 +24,19 @@ function StatusPieTooltip({ active, payload }) {
   );
 }
 
-export default function StatusVisitantesChart({ mobileLayout = "default" }) {
-  const ativos = STATUS_VISITANTES[0]?.value ?? 0;
+export default function StatusVisitantesChart({ 
+  mobileLayout = "default",
+  data = STATUS_VISITANTES 
+}) {
+  // Ensure we have data, fallback to mock only if explicitly null/undefined
+  const chartData = data && data.length > 0 ? data : STATUS_VISITANTES;
+  
+  // "Ativos" is usually the first item (Dentro da fábrica)
+  const ativos = useMemo(() => {
+    const itemAtivo = chartData.find(item => item.name.toLowerCase().includes("dentro") || item.name.toLowerCase().includes("ativo"));
+    return itemAtivo?.value ?? 0;
+  }, [chartData]);
+
   const compactMobile = mobileLayout === "list";
   const chartSize = 176;
   const mobileChartSize = 132;
@@ -43,7 +55,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             <ResponsiveContainer width={mobileChartSize} height={mobileChartSize}>
               <PieChart>
                 <Pie
-                  data={STATUS_VISITANTES}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={40}
@@ -55,7 +67,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
                   stroke="var(--card)"
                   paddingAngle={2}
                 >
-                  {STATUS_VISITANTES.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -71,7 +83,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             </div>
           </div>
 
-          {STATUS_VISITANTES.map((item, index) => (
+          {chartData.map((item, index) => (
             <div
               key={item.name}
               className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-3 animate-in fade-in slide-in-from-right-2 duration-700"
@@ -94,7 +106,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             <ResponsiveContainer width={chartSize} height={chartSize}>
               <PieChart>
                 <Pie
-                  data={STATUS_VISITANTES}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={56}
@@ -106,7 +118,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
                   stroke="var(--card)"
                   paddingAngle={2}
                 >
-                  {STATUS_VISITANTES.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -123,7 +135,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
           </div>
 
           <div className="flex flex-1 flex-col justify-center gap-3">
-            {STATUS_VISITANTES.map((item, index) => (
+            {chartData.map((item, index) => (
               <div
                 key={item.name}
                 className="flex items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
