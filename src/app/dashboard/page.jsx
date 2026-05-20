@@ -16,7 +16,9 @@ const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#
 
 // Helper: Parse data from multiple possible field names
 function parseDataRequisicao(item) {
-  const campos = ["dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao", "validade", "dataDaRequisicao"];
+  // Priorizamos dataDaRequisicao para requisições e dataDeEntrada para logs
+  // Removemos 'validade' pois representa um prazo futuro, não a data do registro
+  const campos = ["dataDaRequisicao", "dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao"];
   
   for (const campo of campos) {
     if (item[campo]) {
@@ -77,8 +79,13 @@ function agruparMotivosSemana(requisicoes) {
     const data = parseDataRequisicao(req);
     if (!data) return;
 
-    const diferenca = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
-    if (diferenca < 0 || diferenca >= 7) return;
+    // Normalizamos as datas para meia-noite para comparar apenas os dias
+    const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const d2 = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+    const diferenca = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+    
+    // Aceitamos registros de hoje (0) até 6 dias atrás (totalizando 7 dias)
+    if (diferenca < 0 || diferenca > 6) return;
 
     const motivo = normalizarMotivo(req.motivo);
     if (!motivo) return;
@@ -143,8 +150,11 @@ function processarStatusSemana(requisicoes) {
     const data = parseDataRequisicao(req);
     if (!data) return;
 
-    const diferenca = Math.floor((hoje - data) / (1000 * 60 * 60 * 24));
-    if (diferenca < 0 || diferenca >= 7) return;
+    const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const d2 = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+    const diferenca = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+    
+    if (diferenca < 0 || diferenca > 6) return;
 
     const status = String(req.status || "").toLowerCase();
     if (counts.hasOwnProperty(status)) {
