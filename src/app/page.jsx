@@ -212,9 +212,8 @@ export default function LoginPage() {
   
   // Estados para estatísticas reais
   const [stats, setStats] = useState({
-    visitasHoje: "38", // Valor inicial (mock)
-    setoresAtivos: "6",
-    rastreabilidade: "100"
+    usuariosTotal: "0",
+    setoresTotal: "0"
   });
 
   // Se já estiver autenticado, redireciona para o dashboard
@@ -234,9 +233,8 @@ export default function LoginPage() {
       const response = await publicService.getStats();
       if (response.sucesso && response.data) {
         setStats({
-          visitasHoje: response.data.visitasHoje.toString(),
-          setoresAtivos: response.data.setoresAtivos.toString(),
-          rastreabilidade: response.data.rastreabilidade.toString()
+          usuariosTotal: response.data.usuariosTotal.toString(),
+          setoresTotal: response.data.setoresTotal.toString()
         });
       }
     };
@@ -332,12 +330,9 @@ export default function LoginPage() {
                         animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500"
           >
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
-              <StatItem value={stats.visitasHoje} label="Usuários" icon={Users} />
+              <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
               <div className="pl-4">
-                <StatItem value={stats.setoresAtivos} label="Setores ativos" icon={Activity} />
-              </div>
-              <div className="pl-4">
-                <StatItem value={stats.rastreabilidade} suffix="%" label="Rastreabilidade" icon={ShieldCheck} />
+                <StatItem value={stats.setoresTotal} label="Setores cadastrados" icon={Activity} />
               </div>
             </div>
           </div>
