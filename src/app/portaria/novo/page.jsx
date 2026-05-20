@@ -626,7 +626,7 @@ export default function NovoCadastroPage() {
                   <div className="p-2.5 bg-primary/10 rounded-xl">
                     <Building2 size={20} className="text-primary" />
                   </div>
-                  <h2 className="text-lg font-bold text-foreground">Dados da Empresa</h2>
+                  <h2 className="text-lg font-bold text-foreground">Dados Informacionais</h2>
                 </div>
 
                 <div className="space-y-5">

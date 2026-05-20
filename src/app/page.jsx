@@ -332,7 +332,7 @@ export default function LoginPage() {
                         animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500"
           >
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
-              <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
+              <StatItem value={stats.visitasHoje} label="Usuários" icon={Users} />
               <div className="pl-4">
                 <StatItem value={stats.setoresAtivos} label="Setores ativos" icon={Activity} />
               </div>
