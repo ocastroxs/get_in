@@ -46,6 +46,42 @@ function normalizarMotivo(motivo) {
   return trimmed;
 }
 
+function inicioDoDia(data) {
+  return new Date(data.getFullYear(), data.getMonth(), data.getDate());
+}
+
+function diferencaEmDias(dataReferencia, dataComparada) {
+  return Math.round((inicioDoDia(dataReferencia) - inicioDoDia(dataComparada)) / (1000 * 60 * 60 * 24));
+}
+
+function obterMaiorDataRequisicao(requisicoes) {
+  return requisicoes.reduce((maior, req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return maior;
+    return !maior || data > maior ? data : maior;
+  }, null);
+}
+
+function formatarMotivos(mapa) {
+  return [...mapa.values()]
+    .map((item, index) => ({
+      name: item.motivo,
+      value: item.count,
+      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function somarMotivo(mapa, req) {
+  const motivo = normalizarMotivo(req.motivo);
+  if (!motivo) return;
+
+  const chaveNormalizada = motivo.toLowerCase();
+  const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
+  atual.count += 1;
+  mapa.set(chaveNormalizada, atual);
+}
+
 // Helper: Group motivos for today
 function agruparMotivosHoje(requisicoes) {
   const hoje = new Date();
@@ -60,62 +96,35 @@ function agruparMotivosHoje(requisicoes) {
                     data.getFullYear() === hoje.getFullYear();
     if (!mesmoDia) return;
 
-    const motivo = normalizarMotivo(req.motivo);
-    if (!motivo) return;
-
-    const chaveNormalizada = motivo.toLowerCase();
-    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
-    atual.count += 1;
-    mapa.set(chaveNormalizada, atual);
+    somarMotivo(mapa, req);
   });
 
-  return [...mapa.values()]
-    .map((item, index) => ({
-      name: item.motivo,
-      value: item.count,
-      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
-    }))
-    .sort((a, b) => b.value - a.value);
+  return formatarMotivos(mapa);
 }
 
 // Helper: Group motivos for the last 7 days
 function agruparMotivosSemana(requisicoes) {
-  const hoje = new Date();
+  const referencia = obterMaiorDataRequisicao(requisicoes) || new Date();
   const mapa = new Map();
 
   requisicoes.forEach((req) => {
     const data = parseDataRequisicao(req);
     if (!data) return;
 
-    // Normalizamos as datas para meia-noite para comparar apenas os dias
-    const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const d2 = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-    const diferenca = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+    const diferenca = diferencaEmDias(referencia, data);
     
     // Aceitamos registros de hoje (0) até 6 dias atrás (totalizando 7 dias)
     if (diferenca < 0 || diferenca > 6) return;
 
-    const motivo = normalizarMotivo(req.motivo);
-    if (!motivo) return;
-
-    const chaveNormalizada = motivo.toLowerCase();
-    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
-    atual.count += 1;
-    mapa.set(chaveNormalizada, atual);
+    somarMotivo(mapa, req);
   });
 
-  return [...mapa.values()]
-    .map((item, index) => ({
-      name: item.motivo,
-      value: item.count,
-      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
-    }))
-    .sort((a, b) => b.value - a.value);
+  return formatarMotivos(mapa);
 }
 
 // Helper: Group motivos for the current month
 function agruparMotivosMes(requisicoes) {
-  const hoje = new Date();
+  const referencia = obterMaiorDataRequisicao(requisicoes) || new Date();
   const mapa = new Map();
 
   requisicoes.forEach((req) => {
@@ -123,25 +132,13 @@ function agruparMotivosMes(requisicoes) {
     if (!data) return;
 
     // Verifica se é o mesmo mês e ano
-    const mesmoMes = data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
+    const mesmoMes = data.getMonth() === referencia.getMonth() && data.getFullYear() === referencia.getFullYear();
     if (!mesmoMes) return;
 
-    const motivo = normalizarMotivo(req.motivo);
-    if (!motivo) return;
-
-    const chaveNormalizada = motivo.toLowerCase();
-    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
-    atual.count += 1;
-    mapa.set(chaveNormalizada, atual);
+    somarMotivo(mapa, req);
   });
 
-  return [...mapa.values()]
-    .map((item, index) => ({
-      name: item.motivo,
-      value: item.count,
-      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
-    }))
-    .sort((a, b) => b.value - a.value);
+  return formatarMotivos(mapa);
 }
 
 // Helper: Process status counts for today
@@ -358,7 +355,12 @@ export default function DashboardPage() {
 
         <EntradasChart mobileLayout />
         <PicoMovimentoChart mobileLayout />
-        <TiposVisitanteChart mobileLayout data={motivosHoje} weekData={motivosSemana} monthData={motivosMes} />
+        <TiposVisitanteChart
+          mobileLayout
+          data={motivosHoje}
+          weekData={motivosSemana}
+          monthData={motivosMes}
+        />
         <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} />
 
         <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
@@ -446,7 +448,11 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <TiposVisitanteChart data={motivosHoje} weekData={motivosSemana} monthData={motivosMes} />
+          <TiposVisitanteChart
+            data={motivosHoje}
+            weekData={motivosSemana}
+            monthData={motivosMes}
+          />
           <div className="space-y-6">
             <StatusVisitantesChart data={statusHoje} weekData={statusSemana} />
           </div>

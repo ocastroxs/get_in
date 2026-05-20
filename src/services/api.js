@@ -1,4 +1,18 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://get-in-ilp5.onrender.com';
+const DEFAULT_API_URL = 'https://get-in-ilp5.onrender.com';
+
+const getApiUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const apiUrl = configuredUrl || DEFAULT_API_URL;
+
+  if (typeof window === 'undefined') {
+    return apiUrl;
+  }
+
+  const currentOrigin = window.location.origin.replace(/\/$/, '');
+  const normalizedApiUrl = apiUrl.replace(/\/$/, '');
+
+  return apiUrl.startsWith('/') || normalizedApiUrl === currentOrigin ? DEFAULT_API_URL : apiUrl;
+};
 
 const getHeaders = () => {
   const headers = {
@@ -19,11 +33,26 @@ const parseResponse = async (response) => {
   const text = await response.text();
 
   if (!text) {
-    return { sucesso: response.ok };
+    return { sucesso: response.ok, ok: response.ok, status: response.status };
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('text/html') || /^\s*<!doctype html|^\s*<html/i.test(text)) {
+    return {
+      sucesso: false,
+      ok: response.ok,
+      status: response.status,
+      mensagem: `A rota retornou HTML (${response.status}). Confira a URL da API.`,
+    };
   }
 
   try {
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    return {
+      ...data,
+      ok: response.ok,
+      status: response.status,
+    };
   } catch {
     const htmlError = text.match(/<pre>(.*?)<\/pre>/is)?.[1];
     const mensagem = htmlError
@@ -40,7 +69,7 @@ const parseResponse = async (response) => {
 
 export const api = {
   async get(endpoint) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${getApiUrl()}${endpoint}`, {
       method: 'GET',
       headers: getHeaders(),
     });
@@ -48,7 +77,7 @@ export const api = {
   },
 
   async post(endpoint, data) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${getApiUrl()}${endpoint}`, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -57,7 +86,7 @@ export const api = {
   },
 
   async put(endpoint, data) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${getApiUrl()}${endpoint}`, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(data),
@@ -66,7 +95,7 @@ export const api = {
   },
 
   async delete(endpoint) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
+    const response = await fetch(`${getApiUrl()}${endpoint}`, {
       method: 'DELETE',
       headers: getHeaders(),
     });
