@@ -1,126 +1,228 @@
-const DEFAULT_API_URL = 'https://get-in-ilp5.onrender.com';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://get-in-ilp5.onrender.com';
 
-const getApiUrl = () => {
-  const configuredUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-  const apiUrl = configuredUrl || DEFAULT_API_URL;
-
-  if (typeof window === 'undefined') {
-    return apiUrl;
-  }
-
-  const currentOrigin = window.location.origin.replace(/\/$/, '');
-  const normalizedApiUrl = apiUrl.replace(/\/$/, '');
-
-  return apiUrl.startsWith('/') || normalizedApiUrl === currentOrigin ? DEFAULT_API_URL : apiUrl;
-};
-
-const getHeaders = () => {
+const getHeaders = (tokenOverride = null) => {
   const headers = {
     'Content-Type': 'application/json',
   };
-  
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('getin_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+
+  const token =
+    tokenOverride ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('getin_token') || sessionStorage.getItem('getin_token')
+      : null);
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
-  
+
   return headers;
 };
 
+const getAuthOnlyHeaders = (tokenOverride = null) => {
+  const headers = {};
+  const token =
+    tokenOverride ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('getin_token') || sessionStorage.getItem('getin_token')
+      : null);
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const getDefaultErrorMessage = (status) => {
+  if (status === 401) {
+    return 'E-mail ou senha incorretos.';
+  }
+
+  if (status === 403) {
+    return 'Voce nao tem permissao para acessar este recurso.';
+  }
+
+  if (status === 404) {
+    return 'Recurso nao encontrado.';
+  }
+
+  return 'Nao foi possivel completar a solicitacao.';
+};
+
 const parseResponse = async (response) => {
-  const text = await response.text();
-
-  if (!text) {
-    return { sucesso: response.ok, ok: response.ok, status: response.status };
-  }
-
   const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('text/html') || /^\s*<!doctype html|^\s*<html/i.test(text)) {
-    return {
-      sucesso: false,
-      ok: response.ok,
-      status: response.status,
-      mensagem: `A rota retornou HTML (${response.status}). Confira a URL da API.`,
-    };
+  const isJson = contentType.includes('application/json');
+  let body = null;
+
+  if (isJson) {
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
   }
 
-  try {
-    const data = JSON.parse(text);
-    return {
-      ...data,
-      ok: response.ok,
-      status: response.status,
-    };
-  } catch {
-    const htmlError = text.match(/<pre>(.*?)<\/pre>/is)?.[1];
-    const mensagem = htmlError
-      ? htmlError.replace(/<[^>]*>/g, '').trim()
-      : text.trim();
-
-    return {
-      sucesso: false,
-      mensagem: mensagem || `Erro ${response.status} ao comunicar com o servidor.`,
-      status: response.status,
-    };
+  if (response.ok) {
+    return body || { sucesso: true };
   }
+
+  return {
+    ...(body || {}),
+    sucesso: false,
+    status: response.status,
+    mensagem: body?.mensagem || body?.message || body?.erro || getDefaultErrorMessage(response.status),
+  };
+};
+
+const request = async (endpoint, options) => {
+  const response = await fetch(`${API_URL}${endpoint}`, options);
+  return parseResponse(response);
+};
+
+const sanitizeFuncionario = (funcionario) => {
+  if (!funcionario || typeof funcionario !== 'object') {
+    return null;
+  }
+
+  const { senha, senhaHash, password, ...safeFuncionario } = funcionario;
+  return safeFuncionario;
+};
+
+const getUsuarioFromLoginResponse = (response) => {
+  const data = response?.data;
+
+  if (data?.usuario) {
+    return data.usuario;
+  }
+
+  if (data?.user) {
+    return data.user;
+  }
+
+  return data || response?.usuario || response?.user || null;
+};
+
+const getFuncionarioFromLoginResponse = (response) => {
+  const data = response?.data;
+  return (
+    response?.funcionario ||
+    data?.funcionario ||
+    data?.usuario?.funcionario ||
+    data?.user?.funcionario ||
+    (data?.tipo || data?.cargo ? data : null)
+  );
+};
+
+const findFuncionarioByUsuarioId = async (token, usuarioId) => {
+  if (!token || usuarioId === undefined || usuarioId === null) {
+    return null;
+  }
+
+  const response = await request('/func', {
+    method: 'GET',
+    headers: getHeaders(token),
+  });
+
+  if (!response.sucesso || !Array.isArray(response.data)) {
+    return null;
+  }
+
+  return (
+    response.data.find((funcionario) => String(funcionario.idUsuario) === String(usuarioId)) ||
+    null
+  );
+};
+
+const withFuncionarioData = async (loginResponse) => {
+  const usuario = getUsuarioFromLoginResponse(loginResponse);
+  const funcionarioExistente = getFuncionarioFromLoginResponse(loginResponse);
+  const funcionario =
+    sanitizeFuncionario(funcionarioExistente) ||
+    sanitizeFuncionario(await findFuncionarioByUsuarioId(loginResponse.token, usuario?.id));
+
+  if (!usuario || !funcionario) {
+    return loginResponse;
+  }
+
+  return {
+    ...loginResponse,
+    funcionario,
+    data: {
+      usuario,
+      funcionario,
+    },
+  };
 };
 
 export const api = {
   async get(endpoint) {
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    return request(endpoint, {
       method: 'GET',
       headers: getHeaders(),
     });
-    return parseResponse(response);
   },
 
   async post(endpoint, data) {
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    return request(endpoint, {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    return parseResponse(response);
   },
 
   async put(endpoint, data) {
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    return request(endpoint, {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify(data),
     });
-    return parseResponse(response);
   },
 
   async delete(endpoint) {
-    const response = await fetch(`${getApiUrl()}${endpoint}`, {
+    return request(endpoint, {
       method: 'DELETE',
       headers: getHeaders(),
     });
-    return parseResponse(response);
+  },
+
+  async upload(endpoint, formData) {
+    return request(endpoint, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
   },
 };
 
 export const authService = {
   async login(email, senha) {
-    const data = await api.post('/auth/login', { email, senha });
-    if (data.sucesso && data.token) {
-      localStorage.setItem('getin_token', data.token);
-      localStorage.setItem('getin_user', JSON.stringify(data.data));
+    const loginResponse = await api.post('/auth/login', { email, senha });
+
+    if (!loginResponse.sucesso || !loginResponse.token) {
+      return loginResponse;
     }
-    return data;
+
+    return withFuncionarioData(loginResponse);
   },
 
   logout() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     localStorage.removeItem('getin_token');
     localStorage.removeItem('getin_user');
+    localStorage.removeItem('getin_funcionario');
+    sessionStorage.removeItem('getin_token');
+    sessionStorage.removeItem('getin_user');
+    sessionStorage.removeItem('getin_funcionario');
+    document.cookie = 'getin_session=; path=/; samesite=lax; max-age=0';
+    document.cookie = 'getin_tipo=; path=/; samesite=lax; max-age=0';
   },
 
   getUser() {
     if (typeof window !== 'undefined') {
-      const user = localStorage.getItem('getin_user');
+      const user = localStorage.getItem('getin_user') || sessionStorage.getItem('getin_user');
       return user ? JSON.parse(user) : null;
     }
     return null;
@@ -128,28 +230,38 @@ export const authService = {
 
   isAuthenticated() {
     if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('getin_token');
+      return !!(localStorage.getItem('getin_token') || sessionStorage.getItem('getin_token'));
     }
     return false;
-  }
+  },
 };
 
 export const publicService = {
   async getStats() {
     try {
-      // Este endpoint deve ser criado no back-end como uma rota pública
       const data = await api.get('/public/stats');
-      return data;
+      if (data.sucesso && data.data) {
+        return {
+          sucesso: true,
+          data: {
+            usuariosTotal: data.data.usuariosTotal || 0,
+            setoresTotal: data.data.setoresTotal || 0,
+            visitasHoje: data.data.visitasHoje || 0,
+          },
+        };
+      }
     } catch (error) {
-      console.error('Erro ao buscar estatísticas públicas:', error);
-      return {
-        sucesso: false,
-        data: {
-          visitasHoje: 0,
-          setoresAtivos: 0,
-          rastreabilidade: 0
-        }
-      };
+      console.warn('Nao foi possivel buscar estatisticas publicas:', error);
     }
-  }
+
+    return {
+      sucesso: false,
+      data: {
+        usuariosTotal: 0,
+        setoresTotal: 0,
+        visitasHoje: 0,
+      },
+    };
+  },
 };
+
