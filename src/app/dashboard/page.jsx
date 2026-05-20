@@ -17,12 +17,18 @@ const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#
 // Helper: Parse data from multiple possible field names
 function parseDataRequisicao(item) {
   // Priorizamos dataDaRequisicao (tabela requisicoes_de_visitas) e dataDeEntrada (logs)
-  // O campo 'solicitacao' também é usado em algumas partes do sistema como string de data
   const campos = ["dataDaRequisicao", "solicitacao", "dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao"];
   
   for (const campo of campos) {
     if (item[campo]) {
-      const data = new Date(item[campo]);
+      // Se for uma string de data do MySQL (YYYY-MM-DD HH:mm:ss), o JS pode interpretar errado dependendo do fuso
+      // Vamos tentar normalizar substituindo o espaço por 'T' se necessário
+      let dateStr = String(item[campo]);
+      if (dateStr.includes(" ") && !dateStr.includes("T")) {
+        dateStr = dateStr.replace(" ", "T");
+      }
+      
+      const data = new Date(dateStr);
       if (!Number.isNaN(data.getTime())) {
         return data;
       }
@@ -32,7 +38,7 @@ function parseDataRequisicao(item) {
   return null;
 }
 
-// Helper: Normalize motivo (trim, lowercase for comparison, preserve original for display)
+// Helper: Normalize motivo (trim, preserve original for display)
 function normalizarMotivo(motivo) {
   if (!motivo || typeof motivo !== "string") return null;
   const trimmed = motivo.trim();
@@ -49,7 +55,9 @@ function agruparMotivosHoje(requisicoes) {
     const data = parseDataRequisicao(req);
     if (!data) return;
 
-    const mesmoDia = data.toDateString() === hoje.toDateString();
+    const mesmoDia = data.getDate() === hoje.getDate() && 
+                    data.getMonth() === hoje.getMonth() && 
+                    data.getFullYear() === hoje.getFullYear();
     if (!mesmoDia) return;
 
     const motivo = normalizarMotivo(req.motivo);
@@ -150,7 +158,9 @@ function processarStatusHoje(requisicoes) {
     const data = parseDataRequisicao(req);
     if (!data) return;
 
-    const mesmoDia = data.toDateString() === hoje.toDateString();
+    const mesmoDia = data.getDate() === hoje.getDate() && 
+                    data.getMonth() === hoje.getMonth() && 
+                    data.getFullYear() === hoje.getFullYear();
     if (!mesmoDia) return;
 
     const status = String(req.status || "").toLowerCase();
