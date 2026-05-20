@@ -46,6 +46,20 @@ function normalizarMotivo(motivo) {
   return trimmed;
 }
 
+function obterSetor(req) {
+  const setorRelacionado = req?.setores || req?.setorRelacionado || req?.departamentoRelacionado;
+  const nomeRelacionado = normalizarMotivo(setorRelacionado?.nome || setorRelacionado?.name || setorRelacionado?.descricao);
+  if (nomeRelacionado) return nomeRelacionado;
+
+  const setorDireto = normalizarMotivo(req?.setor || req?.nomeSetor || req?.departamento || req?.nomeDepartamento);
+  if (setorDireto) return setorDireto;
+
+  if (req?.idSetor) return `Setor ${req.idSetor}`;
+  if (req?.idDepartamento) return `Setor ${req.idDepartamento}`;
+
+  return null;
+}
+
 function inicioDoDia(data) {
   return new Date(data.getFullYear(), data.getMonth(), data.getDate());
 }
@@ -80,6 +94,27 @@ function somarMotivo(mapa, req) {
   const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
   atual.count += 1;
   mapa.set(chaveNormalizada, atual);
+}
+
+function agruparPicoPorSetor(requisicoes) {
+  const mapa = new Map();
+
+  requisicoes.forEach((req) => {
+    const setor = obterSetor(req);
+    if (!setor) return;
+
+    const chaveNormalizada = setor.toLowerCase();
+    const atual = mapa.get(chaveNormalizada) || { setor, value: 0 };
+    atual.value += 1;
+    mapa.set(chaveNormalizada, atual);
+  });
+
+  return [...mapa.values()]
+    .sort((a, b) => b.value - a.value)
+    .map((item) => ({
+      setor: item.setor,
+      value: item.value,
+    }));
 }
 
 // Helper: Group motivos for today
@@ -214,6 +249,7 @@ export default function DashboardPage() {
   const [motivosHoje, setMotivosHoje] = useState([]);
   const [motivosSemana, setMotivosSemana] = useState([]);
   const [motivosMes, setMotivosMes] = useState([]);
+  const [picoSetores, setPicoSetores] = useState([]);
   const [statusHoje, setStatusHoje] = useState([]);
   const [statusSemana, setStatusSemana] = useState([]);
 
@@ -233,6 +269,7 @@ export default function DashboardPage() {
           setMotivosHoje(agruparMotivosHoje(requisicoes));
           setMotivosSemana(agruparMotivosSemana(requisicoes));
           setMotivosMes(agruparMotivosMes(requisicoes));
+          setPicoSetores(agruparPicoPorSetor(requisicoes));
           
           // Process status
           setStatusHoje(processarStatusHoje(requisicoes));
@@ -245,6 +282,7 @@ export default function DashboardPage() {
         setMotivosHoje([]);
         setMotivosSemana([]);
         setMotivosMes([]);
+        setPicoSetores([]);
         setStatusHoje([]);
         setStatusSemana([]);
       }
@@ -354,7 +392,7 @@ export default function DashboardPage() {
         ) : null}
 
         <EntradasChart mobileLayout />
-        <PicoMovimentoChart mobileLayout />
+        <PicoMovimentoChart mobileLayout data={picoSetores} />
         <TiposVisitanteChart
           mobileLayout
           data={motivosHoje}
@@ -444,7 +482,7 @@ export default function DashboardPage() {
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
           <EntradasChart />
-          <PicoMovimentoChart />
+          <PicoMovimentoChart data={picoSetores} />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">

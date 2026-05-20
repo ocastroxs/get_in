@@ -322,7 +322,7 @@ export default function LoginPage() {
             </p>
 
             {/* Divisor */}
-            <div className="w-12 h-0.5 rounded-full bg-blue-500/40 animate-in fade-in duration-700 delay-400" />
+            <div className="w-100 h-0.5 rounded-full bg-blue-500/40 animate-in fade-in duration-700 delay-400" />
           </div>
 
           {/* Barra de estatísticas */}
