@@ -8,6 +8,7 @@ import {
   Trash2, Edit, Loader2, Filter
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -61,7 +62,7 @@ function LinhaFuncionario({ f }) {
   if (!f || !f.nome) return null;
   
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
+    <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
@@ -99,10 +100,10 @@ function LinhaFuncionario({ f }) {
       </td>
       <td className="py-3 px-4 text-right">
         <div className="flex items-center justify-end gap-2">
-          <button className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
             <Edit size={16} />
           </button>
-          <button className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
             <Trash2 size={16} />
           </button>
         </div>
@@ -170,33 +171,14 @@ export default function FuncionariosPage() {
 
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Dashboard Funcionários</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Gestão de colaboradores e níveis de acesso do sistema
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadCSV(filtrados)}
-            className="gap-2 rounded-xl"
-          >
-            <Download size={14} />
-            Exportar CSV
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
-            className="gap-1.5 rounded-xl"
-          >
-            <Plus size={14} />
-            Novo Funcionário
-          </Button>
-        </div>
-      </header>
+      <Topbar
+        title="Dashboard Funcionários"
+        subtitle="Gestão de colaboradores e níveis de acesso do sistema"
+        secondaryButtonText="Exportar CSV"
+        onSecondaryButtonClick={() => downloadCSV(filtrados)}
+        buttonText="Novo Funcionário"
+        onButtonClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard
@@ -210,38 +192,38 @@ export default function FuncionariosPage() {
         <StatCard
           label="Gerentes"
           value={stats.gerentes}
-          valueClassName="text-orange-600"
-          icon={<Star size={17} className="text-orange-600" />}
+          valueClassName="text-foreground"
+          icon={<Star size={17} className="text-foreground" />}
           sub="liderança"
-          accentVar="var(--orange-500)"
+          accentVar="var(--chart-4)"
         />
         <StatCard
           label="Supervisores"
           value={stats.supervisores}
-          valueClassName="text-green-600"
-          icon={<Eye size={17} className="text-green-600" />}
+          valueClassName="text-secondary"
+          icon={<Eye size={17} className="text-secondary" />}
           sub="supervisão"
-          accentVar="var(--green-500)"
+          accentVar="var(--chart-2)"
         />
         <StatCard
           label="Portaria"
           value={stats.portaria}
-          valueClassName="text-blue-600"
-          icon={<Shield size={17} className="text-blue-600" />}
+          valueClassName="text-primary"
+          icon={<Shield size={17} className="text-primary" />}
           sub="acesso"
-          accentVar="var(--blue-500)"
+          accentVar="var(--primary)"
         />
       </div>
 
       {/* Barra de Filtros Padronizada */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-3 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar por nome, CPF ou email..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -260,7 +242,7 @@ export default function FuncionariosPage() {
               type="button"
               onClick={() => setModalFiltroAberto(true)}
               variant="outline"
-              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
@@ -293,7 +275,7 @@ export default function FuncionariosPage() {
             <Button
               variant="ghost"
               onClick={limparFiltros}
-              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
             >
               Limpar tudo
             </Button>
@@ -301,7 +283,7 @@ export default function FuncionariosPage() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] overflow-hidden shadow-md">
         <div className="p-4 border-b border-border bg-muted/20">
           <h3 className="font-bold text-sm">Listagem de Colaboradores</h3>
           <p className="text-xs text-muted-foreground">Gerenciamento de acessos</p>

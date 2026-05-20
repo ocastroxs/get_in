@@ -1,265 +1,264 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Building2,
-  Clock,
-  Loader2,
-  X,
-  Users,
   CheckCircle2,
-  XCircle,
-  MapPin,
+  Clock,
+  FileText,
+  Loader2,
   Mail,
+  MapPin,
   Phone,
-  FileText
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { api } from '@/services/api';
+  Users,
+  X,
+  XCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { api } from "@/services/api";
+import { useToast } from "@/components/ui/toast-provider";
+
+const STATUS_STYLE = {
+  pendente: "border-amber-200 bg-amber-50 text-amber-700",
+  aprovado: "border-green-200 bg-green-50 text-green-700",
+  recusado: "border-red-200 bg-red-50 text-red-700",
+};
+
+const STATUS_LABEL = {
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado",
+};
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
   }).format(date);
 }
 
-export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, onConfirm }) {
-  const [loading, setLoading] = useState(false);
-  const [observacoes, setObservacoes] = useState('');
-  const [acao, setAcao] = useState(null); // 'aprovar' ou 'rejeitar'
+function getSetorNome(item) {
+  return item?.setor || item?.setores?.nome || item?.departamento?.nome || "-";
+}
 
-  async function handleAcao(novaAcao) {
-    setAcao(novaAcao);
+function getSolicitacoes(requisicao) {
+  const itens = requisicao?.setoresSolicitados || requisicao?.requisicoes || requisicao?.itens || [requisicao];
+
+  return itens.filter(Boolean).map((item) => ({
+    id: item.id,
+    setor: getSetorNome(item),
+    status: item.status || "pendente",
+    motivo: item.motivo || requisicao?.motivo || "-",
+    dataDaRequisicao: item.dataDaRequisicao || requisicao?.dataDaRequisicao,
+  }));
+}
+
+export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, onConfirm }) {
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [observacoes, setObservacoes] = useState("");
+  const [decisoes, setDecisoes] = useState({});
+
+  const solicitacoes = useMemo(() => getSolicitacoes(requisicao), [requisicao]);
+
+  useEffect(() => {
+    if (!requisicao) {
+      return;
+    }
+
+    const initial = {};
+    getSolicitacoes(requisicao).forEach((item) => {
+      initial[item.id] = item.status || "pendente";
+    });
+    setDecisoes(initial);
+    setObservacoes("");
+  }, [requisicao]);
+
+  async function handleConfirmar() {
+    const updates = solicitacoes
+      .filter((item) => item.id)
+      .map((item) => ({
+        id: item.id,
+        status: decisoes[item.id] || item.status || "pendente",
+      }));
+
+    if (updates.length === 0) {
+      showToast({
+        type: "error",
+        title: "Pedido sem setores",
+        description: "Nao foi possivel identificar os setores da solicitacao.",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const payload = {
-        id: requisicao?.id,
-        status: novaAcao === 'aprovar' ? 'aprovado' : 'recusado',
-        observacoes: observacoes || null
-      };
+      const response = await api.put("/requisicao-visitante/lote", {
+        updates,
+        observacoes: observacoes || null,
+      });
 
-      const response = await api.put(`/requisicao-visitante/${requisicao?.id}`, payload);
-
-      if (response.sucesso) {
-        alert(
-          novaAcao === 'aprovar'
-            ? 'Visitante aprovado com sucesso!'
-            : 'Visitante rejeitado com sucesso!'
-        );
-        onConfirm();
-        onClose();
-        setObservacoes('');
-        setAcao(null);
-      } else {
-        alert(response.mensagem || 'Erro ao processar requisição.');
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao processar requisicao.");
       }
+
+      showToast({
+        type: "success",
+        title: "Solicitacao analisada",
+        description: "As decisoes por setor foram salvas.",
+      });
+      onConfirm?.();
+      onClose?.();
     } catch (error) {
-      console.error(error);
-      alert('Erro de conexão com o servidor.');
+      showToast({
+        type: "error",
+        title: "Erro ao analisar",
+        description: error.message || "Tente novamente em instantes.",
+      });
     } finally {
       setLoading(false);
-      setAcao(null);
     }
   }
 
   if (!isOpen || !requisicao) return null;
 
   const usuario = requisicao.usuario || {};
-  const departamento = requisicao.departamento || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl animate-in zoom-in rounded-xl border border-border bg-card shadow-lg duration-300 fade-in max-h-[90vh] overflow-y-auto">
-        {/* Cabeçalho */}
-        <div className="flex items-center justify-between border-b border-border p-6 sticky top-0 bg-card">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-5">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-500/10 rounded-xl">
-              <AlertTriangle size={20} className="text-amber-500" />
+            <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600">
+              <AlertTriangle size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Aprovação de Visitante</h2>
-              <p className="text-xs text-muted-foreground">Solicitação pendente de aprovação</p>
+              <h2 className="text-lg font-bold text-foreground">Analisar visitante</h2>
+              <p className="text-xs text-muted-foreground">Decida cada setor solicitado individualmente</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1 transition-colors hover:bg-muted"
-            type="button"
-            disabled={loading}
-          >
-            <X size={18} className="text-muted-foreground" />
+          <button type="button" onClick={onClose} disabled={loading} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <X size={18} />
           </button>
         </div>
 
-        {/* Conteúdo */}
-        <div className="space-y-6 p-6">
-          {/* Dados Pessoais */}
-          <div className="space-y-3 rounded-lg bg-muted/40 p-4 border border-border/50">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+        <div className="max-h-[calc(90vh-148px)] space-y-5 overflow-y-auto p-5">
+          <section className="rounded-2xl border border-border bg-muted/30 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
               <Users size={16} className="text-primary" />
-              Dados do Visitante
+              Dados do visitante
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Nome</p>
-                <p className="text-sm font-medium text-foreground">{usuario.nome || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">CPF</p>
-                <p className="text-sm font-medium text-foreground">{usuario.cpf || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Email</p>
-                <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Mail size={14} className="text-muted-foreground" />
-                  {usuario.email || '—'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Telefone</p>
-                <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Phone size={14} className="text-muted-foreground" />
-                  {usuario.celular || '—'}
-                </p>
-              </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="Nome" value={usuario.nome || "-"} />
+              <Info label="CPF" value={usuario.cpf || "-"} />
+              <Info label="E-mail" value={usuario.email || "-"} icon={<Mail size={14} />} />
+              <Info label="Telefone" value={usuario.celular || usuario.telefone || "-"} icon={<Phone size={14} />} />
+              <Info label="Empresa" value={requisicao.empresa || "-"} icon={<Building2 size={14} />} />
+              <Info label="Solicitado em" value={formatDateTime(requisicao.dataDaRequisicao)} icon={<Clock size={14} />} />
             </div>
-          </div>
+          </section>
 
-          {/* Dados da Empresa */}
-          <div className="space-y-3 rounded-lg bg-muted/40 p-4 border border-border/50">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Building2 size={16} className="text-primary" />
-              Dados da Empresa
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Empresa</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.empresa || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Motivo da Visita</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.motivo || '—'}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Dados do Departamento */}
-          <div className="space-y-3 rounded-lg bg-muted/40 p-4 border border-border/50">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <section className="space-y-3">
+            <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
               <MapPin size={16} className="text-primary" />
-              Departamento de Destino
+              Setores solicitados
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Departamento</p>
-                <p className="text-sm font-medium text-foreground">{departamento.nome || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">Responsável</p>
-                <p className="text-sm font-medium text-foreground">{departamento.responsavel || '—'}</p>
-              </div>
-            </div>
-          </div>
+            <div className="grid gap-3">
+              {solicitacoes.map((item) => {
+                const status = decisoes[item.id] || item.status || "pendente";
 
-          {/* Informações de Validade */}
-          {requisicao.validade && (
-            <div className="space-y-3 rounded-lg bg-blue-500/10 p-4 border border-blue-500/20">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Clock size={16} className="text-blue-500" />
-                Validade
-              </h3>
-              <p className="text-sm font-medium text-foreground">
-                {formatDateTime(requisicao.validade)}
-              </p>
+                return (
+                  <div key={item.id || item.setor} className="rounded-2xl border border-border bg-background p-4 shadow-xs">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-foreground">{item.setor}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{item.motivo}</p>
+                      </div>
+                      <span className={`w-fit rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[status] || STATUS_STYLE.pendente}`}>
+                        {STATUS_LABEL[status] || status}
+                      </span>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={status === "aprovado" ? "default" : "outline"}
+                        onClick={() => setDecisoes((current) => ({ ...current, [item.id]: "aprovado" }))}
+                        className="h-9 gap-1.5 rounded-xl"
+                        disabled={loading}
+                      >
+                        <CheckCircle2 size={14} />
+                        Aprovar setor
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setDecisoes((current) => ({ ...current, [item.id]: "recusado" }))}
+                        className={`h-9 gap-1.5 rounded-xl ${status === "recusado" ? "border-red-300 bg-red-50 text-red-700" : ""}`}
+                        disabled={loading}
+                      >
+                        <XCircle size={14} />
+                        Recusar setor
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </section>
 
-          {/* Descrição/Observações da Requisição */}
           {requisicao.descricao && (
-            <div className="space-y-3 rounded-lg bg-muted/40 p-4 border border-border/50">
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <section className="rounded-2xl border border-border bg-muted/30 p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
                 <FileText size={16} className="text-primary" />
-                Descrição da Requisição
+                Descricao da requisicao
               </h3>
-              <p className="text-sm text-foreground">{requisicao.descricao}</p>
-            </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">{requisicao.descricao}</p>
+            </section>
           )}
 
-          {/* Campo de Observações do Supervisor */}
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Observações (Opcional)
-            </label>
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observacoes</span>
             <textarea
-              placeholder="Adicione observações sobre a aprovação ou rejeição (opcional)"
+              placeholder="Adicione observacoes para auditoria interna"
               value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-              rows="3"
+              onChange={(event) => setObservacoes(event.target.value)}
+              className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               disabled={loading}
             />
-          </div>
+          </label>
         </div>
 
-        {/* Rodapé com Ações */}
-        <div className="flex gap-2 border-t border-border p-6 sticky bottom-0 bg-card">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="flex-1"
-            disabled={loading}
-            type="button"
-          >
+        <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-card p-5 sm:flex-row">
+          <Button type="button" variant="outline" onClick={onClose} className="h-10 flex-1 rounded-xl" disabled={loading}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => handleAcao('rejeitar')}
-            className="flex-1 bg-red-600 hover:bg-red-700"
-            disabled={loading || acao === 'aprovar'}
-            type="button"
-          >
-            {loading && acao === 'rejeitar' ? (
-              <>
-                <Loader2 size={14} className="mr-2 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <XCircle size={14} className="mr-2" />
-                Rejeitar
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={() => handleAcao('aprovar')}
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            disabled={loading || acao === 'rejeitar'}
-            type="button"
-          >
-            {loading && acao === 'aprovar' ? (
-              <>
-                <Loader2 size={14} className="mr-2 animate-spin" />
-                Processando...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={14} className="mr-2" />
-                Aprovar
-              </>
-            )}
+          <Button type="button" onClick={handleConfirmar} className="h-10 flex-1 rounded-xl" disabled={loading}>
+            {loading ? <Loader2 size={14} className="mr-2 animate-spin" /> : <CheckCircle2 size={14} className="mr-2" />}
+            Salvar analise
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Info({ label, value, icon }) {
+  return (
+    <div>
+      <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        {icon}
+        {value}
+      </p>
     </div>
   );
 }

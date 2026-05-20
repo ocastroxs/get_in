@@ -1,7 +1,17 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import {
-  Clock, CheckCircle2, XCircle, Loader2, Search, X, AlertTriangle, User, Building2, MapPin, Phone, Filter, Check, Download
+  AlertTriangle,
+  Check,
+  Clock,
+  Download,
+  Eye,
+  FileText,
+  Filter,
+  Loader2,
+  Search,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,153 +20,269 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 
-// ─── MODAL DE APROVAÇÃO ──────────────────────────────────────────────────────
-function ModalAprovacao({ isOpen, onClose, requisicao, onConfirm }) {
-  const [loading, setLoading] = useState(false);
+const STATUS_LABEL = {
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado"
+};
 
-  async function handleAprovacao() {
-    setLoading(true);
-    try {
-      const payload = {
-        id: requisicao?.id,
-        status: "aprovado"
-      };
+function pickFirst(...values) {
+  return (
+    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
+    ""
+  );
+}
 
-      const response = await api.post('/portaria/aprovar-requisicao', payload);
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
 
-      if (response.sucesso) {
-        alert("Requisição aprovada com sucesso!");
-        onConfirm();
-        onClose();
-      } else {
-        alert(response.mensagem || "Erro ao aprovar requisição.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Erro de conexão com o servidor.");
-    } finally {
-      setLoading(false);
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function normalizeStatus(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized.includes("aguard")) {
+    return "pendente";
+  }
+
+  if (["aprovada", "aprovado"].includes(normalized)) return "aprovado";
+  if (["recusada", "recusado", "rejeitado", "negado"].includes(normalized)) return "recusado";
+
+  return normalized || "pendente";
+}
+
+function getResponseArray(response, keys = []) {
+  if (!response || typeof response !== "object" || !response.sucesso) {
+    return [];
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(response.data?.[key])) {
+      return response.data[key];
+    }
+
+    if (Array.isArray(response[key])) {
+      return response[key];
     }
   }
 
-  async function handleRecusa() {
-    setLoading(true);
-    try {
-      const payload = {
-        id: requisicao?.id,
-        status: "recusado"
-      };
+  return [];
+}
 
-      const response = await api.post('/portaria/recusar-requisicao', payload);
+function formatDateTime(value) {
+  if (!value) return "";
 
-      if (response.sucesso) {
-        alert("Requisição recusada com sucesso!");
-        onConfirm();
-        onClose();
-      } else {
-        alert(response.mensagem || "Erro ao recusar requisição.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Erro de conexão com o servidor.");
-    } finally {
-      setLoading(false);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function getEmpresaNome(registro) {
+  if (typeof registro?.empresas === "string") return registro.empresas;
+
+  return pickFirst(
+    registro?.empresa,
+    registro?.empresa_visitante,
+    registro?.usuario?.empresas?.nome,
+    registro?.usuario?.empresa,
+    registro?.empresas?.nome
+  );
+}
+
+function getSetorNome(registro) {
+  if (typeof registro?.setores === "string") return registro.setores;
+  if (typeof registro?.departamento === "string") return registro.departamento;
+
+  return pickFirst(
+    registro?.setor,
+    registro?.setores?.nome,
+    registro?.departamento?.nome
+  );
+}
+
+function splitSetores(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getObservacoes(registro, descricao) {
+  return pickFirst(
+    registro?.observacoes,
+    getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observações"),
+    descricao,
+    "Nenhuma observacao cadastrada."
+  );
+}
+
+function normalizeRequisicao(registro) {
+  const usuario = registro?.usuario || {};
+  const descricao = registro?.descricao || "";
+  const status = normalizeStatus(pickFirst(registro?.status, registro?.solicitacao));
+  const dataDaRequisicao = pickFirst(
+    registro?.dataDaRequisicao,
+    registro?.dataRequisicao,
+    registro?.createdAt
+  );
+  const setor = pickFirst(getSetorNome(registro), getDescricaoValue(descricao, "Setor"));
+  const visitante = pickFirst(
+    registro?.visitante,
+    registro?.nome,
+    usuario?.nome,
+    getDescricaoValue(descricao, "Visitante")
+  );
+  const cpf = pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF"));
+  const email = pickFirst(
+    registro?.email,
+    usuario?.email,
+    getDescricaoValue(descricao, "Email"),
+    getDescricaoValue(descricao, "E-mail")
+  );
+  const empresa = pickFirst(getEmpresaNome(registro), getDescricaoValue(descricao, "Empresa"));
+  const motivo = pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "-");
+  const setoresLista = splitSetores(setor);
+  const key = getRequisicaoIdentity({ ...registro, visitante, cpf, email });
+
+  return {
+    ...registro,
+    id: pickFirst(registro?.id, registro?.idRequisicao, key),
+    key,
+    idUsuario: pickFirst(registro?.idUsuario, usuario?.id),
+    visitante: visitante || "-",
+    cpf,
+    email,
+    empresa: empresa || "-",
+    setor: setor || "-",
+    setoresLista,
+    motivo,
+    status,
+    solicitacao: dataDaRequisicao ? formatDateTime(dataDaRequisicao) : STATUS_LABEL[status] || status,
+    dataDaRequisicao,
+    observacoes: getObservacoes(registro, descricao)
+  };
+}
+
+function getRequisicaoIdentity(registro) {
+  const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
+  const cpf = onlyDigits(registro?.cpf);
+  const email = String(registro?.email || registro?.usuario?.email || "").trim().toLowerCase();
+  const visitante = String(registro?.visitante || registro?.nome || registro?.usuario?.nome || "")
+    .trim()
+    .toLowerCase();
+
+  if (idUsuario) return `usuario:${idUsuario}`;
+  if (cpf) return `cpf:${cpf}`;
+  if (email) return `email:${email}`;
+  if (visitante) return `nome:${visitante}`;
+
+  return `requisicao:${pickFirst(registro?.id, registro?.idRequisicao, registro?.dataDaRequisicao, registro?.motivo)}`;
+}
+
+function getRequisicaoTimestamp(registro) {
+  const datas = [registro?.dataDaRequisicao, registro?.validade];
+
+  for (const data of datas) {
+    const timestamp = new Date(data).getTime();
+
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
     }
   }
 
+  return Number(registro?.id || 0);
+}
+
+function mergeRequisicoes(atual, nova) {
+  const setoresLista = Array.from(
+    new Set([...(atual.setoresLista || []), ...(nova.setoresLista || [])])
+  );
+  const principal = getRequisicaoTimestamp(nova) >= getRequisicaoTimestamp(atual) ? nova : atual;
+
+  return {
+    ...principal,
+    ids: Array.from(new Set([...(atual.ids || [atual.id]), ...(nova.ids || [nova.id])].filter(Boolean))),
+    setoresLista,
+    setor: setoresLista.length > 0 ? setoresLista.join(", ") : pickFirst(principal.setor, atual.setor, nova.setor),
+    motivo: pickFirst(principal.motivo, atual.motivo, nova.motivo),
+    observacoes: pickFirst(principal.observacoes, atual.observacoes, nova.observacoes)
+  };
+}
+
+function dedupeRequisicoesPorVisitante(registros) {
+  const porVisitante = new Map();
+
+  registros.forEach((registro) => {
+    const atual = porVisitante.get(registro.key);
+    porVisitante.set(registro.key, atual ? mergeRequisicoes(atual, registro) : registro);
+  });
+
+  return Array.from(porVisitante.values()).sort(
+    (a, b) => getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a)
+  );
+}
+
+function ModalObservacoes({ isOpen, onClose, requisicao }) {
   if (!isOpen || !requisicao) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card rounded-xl border border-border w-full max-w-md shadow-lg animate-in zoom-in-95 duration-300">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">Análise de Requisição</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300">
+        <div className="flex items-center justify-between border-b border-border p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
+              <FileText size={17} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Observacoes</h2>
+              <p className="text-xs text-muted-foreground">{requisicao.visitante} - {requisicao.setor}</p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-muted rounded-lg transition-colors"
+            className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            type="button"
+            aria-label="Fechar"
           >
-            <X size={18} className="text-muted-foreground" />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
-          <div className="bg-muted/40 rounded-lg p-3 space-y-3">
-            <div className="flex items-start gap-2">
-              <User size={16} className="text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Visitante</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.visitante}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Building2 size={16} className="text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Empresa</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.empresa}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <MapPin size={16} className="text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Setor de Destino</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.setor}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Clock size={16} className="text-muted-foreground mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">Motivo</p>
-                <p className="text-sm font-medium text-foreground">{requisicao.motivo}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-            <p className="text-xs text-amber-700 leading-relaxed">
-              <strong>Atenção:</strong> Você está prestes a aprovar ou recusar esta requisição de visita. Esta ação notificará o supervisor responsável.
+        <div className="p-4">
+          <div className="rounded-2xl border border-border bg-background p-4 shadow-xs">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Registro da portaria</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              {requisicao.observacoes || "Nenhuma observacao cadastrada."}
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2 p-4 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="flex-1 rounded-xl"
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleRecusa}
-            className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <>
-                <XCircle size={14} className="mr-2" />
-                Recusar
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={handleAprovacao}
-            className="flex-1 bg-green-600 hover:bg-green-700 rounded-xl"
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <>
-                <CheckCircle2 size={14} className="mr-2" />
-                Aprovar
-              </>
-            )}
+        <div className="border-t border-border p-4">
+          <Button variant="outline" onClick={onClose} className="h-11 w-full rounded-xl" type="button">
+            Fechar
           </Button>
         </div>
       </div>
@@ -164,14 +290,13 @@ function ModalAprovacao({ isOpen, onClose, requisicao, onConfirm }) {
   );
 }
 
-// ─── LINHA DA REQUISIÇÃO ─────────────────────────────────────────────────────
 function LinhaRequisicao({ requisicao, onAnalise }) {
   return (
-    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
+    <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-medium text-foreground">{requisicao.visitante}</p>
-          <p className="text-xs text-muted-foreground">{requisicao.cpf}</p>
+          <p className="text-xs text-muted-foreground">{requisicao.cpf || "-"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa}</td>
@@ -183,24 +308,23 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
           size="sm"
           variant="outline"
           onClick={() => onAnalise(requisicao)}
-          className="text-amber-600 border-amber-200 hover:bg-amber-50 rounded-lg h-8"
+          className="h-9 gap-1.5 rounded-xl border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+          type="button"
         >
-          <Clock size={14} className="mr-1.5" />
-          Analisar
+          <Eye size={14} />
+          Observacoes
         </Button>
       </td>
     </tr>
   );
 }
 
-// ─── PÁGINA PRINCIPAL ────────────────────────────────────────────────────────
 export default function PendenciasPage() {
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
   const [requisicaoSelecionada, setRequisicaoSelecionada] = useState(null);
-  
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [filtroSetor, setFiltroSetor] = useState("Todos");
   const [tempFiltroSetor, setTempFiltroSetor] = useState("Todos");
@@ -214,40 +338,58 @@ export default function PendenciasPage() {
   async function fetchRequisicoes() {
     try {
       setLoading(true);
-      const response = await api.get('/portaria/pendencias');
+      const response = await api.get("/portaria/pendencias");
+      const pendencias = getResponseArray(response, ["dados", "requisicoes"])
+        .map(normalizeRequisicao)
+        .filter((requisicao) => requisicao.status === "pendente");
 
-      if (response.sucesso && response.data) {
-        setRequisicoes(response.data);
-      }
+      setRequisicoes(dedupeRequisicoesPorVisitante(pendencias));
     } catch (error) {
-      console.error("Erro ao carregar pendências:", error);
+      console.error("Erro ao carregar pendencias:", error);
+      setRequisicoes([]);
     } finally {
       setLoading(false);
     }
   }
 
   const requisicoesFiltradas = useMemo(() => {
-    return requisicoes.filter(r => {
-      const matchBusca = busca === "" ||
-        r.visitante.toLowerCase().includes(busca.toLowerCase()) ||
-        r.cpf.includes(busca) ||
-        r.empresa.toLowerCase().includes(busca.toLowerCase());
-      
-      const matchSetor = filtroSetor === "Todos" || r.setor === filtroSetor;
+    const termoBusca = busca.toLowerCase();
+    const termoBuscaDigitos = onlyDigits(busca);
+
+    return requisicoes.filter((requisicao) => {
+      const cpfDigitos = onlyDigits(requisicao.cpf);
+      const matchBusca =
+        busca === "" ||
+        requisicao.visitante.toLowerCase().includes(termoBusca) ||
+        requisicao.empresa.toLowerCase().includes(termoBusca) ||
+        requisicao.setor.toLowerCase().includes(termoBusca) ||
+        requisicao.motivo.toLowerCase().includes(termoBusca) ||
+        (requisicao.cpf || "").toLowerCase().includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && cpfDigitos.includes(termoBuscaDigitos));
+
+      const setoresLista = requisicao.setoresLista?.length > 0 ? requisicao.setoresLista : [requisicao.setor];
+      const matchSetor = filtroSetor === "Todos" || setoresLista.includes(filtroSetor);
 
       return matchBusca && matchSetor;
     });
   }, [requisicoes, busca, filtroSetor]);
 
-  const setoresUnicos = ["Todos", ...new Set(requisicoes.map(r => r.setor))];
+  const setoresUnicos = useMemo(() => {
+    const setores = requisicoes.flatMap((requisicao) =>
+      requisicao.setoresLista?.length > 0 ? requisicao.setoresLista : [requisicao.setor]
+    );
+
+    return [
+      "Todos",
+      ...Array.from(new Set(setores.filter((setor) => setor && setor !== "-"))).sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      )
+    ];
+  }, [requisicoes]);
 
   function handleAnalise(requisicao) {
     setRequisicaoSelecionada(requisicao);
     setModalAberto(true);
-  }
-
-  function handleConfirmacao() {
-    fetchRequisicoes();
   }
 
   const aplicarFiltros = () => {
@@ -262,7 +404,7 @@ export default function PendenciasPage() {
 
   const exportarPDF = async () => {
     if (requisicoesFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      alert("Nao ha dados para exportar.");
       return;
     }
 
@@ -281,53 +423,53 @@ export default function PendenciasPage() {
           { header: "Empresa", weight: 1.2 },
           { header: "Setor", weight: 1.1 },
           { header: "Motivo", weight: 1.5 },
-          { header: "Solicitação", weight: 1 },
+          { header: "Solicitacao", weight: 1 },
         ],
-        rows: requisicoesFiltradas.map((r) => [
-          r.visitante,
-          r.cpf,
-          r.empresa,
-          r.setor,
-          r.motivo,
-          r.solicitacao,
+        rows: requisicoesFiltradas.map((requisicao) => [
+          requisicao.visitante,
+          requisicao.cpf,
+          requisicao.empresa,
+          requisicao.setor,
+          requisicao.motivo,
+          requisicao.solicitacao,
         ]),
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Não foi possível exportar o PDF.");
+      alert("Nao foi possivel exportar o PDF.");
     }
   };
 
   return (
     <>
       <Topbar
+        buttonText="Adicionar visitante"
+        buttonHref="/portaria/novo"
         title="Pendências"
         subtitle="Requisições de visita aguardando aprovação"
       />
 
       <div className="flex flex-col gap-5 p-4 md:p-6 animate-in fade-in duration-700">
-        {/* Card de Informação */}
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-start gap-3 shadow-sm">
-          <AlertTriangle size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 shadow-sm">
+          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-blue-600" />
           <div>
-            <h3 className="font-bold text-sm text-blue-900 dark:text-blue-300">Requisições Pendentes</h3>
-            <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-              Atualmente existem <strong>{requisicoesFiltradas.length}</strong> requisições aguardando sua análise.
+            <h3 className="text-sm font-bold text-blue-900 dark:text-blue-300">Requisições Pendentes</h3>
+            <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+              Atualmente existem <strong>{requisicoesFiltradas.length}</strong> visitantes aguardando análise.
             </p>
           </div>
         </div>
 
-        {/* Barra de Filtros Padronizada */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="flex w-full flex-1 items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF ou empresa..."
-                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  placeholder="Buscar por nome, CPF, empresa, setor ou motivo..."
+                  className="h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10"
                   value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
+                  onChange={(event) => setBusca(event.target.value)}
                 />
                 {busca && (
                   <button
@@ -339,17 +481,17 @@ export default function PendenciasPage() {
                   </button>
                 )}
               </div>
-              
+
               <Button
                 type="button"
                 onClick={() => setModalFiltroAberto(true)}
                 variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+                className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4"
               >
                 <Filter size={16} />
                 <span className="hidden sm:inline">Filtros</span>
                 {filtroSetor !== "Todos" && (
-                  <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
+                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
                     1
                   </span>
                 )}
@@ -360,20 +502,21 @@ export default function PendenciasPage() {
               <Button
                 onClick={exportarPDF}
                 variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
+                className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+                type="button"
               >
                 <Download size={16} />
                 <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
-              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-                {requisicoesFiltradas.length} registro(s)
+              <div className="rounded-xl border border-border/50 bg-muted/40 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+                {requisicoesFiltradas.length} visitante(s)
               </div>
             </div>
           </div>
 
           {(filtroSetor !== "Todos" || busca) && (
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/40 pt-4">
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filtros ativos:</span>
               {busca && (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
                   Busca: {busca}
@@ -388,6 +531,7 @@ export default function PendenciasPage() {
                 variant="ghost"
                 onClick={limparFiltros}
                 className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                type="button"
               >
                 Limpar tudo
               </Button>
@@ -395,23 +539,22 @@ export default function PendenciasPage() {
           )}
         </div>
 
-        {/* Tabela de Requisições */}
-        <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-border bg-muted/20">
-            <h3 className="font-bold text-sm">Lista de Pendências</h3>
-            <p className="text-xs text-muted-foreground">{requisicoesFiltradas.length} requisições encontradas</p>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border bg-muted/20 p-4">
+            <h3 className="text-sm font-bold">Lista de Pendencias</h3>
+            <p className="text-xs text-muted-foreground">{requisicoesFiltradas.length} visitante(s) encontrados</p>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Motivo</th>
-                  <th className="px-4 py-3">Solicitação</th>
-                  <th className="px-4 py-3 text-right">Ações</th>
+                  <th className="px-4 py-3">Solicitacao</th>
+                  <th className="px-4 py-3 text-right">Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -420,7 +563,7 @@ export default function PendenciasPage() {
                     <td colSpan={6} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
-                        <span className="text-sm">Carregando pendências...</span>
+                        <span className="text-sm">Carregando pendencias...</span>
                       </div>
                     </td>
                   </tr>
@@ -429,15 +572,15 @@ export default function PendenciasPage() {
                     <td colSpan={6} className="py-20 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Clock className="h-12 w-12 text-muted/30" />
-                        <p>Nenhuma requisição pendente encontrada.</p>
+                        <p>Nenhuma requisicao pendente encontrada.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  requisicoesFiltradas.map((r) => (
+                  requisicoesFiltradas.map((requisicao) => (
                     <LinhaRequisicao
-                      key={r.id}
-                      requisicao={r}
+                      key={`${requisicao.key}-${requisicao.id}`}
+                      requisicao={requisicao}
                       onAnalise={handleAnalise}
                     />
                   ))
@@ -448,15 +591,12 @@ export default function PendenciasPage() {
         </div>
       </div>
 
-      {/* Modal de Análise */}
-      <ModalAprovacao
+      <ModalObservacoes
         isOpen={modalAberto}
         onClose={() => setModalAberto(false)}
         requisicao={requisicaoSelecionada}
-        onConfirm={handleConfirmacao}
       />
 
-      {/* Modal de Filtro Padronizado */}
       <ModalFiltro
         isOpen={modalFiltroAberto}
         onClose={() => setModalFiltroAberto(false)}
@@ -465,7 +605,7 @@ export default function PendenciasPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+            <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Filtrar por Setor
             </label>
             <div className="grid grid-cols-1 gap-2">
@@ -474,24 +614,26 @@ export default function PendenciasPage() {
                   key={setor}
                   type="button"
                   onClick={() => setTempFiltroSetor(setor)}
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-xs font-semibold transition-all ${
                     tempFiltroSetor === setor
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                      ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  <span>{setor === "Todos" ? "Todos os Setores" : setor}</span>
+                  <span>{setor === "Todos" ? "Todos os setores" : setor}</span>
                   {tempFiltroSetor === setor && <Check size={14} />}
                 </button>
               ))}
             </div>
           </div>
-          
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> Filtrar por setor ajuda a organizar as aprovações de acordo com a área de destino do visitante.
-            </p>
-          </div>
+
+          {setoresUnicos.length === 1 && (
+            <div className="rounded-xl border border-border bg-muted/40 p-4">
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Nenhum setor disponivel para filtrar nas pendencias atuais.
+              </p>
+            </div>
+          )}
         </div>
       </ModalFiltro>
     </>

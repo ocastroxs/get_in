@@ -18,6 +18,21 @@ const getHeaders = (tokenOverride = null) => {
   return headers;
 };
 
+const getAuthOnlyHeaders = (tokenOverride = null) => {
+  const headers = {};
+  const token =
+    tokenOverride ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('getin_token') || sessionStorage.getItem('getin_token')
+      : null);
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 const getDefaultErrorMessage = (status) => {
   if (status === 401) {
     return 'E-mail ou senha incorretos.';
@@ -169,6 +184,14 @@ export const api = {
       headers: getHeaders(),
     });
   },
+
+  async upload(endpoint, formData) {
+    return request(endpoint, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
+  },
 };
 
 export const authService = {
@@ -215,21 +238,17 @@ export const authService = {
 
 export const publicService = {
   async getStats() {
-    if (process.env.NEXT_PUBLIC_ENABLE_PUBLIC_STATS !== 'true') {
-      return {
-        sucesso: false,
-        data: {
-          visitasHoje: 0,
-          setoresAtivos: 0,
-          rastreabilidade: 0,
-        },
-      };
-    }
-
     try {
       const data = await api.get('/public/stats');
-      if (data.sucesso) {
-        return data;
+      if (data.sucesso && data.data) {
+        return {
+          sucesso: true,
+          data: {
+            usuariosTotal: data.data.usuariosTotal || 0,
+            setoresTotal: data.data.setoresTotal || 0,
+            visitasHoje: data.data.visitasHoje || 0,
+          },
+        };
       }
     } catch (error) {
       console.warn('Nao foi possivel buscar estatisticas publicas:', error);
@@ -238,10 +257,11 @@ export const publicService = {
     return {
       sucesso: false,
       data: {
+        usuariosTotal: 0,
+        setoresTotal: 0,
         visitasHoje: 0,
-        setoresAtivos: 0,
-        rastreabilidade: 0,
       },
     };
   },
 };
+

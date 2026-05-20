@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { STATUS_VISITANTES } from "@/lib/mockData";
 
@@ -23,8 +24,24 @@ function StatusPieTooltip({ active, payload }) {
   );
 }
 
-export default function StatusVisitantesChart({ mobileLayout = "default" }) {
-  const ativos = STATUS_VISITANTES[0]?.value ?? 0;
+export default function StatusVisitantesChart({ 
+  mobileLayout = "default",
+  data = STATUS_VISITANTES,
+  weekData = STATUS_VISITANTES
+}) {
+  const [view, setView] = useState("hoje");
+
+  // Select data based on view
+  const chartData = useMemo(() => {
+    return view === "semana" ? weekData : data;
+  }, [data, weekData, view]);
+
+  // "Ativos" is usually the first item (Dentro da fábrica)
+  const ativos = useMemo(() => {
+    const itemAtivo = chartData.find(item => item.name.toLowerCase().includes("dentro") || item.name.toLowerCase().includes("ativo"));
+    return itemAtivo?.value ?? 0;
+  }, [chartData]);
+
   const compactMobile = mobileLayout === "list";
   const chartSize = 176;
   const mobileChartSize = 132;
@@ -32,9 +49,30 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
   return (
     <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 ${compactMobile ? "gap-4 p-5" : "gap-4 p-5 min-h-[320px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
-        <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-        <p className="text-sm text-muted-foreground">Situacao atual com leitura imediata de risco e permanencia.</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
+            <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
+            <p className="text-sm text-muted-foreground">Situacao atual com leitura imediata de risco e permanencia.</p>
+          </div>
+
+          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
+            {["hoje", "semana"].map((item) => (
+              <button
+                key={item}
+                onClick={() => setView(item)}
+                className={[
+                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  view === item
+                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
+                    : "hover:bg-white/80 hover:text-foreground",
+                ].join(" ")}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {compactMobile ? (
@@ -43,7 +81,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             <ResponsiveContainer width={mobileChartSize} height={mobileChartSize}>
               <PieChart>
                 <Pie
-                  data={STATUS_VISITANTES}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={40}
@@ -55,7 +93,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
                   stroke="var(--card)"
                   paddingAngle={2}
                 >
-                  {STATUS_VISITANTES.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -71,7 +109,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             </div>
           </div>
 
-          {STATUS_VISITANTES.map((item, index) => (
+          {chartData.map((item, index) => (
             <div
               key={item.name}
               className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-3 animate-in fade-in slide-in-from-right-2 duration-700"
@@ -94,7 +132,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
             <ResponsiveContainer width={chartSize} height={chartSize}>
               <PieChart>
                 <Pie
-                  data={STATUS_VISITANTES}
+                  data={chartData}
                   cx="50%"
                   cy="50%"
                   innerRadius={56}
@@ -106,7 +144,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
                   stroke="var(--card)"
                   paddingAngle={2}
                 >
-                  {STATUS_VISITANTES.map((entry, index) => (
+                  {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
                   ))}
                 </Pie>
@@ -123,7 +161,7 @@ export default function StatusVisitantesChart({ mobileLayout = "default" }) {
           </div>
 
           <div className="flex flex-1 flex-col justify-center gap-3">
-            {STATUS_VISITANTES.map((item, index) => (
+            {chartData.map((item, index) => (
               <div
                 key={item.name}
                 className="flex items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"

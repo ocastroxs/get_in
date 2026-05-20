@@ -37,8 +37,12 @@ const getRequiredTipo = (pathname) => {
     return "sup";
   }
 
-  if (isPathInSection(pathname, "/dashboard") || isPathInSection(pathname, "/configuracoes")) {
+  if (isPathInSection(pathname, "/dashboard")) {
     return "adm";
+  }
+
+  if (isPathInSection(pathname, "/configuracoes")) {
+    return "authenticated";
   }
 
   return null;
@@ -71,7 +75,7 @@ export function middleware(request) {
     return redirectTo(request, "/");
   }
 
-  if (tipo !== requiredTipo) {
+  if (requiredTipo !== "authenticated" && tipo !== requiredTipo) {
     return redirectTo(request, roleRoute);
   }
 

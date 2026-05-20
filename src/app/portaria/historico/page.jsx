@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Calendar, Clock, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check
+  Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,16 +9,191 @@ import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatPhone } from "@/lib/utils";
 
-const STATUS_OPTIONS = ["Todos", "Ativo", "Finalizado"];
+const STATUS_OPTIONS = ["Todos", "Pendente", "Aprovado", "Recusado"];
 
-// ─── MODAL DE DETALHES ───────────────────────────────────────────────────────
+const STATUS_LABEL = {
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado",
+  ativo: "Ativo",
+  finalizado: "Finalizado"
+};
+
+const STATUS_STYLE = {
+  pendente: "bg-amber-100 text-amber-700",
+  aprovado: "bg-green-100 text-green-700",
+  recusado: "bg-red-100 text-red-600",
+  ativo: "bg-green-100 text-green-700",
+  finalizado: "bg-blue-100 text-blue-700"
+};
+
+function pickFirst(...values) {
+  return (
+    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
+    ""
+  );
+}
+
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+}
+
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function splitSetores(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function pickBestCapitalization(current, next) {
+  if (!current) return next || "";
+  if (!next) return current;
+
+  const currentHasUpper = /[A-ZÀ-Ý]/.test(current.slice(1));
+  const nextHasUpper = /[A-ZÀ-Ý]/.test(next.slice(1));
+
+  if (!currentHasUpper && nextHasUpper) return next;
+  return current;
+}
+
+function maskCPF(value) {
+  return onlyDigits(value)
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function normalizeRegistro(registro) {
+  const usuario = registro?.usuario || {};
+  const departamento = registro?.departamento || registro?.setores || {};
+  const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
+  const descricao = registro?.descricao || "";
+
+  return {
+    ...registro,
+    visitante: pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
+    cpf: pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
+    telefone: pickFirst(
+      registro?.telefone,
+      registro?.celular,
+      usuario?.celular,
+      usuario?.telefone,
+      getDescricaoValue(descricao, "Telefone")
+    ),
+    email: pickFirst(registro?.email, usuario?.email, getDescricaoValue(descricao, "Email"), getDescricaoValue(descricao, "E-mail")),
+    empresa: pickFirst(registro?.empresa, registro?.empresa_visitante, usuario?.empresa, getDescricaoValue(descricao, "Empresa")),
+    setor: pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
+    setoresLista: splitSetores(pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"))),
+    dataEntrada: pickFirst(registro?.dataEntrada, registro?.dataDaRequisicao, registro?.dataDeEntrada),
+    dataSaida: pickFirst(registro?.dataSaida, registro?.dataDeSaida),
+    status: registro?.status || (registro?.dataSaida || registro?.dataDeSaida ? "finalizado" : "ativo"),
+    observacoes: pickFirst(registro?.observacoes, descricao)
+  };
+}
+
+// Helpers do historico
+function getRegistroIdentity(registro) {
+  const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
+  const cpf = onlyDigits(registro?.cpf);
+  const email = String(registro?.email || "").trim().toLowerCase();
+  const nome = String(registro?.visitante || "").trim().toLowerCase();
+  const idRegistro = pickFirst(registro?.id, registro?.idRequisicao);
+
+  if (idUsuario) return `usuario:${idUsuario}`;
+  if (cpf) return `cpf:${cpf}`;
+  if (email) return `email:${email}`;
+  if (nome) return `nome:${nome}`;
+
+  return `registro:${idRegistro || registro?.dataEntrada || ""}`;
+}
+
+function getRegistroTimestamp(registro) {
+  const datas = [
+    registro?.dataSaida,
+    registro?.dataEntrada,
+    registro?.dataDaRequisicao,
+    registro?.validade
+  ];
+
+  for (const data of datas) {
+    const timestamp = new Date(data).getTime();
+
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+
+  return 0;
+}
+
+function compareRegistroRecency(a, b) {
+  const timestampA = getRegistroTimestamp(a);
+  const timestampB = getRegistroTimestamp(b);
+
+  if (timestampA !== timestampB) {
+    return timestampA - timestampB;
+  }
+
+  return Number(a?.id || a?.idRequisicao || 0) - Number(b?.id || b?.idRequisicao || 0);
+}
+
+function dedupeRegistrosPorVisitante(registros) {
+  const registrosPorVisitante = new Map();
+
+  registros.forEach((registro) => {
+    const key = getRegistroIdentity(registro);
+    const registroAtual = registrosPorVisitante.get(key);
+
+    if (!registroAtual) {
+      registrosPorVisitante.set(key, registro);
+      return;
+    }
+
+    const principal = compareRegistroRecency(registro, registroAtual) >= 0 ? registro : registroAtual;
+    const setoresLista = Array.from(
+      new Set([...(registroAtual.setoresLista || []), ...(registro.setoresLista || [])])
+    );
+
+    registrosPorVisitante.set(key, {
+      ...principal,
+      empresa: pickBestCapitalization(registroAtual.empresa, registro.empresa),
+      setoresLista,
+      setor: setoresLista.length > 0 ? setoresLista.join(", ") : principal.setor
+    });
+  });
+
+  return Array.from(registrosPorVisitante.values()).sort((a, b) => compareRegistroRecency(b, a));
+}
+
+// Modal de detalhes
 function ModalDetalhes({ isOpen, onClose, registro }) {
   if (!isOpen || !registro) return null;
-
-  const tempoPermanen = registro.dataSaida 
-    ? Math.round((new Date(registro.dataSaida) - new Date(registro.dataEntrada)) / 60000)
-    : "—";
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
@@ -42,7 +217,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
               <div className="flex-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Visitante</p>
                 <p className="text-sm font-semibold text-foreground">{registro.visitante}</p>
-                <p className="text-xs text-muted-foreground font-mono">{registro.cpf}</p>
+                <p className="text-xs text-muted-foreground font-mono">{maskCPF(registro.cpf) || "—"}</p>
               </div>
             </div>
 
@@ -53,6 +228,28 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
               <div className="flex-1">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Empresa</p>
                 <p className="text-sm font-semibold text-foreground">{registro.empresa}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
+                  <Phone size={16} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Telefone</p>
+                  <p className="text-sm font-semibold text-foreground">{formatPhone(registro.telefone) || "—"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
+                  <Mail size={16} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">E-mail</p>
+                  <p className="truncate text-sm font-semibold text-foreground">{registro.email || "—"}</p>
+                </div>
               </div>
             </div>
 
@@ -73,7 +270,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entrada</p>
-                  <p className="text-xs font-semibold text-foreground">{registro.dataEntrada}</p>
+                  <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataEntrada)}</p>
                 </div>
               </div>
 
@@ -84,31 +281,12 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                   </div>
                   <div className="flex-1">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saída</p>
-                    <p className="text-xs font-semibold text-foreground">{registro.dataSaida}</p>
+                    <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataSaida)}</p>
                   </div>
                 </div>
               )}
             </div>
-
-            <div className="flex items-start gap-3 pt-2">
-              <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                <Clock size={16} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Permanência</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {tempoPermanen === "—" ? "—" : `${tempoPermanen} minutos`}
-                </p>
-              </div>
-            </div>
           </div>
-
-          {registro.observacoes && (
-            <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4">
-              <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-2">Observações</p>
-              <p className="text-sm text-amber-800/80 leading-relaxed">{registro.observacoes}</p>
-            </div>
-          )}
         </div>
 
         <div className="p-5 border-t border-border bg-muted/10">
@@ -126,23 +304,32 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
 
 // ─── LINHA DO HISTÓRICO ─────────────────────────────────────────────────────
 function LinhaHistorico({ registro, onDetalhes }) {
-  const status = registro.dataSaida ? "Finalizado" : "Ativo";
-  const statusClass = registro.dataSaida 
-    ? "bg-blue-100 text-blue-700" 
-    : "bg-green-100 text-green-700";
+  const status = STATUS_LABEL[registro.status] || registro.status || "Ativo";
+  const statusClass = STATUS_STYLE[registro.status] || "bg-muted text-muted-foreground";
 
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-foreground">{registro.visitante}</p>
-          <p className="text-xs text-muted-foreground font-mono">{registro.cpf}</p>
+          <p className="text-sm font-medium text-foreground">{registro.visitante || "—"}</p>
+          <p className="text-xs text-muted-foreground font-mono">{maskCPF(registro.cpf) || "—"}</p>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{registro.empresa}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{registro.setor}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{registro.dataEntrada}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{registro.dataSaida || "—"}</td>
+      <td className="px-4 py-3">
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p className="flex items-center gap-1.5 whitespace-nowrap">
+            <Phone size={12} />
+            <span>{formatPhone(registro.telefone) || "—"}</span>
+          </p>
+          <p className="flex max-w-[220px] items-center gap-1.5 truncate">
+            <Mail size={12} className="shrink-0" />
+            <span className="truncate">{registro.email || "—"}</span>
+          </p>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "—"}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
       <td className="px-4 py-3">
         <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass}`}>
           {status}
@@ -183,10 +370,10 @@ export default function HistoricoPage() {
   async function fetchHistorico() {
     try {
       setLoading(true);
-      const response = await api.get('/portaria/historico');
+      const response = await api.get('/requisicao-visitante');
 
-      if (response.sucesso && response.data) {
-        setRegistros(response.data);
+      if (response.sucesso && Array.isArray(response.data)) {
+        setRegistros(dedupeRegistrosPorVisitante(response.data.map(normalizeRegistro)));
       }
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -197,17 +384,28 @@ export default function HistoricoPage() {
 
   const registrosFiltrados = useMemo(() => {
     return registros.filter(r => {
+      const termoBusca = busca.toLowerCase();
+      const telefoneFormatado = formatPhone(r.telefone).toLowerCase();
+      const telefoneDigitos = onlyDigits(r.telefone);
+      const termoBuscaDigitos = onlyDigits(busca);
+      const cpfFormatado = maskCPF(r.cpf).toLowerCase();
+      const cpfDigitos = onlyDigits(r.cpf);
+      const status = STATUS_LABEL[r.status] || r.status;
       const matchBusca = busca === "" ||
-        r.visitante.toLowerCase().includes(busca.toLowerCase()) ||
-        r.cpf.includes(busca) ||
-        r.empresa.toLowerCase().includes(busca.toLowerCase());
+        (r.visitante || "").toLowerCase().includes(termoBusca) ||
+        (r.cpf || "").toLowerCase().includes(termoBusca) ||
+        cpfFormatado.includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && cpfDigitos.includes(termoBuscaDigitos)) ||
+        (r.empresa || "").toLowerCase().includes(termoBusca) ||
+        (r.telefone || "").toLowerCase().includes(termoBusca) ||
+        telefoneFormatado.includes(termoBusca) ||
+        (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
+        (r.email || "").toLowerCase().includes(termoBusca);
 
-      const matchStatus = filtroStatus === "Todos" || 
-        (filtroStatus === "Finalizado" && r.dataSaida) ||
-        (filtroStatus === "Ativo" && !r.dataSaida);
+      const matchStatus = filtroStatus === "Todos" || status === filtroStatus;
 
       const matchData = filtroData === "" ||
-        r.dataEntrada.includes(filtroData);
+        String(r.dataEntrada || "").includes(filtroData);
 
       return matchBusca && matchStatus && matchData;
     });
@@ -215,8 +413,9 @@ export default function HistoricoPage() {
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
-    Ativo: registros.filter((r) => !r.dataSaida).length,
-    Finalizado: registros.filter((r) => Boolean(r.dataSaida)).length,
+    Pendente: registros.filter((r) => r.status === "pendente").length,
+    Aprovado: registros.filter((r) => r.status === "aprovado").length,
+    Recusado: registros.filter((r) => r.status === "recusado").length,
   }), [registros]);
 
   function handleDetalhes(registro) {
@@ -256,6 +455,8 @@ export default function HistoricoPage() {
         columns: [
           { header: "Visitante", weight: 1.4 },
           { header: "CPF", weight: 1 },
+          { header: "Telefone", weight: 1 },
+          { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
           { header: "Setor", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
@@ -264,12 +465,14 @@ export default function HistoricoPage() {
         ],
         rows: registrosFiltrados.map((r) => [
           r.visitante,
-          r.cpf,
+          maskCPF(r.cpf),
+          formatPhone(r.telefone),
+          r.email,
           r.empresa,
           r.setor,
-          r.dataEntrada,
-          r.dataSaida || "-",
-          r.dataSaida ? "Finalizado" : "Ativo",
+          formatDateTime(r.dataEntrada),
+          formatDateTime(r.dataSaida),
+          STATUS_LABEL[r.status] || r.status,
         ]),
       });
     } catch (error) {
@@ -281,6 +484,8 @@ export default function HistoricoPage() {
   return (
     <>
       <Topbar
+        buttonText="Adicionar visitante"
+        buttonHref="/portaria/novo"
         title="Histórico"
         subtitle="Registro completo de entradas e saídas"
       />
@@ -292,8 +497,8 @@ export default function HistoricoPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
-                placeholder="Buscar por nome, CPF ou empresa..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                placeholder="Buscar por nome, CPF, telefone, e-mail ou empresa..."
+                className="h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -381,10 +586,10 @@ export default function HistoricoPage() {
             <thead>
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Visitante</th>
+                <th className="px-4 py-3">Contato</th>
                 <th className="px-4 py-3">Empresa</th>
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Entrada</th>
-                <th className="px-4 py-3">Saída</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>

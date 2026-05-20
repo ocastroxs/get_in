@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import Topbar from "@/components/Topbar";
 import { api } from '@/services/api';
 
 // ─── Dados de Permissões (estrutura padrão) ──────────────────────────────────
@@ -142,44 +143,17 @@ export default function PermissoesPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       
-      {/* Cabeçalho */}
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Permissões</h1>
-            <p className="text-xs text-muted-foreground mt-1">Determine o que cada perfil e visitante pode acessar no sistema.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-1.5 rounded-xl"
-              onClick={handleDescartar}
-              disabled={loading}
-            >
-              <RotateCcw size={14} />
-              Descartar
-            </Button>
-            <Button 
-              size="sm" 
-              className="gap-1.5 rounded-xl"
-              onClick={handleSalvar}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save size={14} />
-                  Salvar Alterações
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <Topbar
+          title="Permissões"
+          subtitle="Determine com mais clareza o que cada perfil e visitante pode acessar no sistema."
+          secondaryButtonText="Descartar"
+          onSecondaryButtonClick={handleDescartar}
+          buttonText={loading ? "Salvando..." : "Salvar Alterações"}
+          onButtonClick={handleSalvar}
+          secondaryButtonDisabled={loading}
+          buttonDisabled={loading}
+        />
 
         {/* Abas */}
         <div className="flex gap-6 border-b border-border">
@@ -204,7 +178,7 @@ export default function PermissoesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar funcionalidade ou descrição..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-[15px] transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -226,7 +200,7 @@ export default function PermissoesPage() {
               className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
             >
               <Filter size={16} />
-              <span className="hidden sm:inline">Filtrar Categorias</span>
+              <span className="hidden text-sm sm:inline">Filtrar Categorias</span>
               {filtroCategoria !== "Todas" && (
                 <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
                   1
@@ -235,7 +209,7 @@ export default function PermissoesPage() {
             </Button>
           </div>
 
-          <div className="hidden lg:flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase text-muted-foreground">
+          <div className="hidden lg:flex flex-wrap items-center gap-4 text-[11px] font-bold uppercase text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-green-100 border border-green-300"></div>
               <span>Permitida</span>
@@ -337,7 +311,7 @@ function TabButton({ active, onClick, label }) {
   return (
     <button 
       onClick={onClick}
-      className={`pb-3 px-1 font-semibold text-sm transition-all duration-200 ${
+      className={`pb-3 px-1 font-semibold text-[15px] transition-all duration-200 ${
         active 
           ? 'text-foreground border-b-2 border-primary' 
           : 'text-muted-foreground hover:text-foreground border-b-2 border-transparent'
@@ -364,7 +338,7 @@ function TabelaFuncionarios({ permissoes, setPermissoes, busca, filtroCategoria 
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Search className="w-10 h-10 text-muted-foreground/30 mx-auto mb-2" />
-        <p className="text-sm">Nenhuma funcionalidade encontrada.</p>
+        <p className="text-[15px]">Nenhuma funcionalidade encontrada.</p>
       </div>
     );
   }
@@ -387,7 +361,7 @@ function TabelaFuncionarios({ permissoes, setPermissoes, busca, filtroCategoria 
   return (
     <table className="w-full text-left border-collapse">
       <thead>
-        <tr className="bg-muted/40 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        <tr className="bg-muted/40 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
           <th className="px-4 py-3 min-w-[300px]">Funcionalidade</th>
           <th className="px-4 py-3 text-center w-24">Portaria</th>
           <th className="px-4 py-3 text-center w-24">Supervisor</th>
@@ -398,15 +372,15 @@ function TabelaFuncionarios({ permissoes, setPermissoes, busca, filtroCategoria 
         {categoriasFiltradas.map((cat, catIdx) => (
           <Fragment key={cat.categoria}>
             <tr className="bg-muted/20">
-              <td colSpan="4" className="px-4 py-2 text-[10px] font-bold text-primary uppercase tracking-widest bg-primary/5">
+              <td colSpan="4" className="px-4 py-2 text-[11px] font-bold text-primary uppercase tracking-widest bg-primary/5">
                 {cat.categoria}
               </td>
             </tr>
             {cat.funcionalidades.map((item, itemIdx) => (
               <tr key={item.titulo} className="hover:bg-muted/30 transition-colors">
                 <td className="px-4 py-3">
-                  <p className="text-xs font-bold text-foreground">{item.titulo}</p>
-                  <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+                  <p className="text-sm font-bold text-foreground">{item.titulo}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <PermissaoBadge status={item.portaria} onClick={() => togglePermissao(catIdx, itemIdx, 'portaria')} />
@@ -444,7 +418,7 @@ function TabelaVisitantes({ permissoes, setPermissoes, busca }) {
   return (
     <table className="w-full text-left border-collapse">
       <thead>
-        <tr className="bg-muted/40 border-b border-border text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        <tr className="bg-muted/40 border-b border-border text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
           <th className="px-4 py-3">Acesso do Visitante</th>
           <th className="px-4 py-3 text-center w-32">Permissão</th>
         </tr>
@@ -453,8 +427,8 @@ function TabelaVisitantes({ permissoes, setPermissoes, busca }) {
         {filtradas.map((item, idx) => (
           <tr key={item.titulo} className="hover:bg-muted/30 transition-colors">
             <td className="px-4 py-3">
-              <p className="text-xs font-bold text-foreground">{item.titulo}</p>
-              <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+              <p className="text-sm font-bold text-foreground">{item.titulo}</p>
+              <p className="text-xs text-muted-foreground">{item.desc}</p>
             </td>
             <td className="px-4 py-3 text-center">
               <PermissaoBadge status={item.visitante} onClick={() => togglePermissao(idx)} />

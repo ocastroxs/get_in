@@ -1,8 +1,6 @@
-import { EMPRESAS_MAIS_VISITAS } from "@/lib/mockData";
-
 export default function EmpresasMaisVisitas({
   title = "Empresas com Mais Visitas",
-  data = EMPRESAS_MAIS_VISITAS
+  data = []
 }) {
   return (
     <div className="bg-card text-card-foreground p-0 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden flex flex-col">
@@ -19,7 +17,13 @@ export default function EmpresasMaisVisitas({
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {data.map((item, i) => (
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-6 py-10 text-center text-sm text-muted-foreground">
+                  Nenhuma empresa encontrada.
+                </td>
+              </tr>
+            ) : data.map((item, i) => (
               <tr key={item.nome} className="hover:bg-muted/30 transition-colors">
                 <td className="px-6 py-3.5 font-semibold text-foreground">{item.nome}</td>
                 <td className="px-6 py-3.5 text-center text-muted-foreground font-medium">{item.visitas}</td>

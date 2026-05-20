@@ -21,7 +21,7 @@ export default function PicoMovimentoChart({ mobileLayout = false }) {
           <p className="text-sm text-muted-foreground">Leitura complementar de entradas e saidas por hora.</p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-muted/60 px-4 py-3">
+        <div className="min-w-[124px] rounded-2xl border border-border bg-muted/50 px-4 py-3 shadow-sm shadow-slate-200/40">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Maior fluxo</p>
           <p className="mt-1 font-mono text-xl font-semibold text-foreground">{peak.value}</p>
           <p className="text-xs text-muted-foreground">{peak.hora}</p>
@@ -46,19 +46,19 @@ export default function PicoMovimentoChart({ mobileLayout = false }) {
               tickLine={false}
             />
             <Tooltip
-              cursor={{ fill: "rgba(15,58,125,0.06)" }}
+              cursor={{ fill: "rgba(15,58,125,0.035)" }}
               contentStyle={{
                 borderRadius: "16px",
                 border: "1px solid var(--border)",
                 background: "rgba(255,255,255,0.96)",
-                boxShadow: "0 2px 8px rgba(15, 58, 125, 0.10)",
+                boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
               }}
             />
-            <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={26}>
+            <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={28}>
               {chartData.map((entry) => (
                 <Cell
                   key={entry.hora}
-                  fill={entry.hora === peak.hora ? "var(--primary)" : "rgba(15, 58, 125, 0.16)"}
+                  fill={entry.hora === peak.hora ? "var(--primary)" : "rgba(15, 58, 125, 0.14)"}
                 />
               ))}
             </Bar>

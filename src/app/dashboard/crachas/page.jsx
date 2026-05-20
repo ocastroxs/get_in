@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
@@ -134,7 +135,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
 
         <div className="px-6 py-5 space-y-4">
           <p className="text-xs text-muted-foreground">
-            Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status "Disponível".
+            Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status &quot;Disponível&quot;.
           </p>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador (Opcional)</label>
@@ -164,15 +165,12 @@ function ModalCadastrarTag({ onClose, onSave }) {
 
 function LinhaCracha({ c }) {
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
+    <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <span className="text-xs font-semibold font-mono text-primary">#{c.id}</span>
       </td>
       <td className="py-3 px-4 text-sm font-medium text-foreground whitespace-nowrap">
         {c.visitante || <span className="text-muted-foreground italic text-xs">Nenhum vinculado</span>}
-      </td>
-      <td className="py-3 px-4 text-sm text-primary font-medium whitespace-nowrap">
-        {c.empresa || "—"}
       </td>
       <td className="py-3 px-4">
         {c.setor ? (
@@ -191,7 +189,7 @@ function LinhaCracha({ c }) {
         </span>
       </td>
       <td className="py-3 px-4 text-right">
-        <button className="w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
           <MoreHorizontal size={14} />
         </button>
       </td>
@@ -235,8 +233,7 @@ export default function CrachasPage() {
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
         String(c.id).includes(q) ||
-        (c.visitante && c.visitante.toLowerCase().includes(q)) ||
-        (c.empresa && c.empresa.toLowerCase().includes(q));
+        (c.visitante && c.visitante.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });
   }, [crachas, statusFiltro, busca]);
@@ -268,23 +265,15 @@ export default function CrachasPage() {
         />
       )}
 
-      <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Dashboard Crachás</h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              Gestão de inventário de crachás e status de TAGs
-            </p>
-          </div>
-          <Button
-            onClick={() => setModalAberto(true)}
-            className="gap-2 rounded-xl"
-          >
-            <Plus size={16} /> Cadastrar Crachá
-          </Button>
-        </header>
+      <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+        <Topbar
+          title="Dashboard Crachás"
+          subtitle="Gestão de inventário de crachás e status de TAGs"
+          buttonText="Cadastrar Crachá"
+          onButtonClick={() => setModalAberto(true)}
+        />
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <StatCard
             label="Total"
             value={stats.total}
@@ -296,46 +285,46 @@ export default function CrachasPage() {
           <StatCard
             label="Em Uso"
             value={stats.emUso}
-            valueClassName="text-green-600"
-            icon={<ArrowRightLeft size={17} className="text-green-600" />}
+            valueClassName="text-secondary"
+            icon={<ArrowRightLeft size={17} className="text-secondary" />}
             sub="visitantes ativos"
-            accentVar="var(--green-500)"
+            accentVar="var(--chart-2)"
           />
           <StatCard
             label="Disponíveis"
             value={stats.disponiveis}
-            valueClassName="text-gray-600"
-            icon={<Check size={17} className="text-gray-600" />}
+            valueClassName="text-foreground"
+            icon={<Check size={17} className="text-foreground" />}
             sub="em estoque"
-            accentVar="var(--gray-500)"
+            accentVar="var(--chart-4)"
           />
           <StatCard
             label="Perdidos"
             value={stats.perdidos}
-            valueClassName="text-red-600"
-            icon={<Undo2 size={17} className="text-red-600" />}
+            valueClassName="text-amber-600"
+            icon={<Undo2 size={17} className="text-amber-600" />}
             sub="precisam reposição"
-            accentVar="var(--destructive)"
+            accentVar="var(--chart-3)"
           />
           <StatCard
             label="Alertas"
             value={stats.alertas}
-            valueClassName="text-amber-600"
-            icon={<AlertTriangle size={17} className="text-amber-600" />}
+            valueClassName="text-destructive"
+            icon={<AlertTriangle size={17} className="text-destructive" />}
             sub="tempo excedido"
-            accentVar="var(--warning)"
+            accentVar="var(--destructive)"
           />
         </div>
 
         {/* Barra de Filtros Padronizada */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-1 items-center gap-3 w-full">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por ID, visitante ou empresa..."
-                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  placeholder="Buscar por ID ou visitante..."
+                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                 />
@@ -354,7 +343,7 @@ export default function CrachasPage() {
                 type="button"
                 onClick={() => setModalFiltroAberto(true)}
                 variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
               >
                 <Filter size={16} />
                 <span className="hidden sm:inline">Filtros</span>
@@ -398,7 +387,7 @@ export default function CrachasPage() {
               <Button
                 variant="ghost"
                 onClick={limparFiltros}
-                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+                className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
               >
                 Limpar tudo
               </Button>
@@ -406,7 +395,7 @@ export default function CrachasPage() {
           )}
         </div>
 
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-card border border-border rounded-[24px] shadow-md overflow-hidden">
           <div className="p-4 border-b border-border bg-muted/20">
             <h3 className="font-bold text-sm">Inventário de Crachás</h3>
             <p className="text-xs text-muted-foreground">Controle de TAGs e vinculações</p>
@@ -418,7 +407,6 @@ export default function CrachasPage() {
                 <tr className="bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="py-3 px-4">TAG</th>
                   <th className="py-3 px-4">Usuário Atual</th>
-                  <th className="py-3 px-4">Empresa</th>
                   <th className="py-3 px-4">Setor</th>
                   <th className="py-3 px-4">Entrega</th>
                   <th className="py-3 px-4">Devolução</th>
@@ -429,7 +417,7 @@ export default function CrachasPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center">
+                    <td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
                         <span className="text-sm">Carregando crachás...</span>
@@ -438,7 +426,7 @@ export default function CrachasPage() {
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                       Nenhum crachá encontrado com os filtros aplicados.
                     </td>
                   </tr>
@@ -483,7 +471,7 @@ export default function CrachasPage() {
           
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> Crachás com status "Alerta" ou "Perdido" devem ser revisados imediatamente para evitar brechas de segurança.
+              <strong>Info:</strong> Crachás com status &quot;Alerta&quot; ou &quot;Perdido&quot; devem ser revisados imediatamente para evitar brechas de segurança.
             </p>
           </div>
         </div>

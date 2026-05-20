@@ -18,7 +18,7 @@ const AVATAR_COLORS = [
  * Componente de Avatar padronizado que exibe a inicial do nome
  * com uma cor de fundo baseada no nome do usuário para manter consistência.
  */
-export default function UserAvatar({ name, email, className }) {
+export default function UserAvatar({ name, email, src, className }) {
   const initials = useMemo(() => {
     if (!name) return 'U';
     return name.charAt(0).toUpperCase();
@@ -38,12 +38,16 @@ export default function UserAvatar({ name, email, className }) {
   return (
     <div 
       className={cn(
-        "flex items-center justify-center rounded-full text-white font-bold shadow-inner",
+        "flex items-center justify-center overflow-hidden rounded-full text-white font-bold shadow-inner",
         backgroundColor,
         className
       )}
     >
-      {initials}
+      {src ? (
+        <img src={src} alt={name || email || 'Avatar'} className="h-full w-full object-cover" />
+      ) : (
+        initials
+      )}
     </div>
   );
 }

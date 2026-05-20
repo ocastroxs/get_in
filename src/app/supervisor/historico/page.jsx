@@ -1,83 +1,127 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Building2,
-  Clock,
+  CheckCircle2,
+  Download,
+  Filter,
+  Info,
   Loader2,
   Search,
-  Users,
-  CheckCircle2,
+  X,
   XCircle,
-  Filter,
-  Download,
-  X
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import Topbar from '@/components/Topbar';
-import StatCard from '@/components/StatCard';
-import ModalFiltro from '@/components/ui/ModalFiltro';
-import { api } from '@/services/api';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Topbar from "@/components/Topbar";
+import StatCard from "@/components/StatCard";
+import ModalFiltro from "@/components/ui/ModalFiltro";
+import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 const STATUS_LABEL = {
-  pendente: 'Pendente',
-  aprovado: 'Aprovado',
-  recusado: 'Recusado'
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado",
 };
 
 const STATUS_STYLE = {
-  pendente: 'bg-amber-100 text-amber-700',
-  aprovado: 'bg-green-100 text-green-700',
-  recusado: 'bg-red-100 text-red-600'
-};
-
-const STATUS_DOT = {
-  pendente: 'bg-amber-500',
-  aprovado: 'bg-green-500',
-  recusado: 'bg-red-500'
+  pendente: "bg-amber-100 text-amber-700",
+  aprovado: "bg-green-100 text-green-700",
+  recusado: "bg-red-100 text-red-600",
 };
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
   }).format(date);
 }
 
-function LinhaRequisicao({ requisicao }) {
-  const status = requisicao.status || 'pendente';
-  const statusClass = STATUS_STYLE[status] || STATUS_STYLE.pendente;
-  const dotClass = STATUS_DOT[status] || STATUS_DOT.pendente;
+function getSetorNome(requisicao) {
+  return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
+}
+
+function getIdentity(requisicao) {
   const usuario = requisicao.usuario || {};
-  const departamento = requisicao.departamento || {};
+  return requisicao.idUsuario || usuario.id || usuario.cpf || usuario.email || usuario.nome || requisicao.id;
+}
+
+function groupByUsuarioEStatus(requisicoes) {
+  const groups = new Map();
+
+  requisicoes.forEach((requisicao) => {
+    const usuario = requisicao.usuario || {};
+    const status = requisicao.status || "pendente";
+    const key = `${getIdentity(requisicao)}|${status}`;
+    const setor = getSetorNome(requisicao);
+    const current = groups.get(key);
+
+    if (!current) {
+      groups.set(key, {
+        key,
+        status,
+        usuario,
+        empresa: requisicao.empresa || usuario.empresas?.nome || "-",
+        motivo: requisicao.motivo || "-",
+        dataDaRequisicao: requisicao.dataDaRequisicao,
+        setores: setor && setor !== "-" ? [setor] : [],
+      });
+      return;
+    }
+
+    if (setor && setor !== "-" && !current.setores.includes(setor)) {
+      current.setores.push(setor);
+    }
+
+    if (new Date(requisicao.dataDaRequisicao).getTime() > new Date(current.dataDaRequisicao).getTime()) {
+      current.dataDaRequisicao = requisicao.dataDaRequisicao;
+      current.empresa = requisicao.empresa || current.empresa;
+      current.motivo = requisicao.motivo || current.motivo;
+    }
+  });
+
+  return Array.from(groups.values()).sort(
+    (a, b) => new Date(b.dataDaRequisicao).getTime() - new Date(a.dataDaRequisicao).getTime()
+  );
+}
+
+function LinhaHistorico({ registro }) {
+  const statusClass = STATUS_STYLE[registro.status] || STATUS_STYLE.pendente;
 
   return (
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-medium text-foreground">{usuario.nome || '—'}</p>
-          <p className="text-xs text-muted-foreground">{usuario.cpf || 'CPF não informado'}</p>
+          <p className="text-sm font-semibold text-foreground">{registro.usuario.nome || "-"}</p>
+          <p className="text-xs text-muted-foreground">{registro.usuario.cpf || "CPF nao informado"}</p>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || '—'}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{departamento.nome || '—'}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || '—'}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-        {formatDateTime(requisicao.dataDaRequisicao)}
+      <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "-"}</td>
+      <td className="px-4 py-3">
+        <div className="flex max-w-sm flex-wrap gap-1.5">
+          {(registro.setores.length > 0 ? registro.setores : ["-"]).map((setor) => (
+            <span key={setor} className="rounded-full border border-border bg-muted/50 px-2.5 py-1 text-[10px] font-bold text-foreground">
+              {setor}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-foreground">{registro.motivo || "-"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">
+        {formatDateTime(registro.dataDaRequisicao)}
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-medium ${statusClass}`}>
-          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-          {STATUS_LABEL[status] || STATUS_LABEL.pendente}
+        <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ${statusClass}`}>
+          {STATUS_LABEL[registro.status] || STATUS_LABEL.pendente}
         </span>
       </td>
     </tr>
@@ -87,12 +131,10 @@ function LinhaRequisicao({ requisicao }) {
 export default function HistoricoSupervisorPage() {
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
-
-  // Estados temporários para o modal de filtro
-  const [tempFiltroStatus, setTempFiltroStatus] = useState('todos');
+  const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
 
   useEffect(() => {
     fetchRequisicoes();
@@ -103,230 +145,161 @@ export default function HistoricoSupervisorPage() {
   async function fetchRequisicoes() {
     try {
       setLoading(true);
-      const response = await api.get('/requisicao-visitante');
+      const response = await api.get("/requisicao-visitante");
 
-      if (response && typeof response === 'object' && response.sucesso && response.data) {
+      if (response?.sucesso && Array.isArray(response.data)) {
         setRequisicoes(response.data);
-      } else if (!response || typeof response !== 'object') {
-        console.warn('Back-end não está pronto. Exibindo lista vazia.');
+      } else {
         setRequisicoes([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar requisições:', error);
+      console.error("Erro ao carregar historico:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
     }
   }
 
-  const requisicoesFiltradas = useMemo(() => {
-    return requisicoes
-      .filter((requisicao) => {
-        const usuario = requisicao.usuario || {};
-        const nome = usuario.nome?.toLowerCase() || '';
-        const cpf = usuario.cpf || '';
-        const empresa = requisicao.empresa?.toLowerCase() || '';
-        const termoBusca = busca.toLowerCase();
+  const registros = useMemo(() => groupByUsuarioEStatus(requisicoes), [requisicoes]);
 
-        const matchBusca =
-          busca === '' ||
-          nome.includes(termoBusca) ||
-          cpf.includes(busca) ||
-          empresa.includes(termoBusca);
+  const registrosFiltrados = useMemo(() => {
+    return registros.filter((registro) => {
+      const termoBusca = busca.toLowerCase();
+      const setores = registro.setores.join(" ").toLowerCase();
+      const matchBusca =
+        busca === "" ||
+        (registro.usuario.nome || "").toLowerCase().includes(termoBusca) ||
+        (registro.usuario.cpf || "").includes(busca) ||
+        (registro.empresa || "").toLowerCase().includes(termoBusca) ||
+        setores.includes(termoBusca);
+      const matchStatus = filtroStatus === "todos" || registro.status === filtroStatus;
 
-        const matchStatus = filtroStatus === 'todos' || requisicao.status === filtroStatus;
+      return matchBusca && matchStatus;
+    });
+  }, [registros, busca, filtroStatus]);
 
-        return matchBusca && matchStatus;
-      })
-      .sort((a, b) => new Date(b.dataDaRequisicao) - new Date(a.dataDaRequisicao));
-  }, [requisicoes, busca, filtroStatus]);
+  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
+  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
+  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
 
-  const countPendentes = requisicoes.filter((r) => r.status === 'pendente').length;
-  const countAprovados = requisicoes.filter((r) => r.status === 'aprovado').length;
-  const countRecusados = requisicoes.filter((r) => r.status === 'recusado').length;
-
-  function handleExportarCSV() {
-    if (requisicoesFiltradas.length === 0) {
-      alert('Nenhuma requisição para exportar.');
+  async function exportarPDF() {
+    if (registrosFiltrados.length === 0) {
+      alert("Nenhuma requisicao para exportar.");
       return;
     }
 
-    const headers = ['Nome', 'CPF', 'Empresa', 'Departamento', 'Motivo', 'Data da Requisição', 'Status'];
-    const rows = requisicoesFiltradas.map((r) => {
-      const usuario = r.usuario || {};
-      const departamento = r.departamento || {};
-      return [
-        usuario.nome || '—',
-        usuario.cpf || '—',
-        r.empresa || '—',
-        departamento.nome || '—',
-        r.motivo || '—',
-        formatDateTime(r.dataDaRequisicao),
-        STATUS_LABEL[r.status] || r.status
-      ];
-    });
-
-    const csv = [
-      headers.join(','),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `historico-requisicoes-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      await exportTableToPdf({
+        title: "Historico de aprovacoes",
+        subtitle: "Registros agrupados por usuario e status",
+        fileName: `historico-requisicoes-${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Nome", weight: 1.3 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.1 },
+          { header: "Setores", weight: 1.6 },
+          { header: "Motivo", weight: 1.1 },
+          { header: "Data", weight: 1 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: registrosFiltrados.map((registro) => [
+          registro.usuario.nome || "-",
+          registro.usuario.cpf || "-",
+          registro.empresa || "-",
+          registro.setores.join(", ") || "-",
+          registro.motivo || "-",
+          formatDateTime(registro.dataDaRequisicao),
+          STATUS_LABEL[registro.status] || registro.status,
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Nao foi possivel exportar o PDF.");
+    }
   }
 
-  const aplicarFiltros = () => {
-    setFiltroStatus(tempFiltroStatus);
-  };
+  const aplicarFiltros = () => setFiltroStatus(tempFiltroStatus);
 
   const limparFiltros = () => {
-    setTempFiltroStatus('todos');
-    setFiltroStatus('todos');
-    setBusca('');
+    setTempFiltroStatus("todos");
+    setFiltroStatus("todos");
+    setBusca("");
   };
 
   return (
     <>
       <Topbar
-        title="Histórico de Aprovações"
-        subtitle="Visualize todas as requisições processadas"
+        title="Historico de Aprovacoes"
+        subtitle="Visualize todas as requisicoes processadas"
       />
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <StatCard
-            label="Pendentes"
-            value={countPendentes}
-            valueClassName="text-amber-600"
-            icon={<AlertTriangle size={17} className="text-amber-600" />}
-            sub="Aguardando análise"
-            accentVar="var(--warning)"
-          />
-          <StatCard
-            label="Aprovados"
-            value={countAprovados}
-            valueClassName="text-green-600"
-            icon={<CheckCircle2 size={17} className="text-green-600" />}
-            sub="Visitantes autorizados"
-            accentVar="var(--chart-2)"
-          />
-          <StatCard
-            label="Recusados"
-            value={countRecusados}
-            valueClassName="text-red-600"
-            icon={<XCircle size={17} className="text-red-600" />}
-            sub="Acesso não autorizado"
-            accentVar="var(--destructive)"
-          />
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
         </div>
 
-        {/* Barra de Busca e Filtros Padronizada */}
-        <div className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm">
+        <div className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="flex w-full flex-1 items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF ou empresa..."
-                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  placeholder="Buscar por nome, CPF, empresa ou setor..."
+                  className="h-11 rounded-xl border-border/60 bg-background/80 pl-10 text-sm"
                   value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
+                  onChange={(event) => setBusca(event.target.value)}
                 />
                 {busca && (
-                  <button
-                    type="button"
-                    onClick={() => setBusca("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  <button type="button" onClick={() => setBusca("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X size={14} />
                   </button>
                 )}
               </div>
-              
-              <Button
-                type="button"
-                onClick={() => setModalFiltroAberto(true)}
-                variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
-              >
+
+              <Button type="button" onClick={() => setModalFiltroAberto(true)} variant="outline" className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4">
                 <Filter size={16} />
                 <span className="hidden sm:inline">Filtros</span>
-                {(filtroStatus !== 'todos') && (
-                  <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
-                    1
-                  </span>
+                {filtroStatus !== "todos" && (
+                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">1</span>
                 )}
               </Button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                onClick={handleExportarCSV}
-                variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
-              >
+              <Button type="button" onClick={exportarPDF} variant="outline" className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium">
                 <Download size={16} />
-                <span className="hidden sm:inline">Exportar CSV</span>
+                <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
-              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-                {requisicoesFiltradas.length} resultado(s)
+              <div className="rounded-xl border border-border/50 bg-muted/40 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+                {registrosFiltrados.length} resultado(s)
               </div>
             </div>
           </div>
-
-          {(filtroStatus !== 'todos' || busca) && (
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
-              {busca && (
-                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Busca: {busca}
-                </span>
-              )}
-              {filtroStatus !== 'todos' && (
-                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Status: {STATUS_LABEL[filtroStatus]}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                onClick={limparFiltros}
-                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-              >
-                Limpar tudo
-              </Button>
-            </div>
-          )}
         </div>
 
-        {/* Tabela de Requisições */}
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-border bg-muted/20">
-            <h3 className="font-bold text-sm">Registros de Acesso</h3>
-            <p className="text-xs text-muted-foreground">Listagem completa de solicitações</p>
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border bg-muted/20 p-4">
+            <h3 className="text-sm font-bold">Registros de Acesso</h3>
+            <p className="text-xs text-muted-foreground">Solicitacoes agrupadas por usuario e status</p>
           </div>
-          
+
           {loading ? (
             <div className="flex items-center justify-center p-12">
               <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-8 h-8 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin" />
                 <span className="text-sm">Carregando dados...</span>
               </div>
             </div>
-          ) : requisicoesFiltradas.length === 0 ? (
+          ) : registrosFiltrados.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
-              <AlertTriangle size={32} className="text-muted-foreground mb-3 opacity-20" />
-              <p className="text-sm text-muted-foreground">
-                Nenhum registro encontrado com os filtros aplicados.
-              </p>
+              <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-20" />
+              <p className="text-sm text-muted-foreground">Nenhum registro encontrado.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -335,18 +308,15 @@ export default function HistoricoSupervisorPage() {
                   <tr className="border-b border-border bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 text-left">Visitante</th>
                     <th className="px-4 py-3 text-left">Empresa</th>
-                    <th className="px-4 py-3 text-left">Departamento</th>
+                    <th className="px-4 py-3 text-left">Setor</th>
                     <th className="px-4 py-3 text-left">Motivo</th>
-                    <th className="px-4 py-3 text-left">Solicitação</th>
+                    <th className="px-4 py-3 text-left">Solicitacao</th>
                     <th className="px-4 py-3 text-left">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {requisicoesFiltradas.map((requisicao) => (
-                    <LinhaRequisicao
-                      key={requisicao.id}
-                      requisicao={requisicao}
-                    />
+                  {registrosFiltrados.map((registro) => (
+                    <LinhaHistorico key={registro.key} registro={registro} />
                   ))}
                 </tbody>
               </table>
@@ -354,24 +324,21 @@ export default function HistoricoSupervisorPage() {
           )}
         </div>
 
-        {/* Informações Adicionais */}
-        <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-5">
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/90 p-5 shadow-sm">
           <div className="flex gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 h-fit">
-              <AlertTriangle size={18} />
+            <div className="h-fit rounded-xl bg-white p-2 text-blue-700 shadow-xs">
+              <Info size={18} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground mb-1">Sobre o Histórico</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Este histórico contém todas as requisições de visitantes processadas. Você pode filtrar por status,
-                buscar por nome/CPF/empresa e exportar os dados em formato CSV para análise posterior.
+              <h3 className="mb-1 text-sm font-bold text-slate-900">Sobre o Historico</h3>
+              <p className="text-xs leading-relaxed text-slate-700">
+                Este historico consolida todos os setores do mesmo visitante por status. Assim, setores aprovados, recusados e pendentes aparecem em logs separados e mais faceis de auditar.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal de Filtro Padronizado */}
       <ModalFiltro
         isOpen={modalFiltroAberto}
         onClose={() => setModalFiltroAberto(false)}
@@ -380,31 +347,25 @@ export default function HistoricoSupervisorPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
-              Status da Requisição
+            <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Status da Requisicao
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {['todos', 'pendente', 'aprovado', 'recusado'].map((status) => (
+              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => setTempFiltroStatus(status)}
-                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                  className={`rounded-xl border px-3 py-2.5 text-xs font-semibold transition-all ${
                     tempFiltroStatus === status
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                      ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                  {status === "todos" ? "Todos" : STATUS_LABEL[status]}
                 </button>
               ))}
             </div>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
-            <p className="text-[10px] text-amber-600 leading-relaxed">
-              <strong>Dica:</strong> Você também pode usar a barra de busca rápida para filtrar por Nome, CPF ou Empresa sem abrir este modal.
-            </p>
           </div>
         </div>
       </ModalFiltro>

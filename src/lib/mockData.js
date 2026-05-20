@@ -70,6 +70,16 @@ export const ENTRADAS_POR_HORA = [
   { hora: "17h", value: 0 },
 ];
 
+export const ENTRADAS_POR_SEMANA = [
+  { hora: "Seg", value: 24 },
+  { hora: "Ter", value: 28 },
+  { hora: "Qua", value: 35 },
+  { hora: "Qui", value: 31 },
+  { hora: "Sex", value: 39 },
+  { hora: "Sab", value: 17 },
+  { hora: "Dom", value: 12 },
+];
+
 export const PICO_MOVIMENTO = [
   { hora: "06h", value: 0 },
   { hora: "07h", value: 1 },

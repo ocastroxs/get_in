@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2, AlertCircle } from 'lucide-react';
+import Topbar from "@/components/Topbar";
 
 const CadastroFuncionario = () => {
   // ==========================================
@@ -269,12 +270,10 @@ const CadastroFuncionario = () => {
   return (
     <div className="flex flex-col items-center justify-center w-full py-6">
       <div className="w-full max-w-4xl">
-        
-        {/* Título */}
-        <div className="mb-8 text-center md:text-left">
-          <h1 className="text-3xl font-black text-[#0A2540] mb-2 tracking-tight">Novo Funcionário</h1>
-          <p className="text-gray-500 font-medium">Cadastre um novo colaborador no sistema GETIN.</p>
-        </div>
+        <Topbar
+          title="Novo Funcionário"
+          subtitle="Cadastre um novo colaborador no sistema GETIN."
+        />
 
         {/* Stepper (Passos) */}
         <div className="flex items-center justify-between mb-12 w-full max-w-2xl mx-auto">

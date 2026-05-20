@@ -205,7 +205,7 @@ const getProtectedRedirect = (pathname, tipo) => {
     return flowRoute;
   }
 
-  if ((isDashboardFlow || isPathInSection(pathname, "/configuracoes")) && normalizedTipo !== "adm") {
+  if (isDashboardFlow && normalizedTipo !== "adm") {
     return flowRoute;
   }
 
@@ -296,6 +296,28 @@ export function AuthProvider({ children }) {
     }
   }, [funcionario, isAuthenticated, isLoading, pathname, router, user]);
 
+  const updateAuthData = (userData, funcionarioData = null, options = {}) => {
+    const remember = options.remember ?? Boolean(localStorage.getItem(TOKEN_KEY));
+    const authData = funcionarioData ? { ...userData, funcionario: funcionarioData } : userData;
+    const authFuncionario = getFuncionarioFromAuthData(authData);
+    const authUser = getUserFromAuthData(authData, authFuncionario);
+    const tipo = getAuthTipo(authFuncionario, authUser);
+
+    if (authUser) {
+      saveBrowserStorageValue(USER_KEY, JSON.stringify(authUser), remember);
+    }
+
+    if (authFuncionario) {
+      saveBrowserStorageValue(FUNCIONARIO_KEY, JSON.stringify(authFuncionario), remember);
+    }
+
+    setUser(authUser);
+    setFuncionario(authFuncionario);
+    syncAuthCookies(tipo, remember);
+
+    return { user: authUser, funcionario: authFuncionario };
+  };
+
   const login = (userData, token, funcionarioData = null, options = {}) => {
     const remember = options.remember ?? true;
     const authData = funcionarioData ? { ...userData, funcionario: funcionarioData } : userData;
@@ -332,7 +354,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, funcionario, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, funcionario, isLoading, login, logout, updateAuthData }}>
       {children}
     </AuthContext.Provider>
   );

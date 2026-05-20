@@ -22,6 +22,7 @@ import {
   Check
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -72,7 +73,7 @@ function LinhaMovimentacao({ reg }) {
   if (!reg) return null;
 
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors">
+    <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="px-4 py-3">
         <p className="text-xs font-bold leading-none">{reg.visitante || reg.nome || "—"}</p>
       </td>
@@ -95,23 +96,23 @@ function LinhaMovimentacao({ reg }) {
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
           {reg.status === "Aguard. aprovação" ? (
-            <Button size="sm" className="h-7 text-[10px] gap-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white border-none">
+            <Button size="sm" className="h-7 gap-1.5 rounded-xl border-none bg-primary px-3 text-[10px] text-white hover:bg-primary/90">
               Aprovar
             </Button>
           ) : reg.status !== "Saiu" ? (
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-[10px] gap-1.5 px-3 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+              className="h-7 gap-1.5 rounded-xl border-secondary/20 px-3 text-[10px] text-secondary hover:bg-secondary/10 hover:text-secondary"
             >
               Check-out
             </Button>
           ) : (
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
               <Eye size={12} className="text-muted-foreground" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
             <MoreHorizontal size={12} className="text-muted-foreground" />
           </Button>
         </div>
@@ -186,82 +187,72 @@ export default function CheckinPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Check-in / Check-out</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Registro de movimentação de visitantes em tempo real
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadCSV(registrosFiltrados)}
-            className="gap-2 rounded-xl"
-          >
-            <Download size={14} /> Exportar CSV
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white border-none"
-          >
-            <LogOut size={14} /> Check-out
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-xl"
-          >
-            <UserPlus size={14} /> Check-in
-          </Button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <Topbar
+        title="Check-in / Check-out"
+        subtitle="Registro de movimentação de visitantes em tempo real"
+        secondaryButtonText="Exportar CSV"
+        onSecondaryButtonClick={() => downloadCSV(registrosFiltrados)}
+      />
+      <div className="flex justify-end gap-2 -mt-2">
+        <Button
+          size="sm"
+          className="gap-1.5 rounded-xl shadow-lg shadow-primary/15"
+        >
+          <UserPlus size={14} /> Check-in
+        </Button>
+        <Button
+          size="sm"
+          className="gap-1.5 rounded-xl border-none bg-secondary text-white shadow-lg shadow-secondary/20 hover:bg-secondary/90"
+        >
+          <LogOut size={14} /> Check-out
+        </Button>
+      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard
           label="Check-ins"
           value={stats.checkins}
-          valueClassName="text-blue-600"
-          icon={<ArrowRightLeft size={17} className="text-blue-600" />}
+          valueClassName="text-primary"
+          icon={<ArrowRightLeft size={17} className="text-primary" />}
           sub="hoje"
-          accentVar="var(--blue-500)"
+          accentVar="var(--primary)"
         />
         <StatCard
           label="Check-outs"
           value={stats.checkouts}
-          valueClassName="text-green-600"
-          icon={<LogOut size={17} className="text-green-600" />}
+          valueClassName="text-secondary"
+          icon={<LogOut size={17} className="text-secondary" />}
           sub="realizados"
-          accentVar="var(--green-500)"
+          accentVar="var(--chart-2)"
         />
         <StatCard
           label="Dentro"
           value={stats.dentro}
-          valueClassName="text-cyan-600"
-          icon={<Users size={17} className="text-cyan-600" />}
+          valueClassName="text-foreground"
+          icon={<Users size={17} className="text-foreground" />}
           sub="na empresa"
-          accentVar="var(--cyan-500)"
+          accentVar="var(--chart-4)"
         />
         <StatCard
           label="Pendentes"
           value={stats.pendentes}
-          valueClassName="text-yellow-600"
-          icon={<Clock size={17} className="text-yellow-600" />}
+          valueClassName="text-destructive"
+          icon={<Clock size={17} className="text-destructive" />}
           sub="aprovação"
-          accentVar="var(--yellow-500)"
+          accentVar="var(--destructive)"
         />
       </div>
 
       {/* Barra de Filtros Padronizada */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-3 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar visitante, CPF, empresa..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -280,7 +271,7 @@ export default function CheckinPage() {
               type="button"
               onClick={() => setModalFiltroAberto(true)}
               variant="outline"
-              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
@@ -313,7 +304,7 @@ export default function CheckinPage() {
             <Button
               variant="ghost"
               onClick={limparFiltros}
-              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
             >
               Limpar tudo
             </Button>
@@ -321,7 +312,7 @@ export default function CheckinPage() {
         )}
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="bg-card rounded-[24px] border border-border overflow-hidden shadow-md">
         <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-sm">Registro de Movimentação</h3>
@@ -410,7 +401,7 @@ export default function CheckinPage() {
           
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> O status "Pendente" indica visitantes que aguardam aprovação de um supervisor para entrar.
+              <strong>Info:</strong> O status &quot;Pendente&quot; indica visitantes que aguardam aprovação de um supervisor para entrar.
             </p>
           </div>
         </div>

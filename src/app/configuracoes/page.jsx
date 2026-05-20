@@ -1,684 +1,511 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  User,
-  Lock,
   Bell,
-  Palette,
-  Save,
-  RotateCcw,
+  Camera,
   Eye,
   EyeOff,
+  Loader2,
+  Lock,
   Mail,
-  Phone,
-  MapPin,
-  Calendar,
+  RotateCcw,
+  Save,
   Shield,
-  LogOut,
-  Trash2,
-  AlertCircle,
-  Check,
-  Loader2
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useAuth } from '@/lib/AuthContext';
-import UserAvatar from '@/components/ui/UserAvatar';
-import { api } from '@/services/api';
+  Smartphone,
+  User,
+} from "lucide-react";
+import Topbar from "@/components/Topbar";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { getAuthTipo, useAuth } from "@/lib/AuthContext";
+import { api } from "@/services/api";
+import { useToast } from "@/components/ui/toast-provider";
+
+const NOTIFICATION_STORAGE_KEY = "getin_notification_preferences";
+
+const CARGOS = [
+  { value: "adm", label: "Administrador" },
+  { value: "sup", label: "Supervisor" },
+  { value: "port", label: "Portaria" },
+];
+
+const DEFAULT_NOTIFICACOES = {
+  emailNovoVisitante: true,
+  emailCheckIn: true,
+  emailAlerta: true,
+  emailRelatorio: false,
+  pushNotificacoes: true,
+  pushAlertas: true,
+  toastSistema: true,
+};
+
+function pickFirst(...values) {
+  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
+}
+
+function getCargoLabel(tipo) {
+  return CARGOS.find((cargo) => cargo.value === tipo)?.label || "Funcionario";
+}
+
+function getSetorNome(setor) {
+  return String(setor?.nome || setor?.setor || setor?.departamento?.nome || "").trim();
+}
+
+function mapProfileResponse(response, fallbackUser, fallbackFuncionario) {
+  const data = response?.data || {};
+  const perfil = data.perfil || {};
+  const usuario = data.usuario || fallbackUser || {};
+  const funcionario = data.funcionario || fallbackFuncionario || {};
+  const tipo = getAuthTipo(funcionario, usuario);
+
+  return {
+    nome: pickFirst(perfil.nome, usuario.nome, "Usuario"),
+    email: pickFirst(perfil.email, usuario.email),
+    telefone: pickFirst(perfil.telefone, perfil.celular, usuario.celular),
+    setor: pickFirst(perfil.setor, funcionario.setor?.nome, funcionario.setores?.nome),
+    idSetor: pickFirst(funcionario.idSetor, funcionario.setor?.id, funcionario.setores?.id),
+    cargo: tipo || "func",
+    dataAdmissao: pickFirst(perfil.dataAdmissao, funcionario.dataDeCriacao, usuario.dataDeCriacao),
+    avatarUrl: pickFirst(perfil.avatarUrl, funcionario.avatarUrl, funcionario.imagem),
+    funcionarioId: pickFirst(funcionario.id, fallbackFuncionario?.id),
+  };
+}
+
+function loadNotificationPreferences() {
+  if (typeof window === "undefined") {
+    return DEFAULT_NOTIFICACOES;
+  }
+
+  try {
+    const stored = localStorage.getItem(NOTIFICATION_STORAGE_KEY);
+    return stored ? { ...DEFAULT_NOTIFICACOES, ...JSON.parse(stored) } : DEFAULT_NOTIFICACOES;
+  } catch {
+    return DEFAULT_NOTIFICACOES;
+  }
+}
 
 export default function ConfiguracoesPage() {
-  const { user } = useAuth();
-  const [abaAtiva, setAbaAtiva] = useState('perfil');
+  const { user, funcionario, updateAuthData } = useAuth();
+  const { showToast } = useToast();
+  const fileInputRef = useRef(null);
+  const tipoAtual = getAuthTipo(funcionario, user);
+  const podeAlterarCargo = tipoAtual === "adm";
+
+  const [abaAtiva, setAbaAtiva] = useState("perfil");
   const [loading, setLoading] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
+  const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [setores, setSetores] = useState([]);
 
-  // Estado de Perfil
-  const [perfil, setPerfil] = useState({
-    nome: user?.nome || 'Usuário',
-    email: user?.email || 'usuario@getin.com',
-    telefone: user?.telefone || '',
-    departamento: user?.departamento || '',
-    funcao: user?.funcao || 'Usuário do Sistema',
-    dataAdmissao: user?.dataAdmissao || '',
-  });
-
+  const [perfil, setPerfil] = useState(() => mapProfileResponse(null, user, funcionario));
   const [perfilOriginal, setPerfilOriginal] = useState(perfil);
-
-  // Estado de Segurança
   const [seguranca, setSeguranca] = useState({
-    senhaAtual: '',
-    novaSenha: '',
-    confirmarSenha: '',
-    autenticacaoDois: true,
-    sessoesCodigo: false,
+    senhaAtual: "",
+    novaSenha: "",
+    confirmarSenha: "",
   });
+  const [notificacoes, setNotificacoes] = useState(DEFAULT_NOTIFICACOES);
+  const [notificacoesOriginal, setNotificacoesOriginal] = useState(DEFAULT_NOTIFICACOES);
 
-  // Estado de Notificações
-  const [notificacoes, setNotificacoes] = useState({
-    emailNovoVisitante: true,
-    emailCheckIn: true,
-    emailAlerta: true,
-    emailRelatorio: false,
-    pushNotificacoes: true,
-    pushAlertas: true,
-    smsAlertas: false,
-  });
+  const setoresOptions = useMemo(() => {
+    return setores
+      .map((setor) => {
+        const nome = getSetorNome(setor);
+        return nome ? { id: setor.id, nome } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }, [setores]);
 
-  const [notificacoesOriginal, setNotificacoesOriginal] = useState(notificacoes);
-
-  // Estado de Preferências
-  const [preferencias, setPreferencias] = useState({
-    tema: 'claro',
-    idioma: 'pt-BR',
-    formatoData: 'DD/MM/YYYY',
-    formatoHora: '24h',
-    notificacoesAudio: true,
-    notificacoesDesktop: true,
-  });
-
-  const [preferenciasOriginal, setPreferenciasOriginal] = useState(preferencias);
-
-  // Carrega configurações do usuário ao montar
   useEffect(() => {
-    carregarConfiguracoes();
-  }, []);
+    async function carregarConfiguracoes() {
+      setLoadingPerfil(true);
 
-  const carregarConfiguracoes = async () => {
-    try {
-      // 🔌 Endpoints futuros: /user/settings ou /configuracoes
-      // Por enquanto, usamos dados do usuário autenticado
-      if (user) {
-        const novosPerfil = {
-          nome: user.nome || 'Usuário',
-          email: user.email || 'usuario@getin.com',
-          telefone: user.telefone || '',
-          departamento: user.departamento || '',
-          funcao: user.funcao || 'Usuário do Sistema',
-          dataAdmissao: user.dataAdmissao || '',
-        };
-        setPerfil(novosPerfil);
-        setPerfilOriginal(novosPerfil);
+      try {
+        const [profileResponse, setoresResponse] = await Promise.all([
+          api.get("/user/me/profile"),
+          api.get("/setores"),
+        ]);
+
+        const nextPerfil = profileResponse.sucesso
+          ? mapProfileResponse(profileResponse, user, funcionario)
+          : mapProfileResponse(null, user, funcionario);
+
+        setPerfil(nextPerfil);
+        setPerfilOriginal(nextPerfil);
+
+        if (setoresResponse.sucesso && Array.isArray(setoresResponse.data)) {
+          setSetores(setoresResponse.data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar configuracoes:", error);
+        showToast({
+          type: "error",
+          title: "Configuracoes nao carregadas",
+          description: "Usando os dados locais da sessao.",
+        });
+      } finally {
+        setLoadingPerfil(false);
       }
-    } catch (error) {
-      console.error('Erro ao carregar configurações:', error);
     }
-  };
 
-  const handleSalvarPerfil = async () => {
+    const preferencias = loadNotificationPreferences();
+    setNotificacoes(preferencias);
+    setNotificacoesOriginal(preferencias);
+    carregarConfiguracoes();
+  }, [funcionario, showToast, user]);
+
+  async function handleSalvarPerfil() {
     setLoading(true);
+
     try {
-      // 🔌 Endpoint futuro: PUT /user/profile
-      const response = await api.put('/user/profile', {
+      const response = await api.put("/user/me/profile", {
         nome: perfil.nome,
         email: perfil.email,
         telefone: perfil.telefone,
-        departamento: perfil.departamento,
+        idSetor: perfil.idSetor || undefined,
+        cargo: perfil.cargo,
       });
 
-      if (response.sucesso) {
-        setSucesso(true);
-        setPerfilOriginal(perfil);
-        setTimeout(() => setSucesso(false), 3000);
-      } else {
-        alert('Erro ao salvar perfil. Tente novamente.');
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao salvar perfil.");
       }
+
+      const nextPerfil = mapProfileResponse(response, user, funcionario);
+      setPerfil(nextPerfil);
+      setPerfilOriginal(nextPerfil);
+
+      const data = response.data || {};
+      if (data.usuario && data.funcionario) {
+        updateAuthData({ data: { usuario: data.usuario, funcionario: data.funcionario } }, data.funcionario);
+      }
+
+      showToast({
+        type: "success",
+        title: "Perfil atualizado",
+        description: "Suas informacoes foram salvas.",
+      });
     } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
-      alert('Erro ao salvar perfil. Tente novamente.');
+      showToast({
+        type: "error",
+        title: "Erro ao salvar perfil",
+        description: error.message || "Tente novamente em instantes.",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleSalvarSeguranca = async () => {
+  async function handleSalvarSeguranca() {
     if (seguranca.novaSenha !== seguranca.confirmarSenha) {
-      alert('As senhas não coincidem!');
+      showToast({
+        type: "error",
+        title: "Senhas diferentes",
+        description: "A confirmacao precisa repetir a nova senha.",
+      });
       return;
     }
+
     if (seguranca.novaSenha.length < 8) {
-      alert('A nova senha deve ter no mínimo 8 caracteres!');
+      showToast({
+        type: "error",
+        title: "Senha muito curta",
+        description: "Use no minimo 8 caracteres.",
+      });
       return;
     }
 
     setLoading(true);
+
     try {
-      // 🔌 Endpoint futuro: PUT /user/password
-      const response = await api.put('/user/password', {
+      const response = await api.put("/user/me/password", {
         senhaAtual: seguranca.senhaAtual,
         novaSenha: seguranca.novaSenha,
       });
 
-      if (response.sucesso) {
-        setSucesso(true);
-        setSeguranca({
-          senhaAtual: '',
-          novaSenha: '',
-          confirmarSenha: '',
-          autenticacaoDois: seguranca.autenticacaoDois,
-          sessoesCodigo: seguranca.sessoesCodigo,
-        });
-        setTimeout(() => setSucesso(false), 3000);
-      } else {
-        alert('Erro ao alterar senha. Verifique sua senha atual.');
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao alterar senha.");
       }
+
+      setSeguranca({ senhaAtual: "", novaSenha: "", confirmarSenha: "" });
+      showToast({
+        type: "success",
+        title: "Senha alterada",
+        description: "A nova senha ja esta ativa.",
+      });
     } catch (error) {
-      console.error('Erro ao salvar segurança:', error);
-      alert('Erro ao alterar senha. Tente novamente.');
+      showToast({
+        type: "error",
+        title: "Erro ao alterar senha",
+        description: error.message || "Confira a senha atual e tente de novo.",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleSalvarNotificacoes = async () => {
+  function handleSalvarNotificacoes() {
+    localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(notificacoes));
+    setNotificacoesOriginal(notificacoes);
+    showToast({
+      type: "success",
+      title: "Notificacoes atualizadas",
+      description: "Os avisos visuais e preferenciais foram salvos.",
+    });
+  }
+
+  async function handleAvatarChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const funcionarioId = perfil.funcionarioId || funcionario?.id;
+
+    if (!funcionarioId) {
+      showToast({
+        type: "error",
+        title: "Foto nao enviada",
+        description: "Nao foi possivel identificar seu funcionario.",
+      });
+      return;
+    }
+
     setLoading(true);
-    try {
-      // 🔌 Endpoint futuro: PUT /user/notifications
-      const response = await api.put('/user/notifications', notificacoes);
 
-      if (response.sucesso) {
-        setSucesso(true);
-        setNotificacoesOriginal(notificacoes);
-        setTimeout(() => setSucesso(false), 3000);
-      } else {
-        alert('Erro ao salvar notificações. Tente novamente.');
+    try {
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await api.upload(`/avatar/${funcionarioId}`, formData);
+
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao enviar imagem.");
       }
+
+      const avatarUrl = response.data?.imagem;
+      setPerfil((current) => ({ ...current, avatarUrl }));
+      setPerfilOriginal((current) => ({ ...current, avatarUrl }));
+
+      showToast({
+        type: "success",
+        title: "Foto atualizada",
+        description: "Sua foto de perfil foi alterada.",
+      });
     } catch (error) {
-      console.error('Erro ao salvar notificações:', error);
-      alert('Erro ao salvar notificações. Tente novamente.');
+      showToast({
+        type: "error",
+        title: "Erro no upload",
+        description: error.message || "Use uma imagem valida de ate 5 MB.",
+      });
     } finally {
+      event.target.value = "";
       setLoading(false);
     }
-  };
-
-  const handleSalvarPreferencias = async () => {
-    setLoading(true);
-    try {
-      // 🔌 Endpoint futuro: PUT /user/preferences
-      const response = await api.put('/user/preferences', preferencias);
-
-      if (response.sucesso) {
-        setSucesso(true);
-        setPreferenciasOriginal(preferencias);
-        setTimeout(() => setSucesso(false), 3000);
-      } else {
-        alert('Erro ao salvar preferências. Tente novamente.');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar preferências:', error);
-      alert('Erro ao salvar preferências. Tente novamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
-      {/* Cabeçalho */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <p className="text-sm text-muted-foreground">Gerencie sua conta, segurança e preferências do sistema.</p>
-      </div>
+    <>
+      <Topbar
+        title="Configuracoes"
+        subtitle="Gerencie perfil, seguranca e notificacoes do sistema"
+      />
 
-      {/* Mensagem de Sucesso */}
-      {sucesso && (
-        <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
-          <Check className="w-5 h-5 text-green-600" />
-          <p className="text-sm font-medium text-green-700">Alterações salvas com sucesso!</p>
+      <div className="space-y-6 animate-in fade-in duration-700">
+        <div className="flex gap-2 overflow-x-auto border-b border-border">
+          <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
+          <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Seguranca" />
+          <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificacoes" />
         </div>
-      )}
 
-      {/* Abas */}
-      <div className="flex gap-2 border-b border-border overflow-x-auto pb-0">
-        <TabButton
-          active={abaAtiva === 'perfil'}
-          onClick={() => setAbaAtiva('perfil')}
-          icon={<User size={16} />}
-          label="Perfil"
-        />
-        <TabButton
-          active={abaAtiva === 'seguranca'}
-          onClick={() => setAbaAtiva('seguranca')}
-          icon={<Lock size={16} />}
-          label="Segurança"
-        />
-        <TabButton
-          active={abaAtiva === 'notificacoes'}
-          onClick={() => setAbaAtiva('notificacoes')}
-          icon={<Bell size={16} />}
-          label="Notificações"
-        />
-        <TabButton
-          active={abaAtiva === 'preferencias'}
-          onClick={() => setAbaAtiva('preferencias')}
-          icon={<Palette size={16} />}
-          label="Preferências"
-        />
-      </div>
-
-      {/* Conteúdo das Abas */}
-      <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-        {/* TAB: PERFIL */}
-        {abaAtiva === 'perfil' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Avatar e Info Rápida */}
-            <div className="flex items-start gap-6 pb-6 border-b border-border">
-              <UserAvatar 
-                name={perfil.nome} 
-                email={perfil.email} 
-                className="w-20 h-20 text-2xl" 
-              />
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">{perfil.nome}</h2>
-                <p className="text-sm text-muted-foreground">{perfil.funcao}</p>
-              </div>
-              <Button variant="outline" size="sm" disabled>
-                Alterar Foto
-              </Button>
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
+          {loadingPerfil ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Carregando configuracoes...
             </div>
+          ) : (
+            <>
+              {abaAtiva === "perfil" && (
+                <div className="space-y-6">
+                  <div className="flex flex-col gap-5 border-b border-border pb-6 md:flex-row md:items-center">
+                    <UserAvatar name={perfil.nome} email={perfil.email} src={perfil.avatarUrl} className="h-20 w-20 text-2xl" />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-xl font-bold text-foreground">{perfil.nome}</h2>
+                      <p className="text-sm text-muted-foreground">{getCargoLabel(perfil.cargo)}</p>
+                    </div>
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                    <Button type="button" variant="outline" className="h-10 gap-2 rounded-xl" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                      <Camera size={16} />
+                      Alterar foto
+                    </Button>
+                  </div>
 
-            {/* Formulário de Perfil */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Nome Completo</label>
-                <Input
-                  type="text"
-                  value={perfil.nome}
-                  onChange={(e) => setPerfil({ ...perfil, nome: e.target.value })}
-                  placeholder="Seu nome completo"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Email</label>
-                <Input
-                  type="email"
-                  value={perfil.email}
-                  onChange={(e) => setPerfil({ ...perfil, email: e.target.value })}
-                  placeholder="seu.email@getin.com"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Telefone</label>
-                <Input
-                  type="tel"
-                  value={perfil.telefone}
-                  onChange={(e) => setPerfil({ ...perfil, telefone: e.target.value })}
-                  placeholder="(11) 98765-4321"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Departamento</label>
-                <Input
-                  type="text"
-                  value={perfil.departamento}
-                  onChange={(e) => setPerfil({ ...perfil, departamento: e.target.value })}
-                  placeholder="Seu departamento"
-                  className="w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Função</label>
-                <Input
-                  type="text"
-                  value={perfil.funcao}
-                  disabled
-                  className="w-full opacity-50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Data de Admissão</label>
-                <Input
-                  type="date"
-                  value={perfil.dataAdmissao}
-                  disabled
-                  className="w-full opacity-50"
-                />
-              </div>
-            </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <Field label="Nome completo">
+                      <Input value={perfil.nome} onChange={(event) => setPerfil({ ...perfil, nome: event.target.value })} className="h-11 rounded-xl" />
+                    </Field>
+                    <Field label="E-mail">
+                      <Input type="email" value={perfil.email} onChange={(event) => setPerfil({ ...perfil, email: event.target.value })} className="h-11 rounded-xl" />
+                    </Field>
+                    <Field label="Telefone">
+                      <Input value={perfil.telefone} onChange={(event) => setPerfil({ ...perfil, telefone: event.target.value })} className="h-11 rounded-xl" />
+                    </Field>
+                    <Field label="Setor principal">
+                      <select
+                        value={perfil.idSetor || ""}
+                        onChange={(event) => {
+                          const selected = setoresOptions.find((setor) => String(setor.id) === event.target.value);
+                          setPerfil({ ...perfil, idSetor: event.target.value, setor: selected?.nome || "" });
+                        }}
+                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary"
+                      >
+                        <option value="">{perfil.setor || "Selecione um setor"}</option>
+                        {setoresOptions.map((setor) => (
+                          <option key={setor.id} value={setor.id}>{setor.nome}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Cargo">
+                      <select
+                        value={perfil.cargo}
+                        disabled={!podeAlterarCargo}
+                        onChange={(event) => setPerfil({ ...perfil, cargo: event.target.value })}
+                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {CARGOS.map((cargo) => (
+                          <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Data de admissao">
+                      <Input type="date" value={perfil.dataAdmissao ? String(perfil.dataAdmissao).slice(0, 10) : ""} disabled className="h-11 rounded-xl opacity-70" />
+                    </Field>
+                  </div>
 
-            {/* Botões de Ação */}
-            <div className="flex items-center justify-between pt-6 border-t border-border">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setPerfil(perfilOriginal)}
-                >
-                  <RotateCcw size={14} />
-                  Descartar
-                </Button>
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSalvarPerfil}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    Salvar Alterações
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: SEGURANÇA */}
-        {abaAtiva === 'seguranca' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Alterar Senha */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Lock size={18} />
-                Alterar Senha
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Senha Atual</label>
-                  <Input
-                    type="password"
-                    value={seguranca.senhaAtual}
-                    onChange={(e) => setSeguranca({ ...seguranca, senhaAtual: e.target.value })}
-                    placeholder="Digite sua senha atual"
-                    className="w-full"
+                  <ActionRow
+                    onReset={() => setPerfil(perfilOriginal)}
+                    onSave={handleSalvarPerfil}
+                    loading={loading}
+                    saveLabel="Salvar alteracoes"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Nova Senha</label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
+              )}
+
+              {abaAtiva === "seguranca" && (
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                      <Shield size={18} />
+                      Alterar senha
+                    </h2>
+                    <PasswordField label="Senha atual" value={seguranca.senhaAtual} onChange={(value) => setSeguranca({ ...seguranca, senhaAtual: value })} />
+                    <PasswordField
+                      label="Nova senha"
                       value={seguranca.novaSenha}
-                      onChange={(e) => setSeguranca({ ...seguranca, novaSenha: e.target.value })}
-                      placeholder="Digite sua nova senha"
-                      className="w-full pr-10"
+                      onChange={(value) => setSeguranca({ ...seguranca, novaSenha: value })}
+                      visible={showPassword}
+                      onToggle={() => setShowPassword((current) => !current)}
                     />
-                    <button
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Mínimo 8 caracteres, com letras e números</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Confirmar Nova Senha</label>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPassword ? 'text' : 'password'}
+                    <PasswordField
+                      label="Confirmar nova senha"
                       value={seguranca.confirmarSenha}
-                      onChange={(e) => setSeguranca({ ...seguranca, confirmarSenha: e.target.value })}
-                      placeholder="Confirme sua nova senha"
-                      className="w-full pr-10"
+                      onChange={(value) => setSeguranca({ ...seguranca, confirmarSenha: value })}
+                      visible={showConfirmPassword}
+                      onToggle={() => setShowConfirmPassword((current) => !current)}
                     />
-                    <button
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
                   </div>
+
+                  <ActionRow
+                    onReset={() => setSeguranca({ senhaAtual: "", novaSenha: "", confirmarSenha: "" })}
+                    onSave={handleSalvarSeguranca}
+                    loading={loading}
+                    saveLabel="Alterar senha"
+                  />
                 </div>
-              </div>
-            </div>
+              )}
 
-            {/* Botões de Ação */}
-            <div className="flex items-center justify-between pt-6 border-t border-border">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setSeguranca({
-                    senhaAtual: '',
-                    novaSenha: '',
-                    confirmarSenha: '',
-                    autenticacaoDois: true,
-                    sessoesCodigo: false,
-                  })}
-                >
-                  <RotateCcw size={14} />
-                  Descartar
-                </Button>
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSalvarSeguranca}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    Alterar Senha
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
+              {abaAtiva === "notificacoes" && (
+                <div className="space-y-6">
+                  <NotificationGroup title="E-mail" icon={<Mail size={18} />}>
+                    <CheckboxItem label="Novo visitante registrado" checked={notificacoes.emailNovoVisitante} onChange={(checked) => setNotificacoes({ ...notificacoes, emailNovoVisitante: checked })} />
+                    <CheckboxItem label="Check-in e check-out" checked={notificacoes.emailCheckIn} onChange={(checked) => setNotificacoes({ ...notificacoes, emailCheckIn: checked })} />
+                    <CheckboxItem label="Alertas de seguranca" checked={notificacoes.emailAlerta} onChange={(checked) => setNotificacoes({ ...notificacoes, emailAlerta: checked })} />
+                    <CheckboxItem label="Relatorios periodicos" checked={notificacoes.emailRelatorio} onChange={(checked) => setNotificacoes({ ...notificacoes, emailRelatorio: checked })} />
+                  </NotificationGroup>
 
-        {/* TAB: NOTIFICAÇÕES */}
-        {abaAtiva === 'notificacoes' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Mail size={18} />
-                Notificações por Email
-              </h3>
-              <div className="space-y-3">
-                <CheckboxItem
-                  label="Novo visitante registrado"
-                  checked={notificacoes.emailNovoVisitante}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, emailNovoVisitante: checked })}
-                />
-                <CheckboxItem
-                  label="Check-in/Check-out"
-                  checked={notificacoes.emailCheckIn}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, emailCheckIn: checked })}
-                />
-                <CheckboxItem
-                  label="Alertas de segurança"
-                  checked={notificacoes.emailAlerta}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, emailAlerta: checked })}
-                />
-                <CheckboxItem
-                  label="Relatórios periódicos"
-                  checked={notificacoes.emailRelatorio}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, emailRelatorio: checked })}
-                />
-              </div>
-            </div>
+                  <NotificationGroup title="Avisos visuais" icon={<Smartphone size={18} />}>
+                    <CheckboxItem label="Notificacoes gerais no canto inferior" checked={notificacoes.pushNotificacoes} onChange={(checked) => setNotificacoes({ ...notificacoes, pushNotificacoes: checked })} />
+                    <CheckboxItem label="Alertas criticos" checked={notificacoes.pushAlertas} onChange={(checked) => setNotificacoes({ ...notificacoes, pushAlertas: checked })} />
+                    <CheckboxItem label="Toasts de acoes importantes" checked={notificacoes.toastSistema} onChange={(checked) => setNotificacoes({ ...notificacoes, toastSistema: checked })} />
+                  </NotificationGroup>
 
-            <div className="space-y-4 pt-6 border-t border-border">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <Bell size={18} />
-                Notificações Push
-              </h3>
-              <div className="space-y-3">
-                <CheckboxItem
-                  label="Notificações gerais"
-                  checked={notificacoes.pushNotificacoes}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, pushNotificacoes: checked })}
-                />
-                <CheckboxItem
-                  label="Alertas críticos"
-                  checked={notificacoes.pushAlertas}
-                  onChange={(checked) => setNotificacoes({ ...notificacoes, pushAlertas: checked })}
-                />
-              </div>
-            </div>
-
-            {/* Botões de Ação */}
-            <div className="flex items-center justify-between pt-6 border-t border-border">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setNotificacoes(notificacoesOriginal)}
-                >
-                  <RotateCcw size={14} />
-                  Descartar
-                </Button>
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSalvarNotificacoes}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    Salvar Alterações
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* TAB: PREFERÊNCIAS */}
-        {abaAtiva === 'preferencias' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Tema</label>
-                <select
-                  value={preferencias.tema}
-                  onChange={(e) => setPreferencias({ ...preferencias, tema: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                >
-                  <option value="claro">Claro</option>
-                  <option value="escuro">Escuro</option>
-                  <option value="auto">Automático</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Idioma</label>
-                <select
-                  value={preferencias.idioma}
-                  onChange={(e) => setPreferencias({ ...preferencias, idioma: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                >
-                  <option value="pt-BR">Português (Brasil)</option>
-                  <option value="en-US">English (USA)</option>
-                  <option value="es-ES">Español (España)</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Formato de Data</label>
-                <select
-                  value={preferencias.formatoData}
-                  onChange={(e) => setPreferencias({ ...preferencias, formatoData: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                >
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-2">Formato de Hora</label>
-                <select
-                  value={preferencias.formatoHora}
-                  onChange={(e) => setPreferencias({ ...preferencias, formatoHora: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground"
-                >
-                  <option value="24h">24 horas</option>
-                  <option value="12h">12 horas (AM/PM)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-6 border-t border-border">
-              <CheckboxItem
-                label="Som nas notificações"
-                checked={preferencias.notificacoesAudio}
-                onChange={(checked) => setPreferencias({ ...preferencias, notificacoesAudio: checked })}
-              />
-              <CheckboxItem
-                label="Notificações do desktop"
-                checked={preferencias.notificacoesDesktop}
-                onChange={(checked) => setPreferencias({ ...preferencias, notificacoesDesktop: checked })}
-              />
-            </div>
-
-            {/* Botões de Ação */}
-            <div className="flex items-center justify-between pt-6 border-t border-border">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setPreferencias(preferenciasOriginal)}
-                >
-                  <RotateCcw size={14} />
-                  Descartar
-                </Button>
-              </div>
-              <Button
-                size="sm"
-                className="gap-2"
-                onClick={handleSalvarPreferencias}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save size={14} />
-                    Salvar Alterações
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
+                  <ActionRow
+                    onReset={() => setNotificacoes(notificacoesOriginal)}
+                    onSave={handleSalvarNotificacoes}
+                    loading={false}
+                    saveLabel="Salvar notificacoes"
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
-// ─── Componentes Auxiliares ─────────────────────────────────────────────────
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function PasswordField({ label, value, onChange, visible = false, onToggle }) {
+  const type = onToggle ? (visible ? "text" : "password") : "password";
+
+  return (
+    <Field label={label}>
+      <div className="relative">
+        <Input
+          type={type}
+          autoComplete="new-password"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 rounded-xl pr-11"
+        />
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+          >
+            {visible ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        )}
+      </div>
+    </Field>
+  );
+}
 
 function TabButton({ active, onClick, icon, label }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 pb-3 px-4 text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+      className={`flex items-center gap-2 border-b-2 px-4 pb-3 text-sm font-semibold transition ${
         active
-          ? 'text-foreground border-b-2 border-primary'
-          : 'text-muted-foreground hover:text-foreground border-b-2 border-transparent'
+          ? "border-primary text-primary"
+          : "border-transparent text-muted-foreground hover:text-foreground"
       }`}
     >
       {icon}
@@ -689,15 +516,36 @@ function TabButton({ active, onClick, icon, label }) {
 
 function CheckboxItem({ label, checked, onChange }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
-      <Checkbox
-        checked={checked}
-        onCheckedChange={onChange}
-        className="w-5 h-5"
-      />
-      <label className="text-sm font-medium text-foreground cursor-pointer flex-1">
-        {label}
-      </label>
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40">
+      <Checkbox checked={checked} onCheckedChange={onChange} className="h-5 w-5" />
+      <span className="flex-1">{label}</span>
+    </label>
+  );
+}
+
+function NotificationGroup({ title, icon, children }) {
+  return (
+    <section className="space-y-3 rounded-2xl border border-border/70 bg-background/50 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
+        {icon}
+        {title}
+      </h2>
+      <div className="grid gap-3 md:grid-cols-2">{children}</div>
+    </section>
+  );
+}
+
+function ActionRow({ onReset, onSave, loading, saveLabel }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <Button type="button" variant="outline" onClick={onReset} className="h-10 gap-2 rounded-xl">
+        <RotateCcw size={14} />
+        Descartar
+      </Button>
+      <Button type="button" onClick={onSave} disabled={loading} className="h-10 gap-2 rounded-xl">
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+        {saveLabel}
+      </Button>
     </div>
   );
 }
