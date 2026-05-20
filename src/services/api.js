@@ -215,21 +215,16 @@ export const authService = {
 
 export const publicService = {
   async getStats() {
-    if (process.env.NEXT_PUBLIC_ENABLE_PUBLIC_STATS !== 'true') {
-      return {
-        sucesso: false,
-        data: {
-          visitasHoje: 0,
-          setoresAtivos: 0,
-          rastreabilidade: 0,
-        },
-      };
-    }
-
     try {
       const data = await api.get('/public/stats');
-      if (data.sucesso) {
-        return data;
+      if (data.sucesso && data.data) {
+        return {
+          sucesso: true,
+          data: {
+            usuariosTotal: data.data.usuariosTotal || 0,
+            setoresTotal: data.data.setoresTotal || 0,
+          },
+        };
       }
     } catch (error) {
       console.warn('Nao foi possivel buscar estatisticas publicas:', error);
@@ -238,9 +233,8 @@ export const publicService = {
     return {
       sucesso: false,
       data: {
-        visitasHoje: 0,
-        setoresAtivos: 0,
-        rastreabilidade: 0,
+        usuariosTotal: 0,
+        setoresTotal: 0,
       },
     };
   },
