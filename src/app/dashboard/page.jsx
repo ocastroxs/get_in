@@ -16,9 +16,9 @@ const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#
 
 // Helper: Parse data from multiple possible field names
 function parseDataRequisicao(item) {
-  // Priorizamos dataDaRequisicao para requisições e dataDeEntrada para logs
-  // Removemos 'validade' pois representa um prazo futuro, não a data do registro
-  const campos = ["dataDaRequisicao", "dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao"];
+  // Priorizamos dataDaRequisicao (tabela requisicoes_de_visitas) e dataDeEntrada (logs)
+  // O campo 'solicitacao' também é usado em algumas partes do sistema como string de data
+  const campos = ["dataDaRequisicao", "solicitacao", "dataDeEntrada", "entrada", "createdAt", "created_at", "dataCriacao", "createdAtRequisicao"];
   
   for (const campo of campos) {
     if (item[campo]) {
