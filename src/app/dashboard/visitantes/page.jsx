@@ -12,7 +12,6 @@ import AlertaBanner from "@/components/AlertaBanner";
 import { Button } from "@/components/ui/button";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
-import ModalFiltro from "@/components/ui/ModalFiltro";
 
 const STATUS_LABEL = {
   ativo: "Ativo",
