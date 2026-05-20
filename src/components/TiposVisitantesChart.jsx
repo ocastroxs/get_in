@@ -29,8 +29,10 @@ export default function TiposVisitantesChart({
   subtitle = "Por periodo - hoje",
   data = TIPOS_VISITANTE,
   weekData = data,
+  monthData = data,
   emptyMessage = "Nenhum motivo registrado hoje.",
   weekEmptyMessage = "Nenhum motivo registrado na semana.",
+  monthEmptyMessage = "Nenhum motivo registrado no mês.",
   dataKey = "value",
   nameKey = "name",
   colorKey = "color",
@@ -39,16 +41,26 @@ export default function TiposVisitantesChart({
   const [view, setView] = useState("hoje");
 
   const chartData = useMemo(() => {
+    if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, weekData, view]);
+  }, [data, weekData, monthData, view]);
 
   const total = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item[dataKey], 0);
   }, [chartData, dataKey]);
 
   const isEmpty = total === 0;
-  const emptyText = view === "semana" ? weekEmptyMessage : emptyMessage;
-  const displaySubtitle = view === "semana" ? "Por periodo - semana" : "Por periodo - hoje";
+  
+  const emptyText = useMemo(() => {
+    if (view === "mes") return monthEmptyMessage;
+    return view === "semana" ? weekEmptyMessage : emptyMessage;
+  }, [view, monthEmptyMessage, weekEmptyMessage, emptyMessage]);
+
+  const displaySubtitle = useMemo(() => {
+    if (view === "mes") return "Por periodo - mês";
+    return view === "semana" ? "Por periodo - semana" : "Por periodo - hoje";
+  }, [view]);
+
   const chartSize = mobileLayout ? 112 : 156;
 
   return (
@@ -62,7 +74,7 @@ export default function TiposVisitantesChart({
           </div>
 
           <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
-            {["hoje", "semana"].map((item) => (
+            {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
@@ -73,7 +85,7 @@ export default function TiposVisitantesChart({
                     : "hover:bg-white/80 hover:text-foreground",
                 ].join(" ")}
               >
-                {item}
+                {item === "mes" ? "mês" : item}
               </button>
             ))}
           </div>

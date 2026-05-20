@@ -105,6 +105,37 @@ function agruparMotivosSemana(requisicoes) {
     .sort((a, b) => b.value - a.value);
 }
 
+// Helper: Group motivos for the current month
+function agruparMotivosMes(requisicoes) {
+  const hoje = new Date();
+  const mapa = new Map();
+
+  requisicoes.forEach((req) => {
+    const data = parseDataRequisicao(req);
+    if (!data) return;
+
+    // Verifica se é o mesmo mês e ano
+    const mesmoMes = data.getMonth() === hoje.getMonth() && data.getFullYear() === hoje.getFullYear();
+    if (!mesmoMes) return;
+
+    const motivo = normalizarMotivo(req.motivo);
+    if (!motivo) return;
+
+    const chaveNormalizada = motivo.toLowerCase();
+    const atual = mapa.get(chaveNormalizada) || { motivo, count: 0 };
+    atual.count += 1;
+    mapa.set(chaveNormalizada, atual);
+  });
+
+  return [...mapa.values()]
+    .map((item, index) => ({
+      name: item.motivo,
+      value: item.count,
+      color: CORES_GRAFICO[index % CORES_GRAFICO.length],
+    }))
+    .sort((a, b) => b.value - a.value);
+}
+
 // Helper: Process status counts for today
 function processarStatusHoje(requisicoes) {
   const hoje = new Date();
@@ -175,6 +206,7 @@ export default function DashboardPage() {
   const [mostrarBanner, setMostrarBanner] = useState(true);
   const [motivosHoje, setMotivosHoje] = useState([]);
   const [motivosSemana, setMotivosSemana] = useState([]);
+  const [motivosMes, setMotivosMes] = useState([]);
   const [statusHoje, setStatusHoje] = useState([]);
   const [statusSemana, setStatusSemana] = useState([]);
 
@@ -193,6 +225,7 @@ export default function DashboardPage() {
           // Process motivos
           setMotivosHoje(agruparMotivosHoje(requisicoes));
           setMotivosSemana(agruparMotivosSemana(requisicoes));
+          setMotivosMes(agruparMotivosMes(requisicoes));
           
           // Process status
           setStatusHoje(processarStatusHoje(requisicoes));
@@ -204,6 +237,7 @@ export default function DashboardPage() {
         setMostrarBanner(false);
         setMotivosHoje([]);
         setMotivosSemana([]);
+        setMotivosMes([]);
         setStatusHoje([]);
         setStatusSemana([]);
       }
@@ -314,7 +348,7 @@ export default function DashboardPage() {
 
         <EntradasChart mobileLayout />
         <PicoMovimentoChart mobileLayout />
-        <TiposVisitanteChart mobileLayout data={motivosHoje} weekData={motivosSemana} />
+        <TiposVisitanteChart mobileLayout data={motivosHoje} weekData={motivosSemana} monthData={motivosMes} />
         <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} />
 
         <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
@@ -402,7 +436,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-          <TiposVisitanteChart data={motivosHoje} weekData={motivosSemana} />
+          <TiposVisitanteChart data={motivosHoje} weekData={motivosSemana} monthData={motivosMes} />
           <div className="space-y-6">
             <StatusVisitantesChart data={statusHoje} weekData={statusSemana} />
           </div>
