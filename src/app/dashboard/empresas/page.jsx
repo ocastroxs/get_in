@@ -19,6 +19,7 @@ import {
   Check
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
+import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -70,7 +71,7 @@ function LinhaEmpresa({ emp, maxVisitantes, index }) {
   const color = emp.color || COLORS[index % COLORS.length];
 
   return (
-    <tr className="border-b border-border hover:bg-accent/40 transition-colors group">
+    <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035] group">
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div
@@ -117,10 +118,10 @@ function LinhaEmpresa({ emp, maxVisitantes, index }) {
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
-          <Button variant="outline" size="sm" className="h-7 text-[10px] gap-1.5 px-2">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl border-border/70 bg-white/75 px-3 text-[10px] hover:border-primary/20 hover:bg-white">
             <Edit2 size={10} /> Editar
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
             <History size={12} className="text-muted-foreground" />
           </Button>
         </div>
@@ -195,78 +196,60 @@ export default function EmpresasPage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 animate-in fade-in duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Empresas Terceirizadas</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Gestão de empresas terceirizadas e visitantes
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadCSV(empresasFiltradas)}
-            className="gap-2 rounded-xl"
-          >
-            <Download size={14} />
-            Exportar CSV
-          </Button>
-          <Button
-            size="sm"
-            className="gap-1.5 rounded-xl"
-          >
-            <Plus size={14} />
-            Cadastrar Empresa
-          </Button>
-        </div>
-      </header>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+      <Topbar
+        title="Empresas Terceirizadas"
+        subtitle="Gestão de empresas terceirizadas e visitantes"
+        secondaryButtonText="Exportar CSV"
+        onSecondaryButtonClick={() => downloadCSV(empresasFiltradas)}
+        buttonText="Cadastrar Empresa"
+        onButtonClick={() => {}}
+      />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard
           label="Total"
           value={stats.total}
-          valueClassName="text-blue-600"
-          icon={<Briefcase size={17} className="text-blue-600" />}
+          valueClassName="text-primary"
+          icon={<Briefcase size={17} className="text-primary" />}
           sub="cadastradas"
-          accentVar="var(--blue-500)"
+          accentVar="var(--primary)"
         />
         <StatCard
           label="Ativas"
           value={stats.ativas}
-          valueClassName="text-green-600"
-          icon={<CheckCircle2 size={17} className="text-green-600" />}
+          valueClassName="text-secondary"
+          icon={<CheckCircle2 size={17} className="text-secondary" />}
           sub={`${stats.pctAtivas}% do total`}
-          accentVar="var(--green-500)"
+          accentVar="var(--chart-2)"
         />
         <StatCard
           label="Mais Visitada"
           value={stats.maisVisitada?.nome || "—"}
-          valueClassName="text-cyan-600 font-bold text-sm"
-          icon={<TrendingUp size={17} className="text-cyan-600" />}
+          valueClassName="text-foreground font-bold text-sm"
+          icon={<TrendingUp size={17} className="text-foreground" />}
           sub={`${stats.maisVisitada?.visitantes || 0} visitas`}
-          accentVar="var(--cyan-500)"
+          accentVar="var(--chart-4)"
         />
         <StatCard
           label="Menos Visitada"
           value={stats.menosVisitada?.nome || "—"}
-          valueClassName="text-yellow-600 font-bold text-sm"
-          icon={<TrendingDown size={17} className="text-yellow-600" />}
+          valueClassName="text-muted-foreground font-bold text-sm"
+          icon={<TrendingDown size={17} className="text-muted-foreground" />}
           sub={`${stats.menosVisitada?.visitantes || 0} visitas`}
-          accentVar="var(--yellow-500)"
+          accentVar="var(--border)"
         />
       </div>
 
       {/* Barra de Filtros Padronizada */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+      <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 items-center gap-3 w-full">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Buscar empresa, CNPJ..."
-                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
@@ -285,7 +268,7 @@ export default function EmpresasPage() {
               type="button"
               onClick={() => setModalFiltroAberto(true)}
               variant="outline"
-              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
+              className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
@@ -297,7 +280,7 @@ export default function EmpresasPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
+          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
             {empresasFiltradas.length} resultado(s)
           </div>
         </div>
@@ -318,7 +301,7 @@ export default function EmpresasPage() {
             <Button
               variant="ghost"
               onClick={limparFiltros}
-              className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+              className="h-7 px-2 text-[10px] text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground"
             >
               Limpar tudo
             </Button>
@@ -326,17 +309,17 @@ export default function EmpresasPage() {
         )}
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
+      <div className="bg-card rounded-[24px] border border-border overflow-hidden shadow-md">
         <div className="p-4 border-b border-border bg-muted/20 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-sm">Registro de Empresas</h3>
             <p className="text-[10px] text-muted-foreground">{empresasFiltradas.length} empresas encontradas</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg" onClick={() => downloadCSV(empresasFiltradas)}>
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-xl border-border/70 bg-white/75 hover:border-primary/20 hover:bg-white" onClick={() => downloadCSV(empresasFiltradas)}>
               <Download size={14} />
             </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg">
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-xl border-border/70 bg-white/75 hover:border-primary/20 hover:bg-white">
               <Printer size={14} />
             </Button>
           </div>

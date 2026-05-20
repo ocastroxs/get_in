@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { TIPOS_VISITANTE } from "@/lib/mockData";
 
@@ -24,79 +25,135 @@ function PieTooltip({ active, payload }) {
 }
 
 export default function TiposVisitantesChart({
-  title = "Tipos de Visitante",
+  title = "Motivos",
   subtitle = "Por periodo - hoje",
   data = TIPOS_VISITANTE,
+  weekData = data,
+  monthData = data,
+  emptyMessage = "Nenhum motivo registrado hoje.",
+  weekEmptyMessage = "Nenhum motivo registrado na semana.",
+  monthEmptyMessage = "Nenhum motivo registrado no mês.",
   dataKey = "value",
   nameKey = "name",
   colorKey = "color",
   mobileLayout = false,
 }) {
-  const total = data.reduce((sum, item) => sum + item[dataKey], 0);
+  const [view, setView] = useState("hoje");
+
+  const chartData = useMemo(() => {
+    if (view === "mes") return monthData;
+    return view === "semana" ? weekData : data;
+  }, [data, weekData, monthData, view]);
+
+  const total = useMemo(() => {
+    return chartData.reduce((sum, item) => sum + item[dataKey], 0);
+  }, [chartData, dataKey]);
+
+  const isEmpty = total === 0;
+  
+  const emptyText = useMemo(() => {
+    if (view === "mes") return monthEmptyMessage;
+    return view === "semana" ? weekEmptyMessage : emptyMessage;
+  }, [view, monthEmptyMessage, weekEmptyMessage, emptyMessage]);
+
+  const displaySubtitle = useMemo(() => {
+    if (view === "mes") return "Por periodo - mês";
+    return view === "semana" ? "Por periodo - semana" : "Por periodo - hoje";
+  }, [view]);
+
   const chartSize = mobileLayout ? 112 : 156;
 
   return (
     <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "gap-4 p-5 min-h-[280px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuicao</p>
-        <h2 className={`${mobileLayout ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h2>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      </div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuicao</p>
+            <h2 className={`${mobileLayout ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h2>
+            <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
+          </div>
 
-      <div className={`mt-1 flex ${mobileLayout ? "flex-col gap-4" : "flex-1 items-center gap-6"}`}>
-        <div className="relative shrink-0 self-center cursor-pointer transition-transform duration-500 hover:scale-105">
-          <ResponsiveContainer width={chartSize} height={chartSize}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={mobileLayout ? 38 : 50}
-                outerRadius={mobileLayout ? 52 : 70}
-                dataKey={dataKey}
-                startAngle={90}
-                endAngle={-270}
-                strokeWidth={3}
-                stroke="var(--card)"
-                paddingAngle={2}
-                animationDuration={1500}
-                animationEasing="ease-out"
+          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
+            {["hoje", "semana", "mes"].map((item) => (
+              <button
+                key={item}
+                onClick={() => setView(item)}
+                className={[
+                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  view === item
+                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
+                    : "hover:bg-white/80 hover:text-foreground",
+                ].join(" ")}
               >
-                {data.map((entry, index) => (
-                  <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
-                ))}
-              </Pie>
-              <Tooltip
-                content={<PieTooltip />}
-                wrapperStyle={{ outline: "none", zIndex: 20 }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
+                {item === "mes" ? "mês" : item}
+              </button>
+            ))}
           </div>
         </div>
-
-        <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1">
-          {data.map((item, index) => (
-            <div
-              key={index}
-              className={`grid items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2.5" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2.5 py-2"}`}
-              style={{ animationDelay: `${500 + index * 50}ms` }}
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full shadow-sm"
-                  style={{ backgroundColor: item[colorKey] }}
-                />
-                <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
-              </div>
-              <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} justify-self-end shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
-            </div>
-          ))}
-        </div>
       </div>
+
+      {isEmpty ? (
+        <div className={`flex flex-col items-center justify-center ${mobileLayout ? "py-8" : "py-12"}`}>
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">{emptyText}</p>
+          </div>
+        </div>
+      ) : (
+        <div className={`mt-1 flex ${mobileLayout ? "flex-col gap-4" : "flex-1 items-center gap-6"}`}>
+          <div className="relative shrink-0 self-center cursor-pointer transition-transform duration-500 hover:scale-105">
+            <ResponsiveContainer width={chartSize} height={chartSize}>
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={mobileLayout ? 38 : 50}
+                  outerRadius={mobileLayout ? 52 : 70}
+                  dataKey={dataKey}
+                  startAngle={90}
+                  endAngle={-270}
+                  strokeWidth={3}
+                  stroke="var(--card)"
+                  paddingAngle={2}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={<PieTooltip />}
+                  wrapperStyle={{ outline: "none", zIndex: 20 }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1">
+            {chartData.map((item, index) => (
+              <div
+                key={index}
+                className={`grid items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2.5" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2.5 py-2"}`}
+                style={{ animationDelay: `${500 + index * 50}ms` }}
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full shadow-sm"
+                    style={{ backgroundColor: item[colorKey] }}
+                  />
+                  <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
+                </div>
+                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} justify-self-end shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
