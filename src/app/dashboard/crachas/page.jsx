@@ -134,7 +134,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
 
         <div className="px-6 py-5 space-y-4">
           <p className="text-xs text-muted-foreground">
-            Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status "Disponível".
+            Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status &quot;Disponível&quot;.
           </p>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador (Opcional)</label>
@@ -483,7 +483,7 @@ export default function CrachasPage() {
           
           <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
             <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> Crachás com status "Alerta" ou "Perdido" devem ser revisados imediatamente para evitar brechas de segurança.
+              <strong>Info:</strong> Crachás com status &quot;Alerta&quot; ou &quot;Perdido&quot; devem ser revisados imediatamente para evitar brechas de segurança.
             </p>
           </div>
         </div>

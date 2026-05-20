@@ -171,6 +171,7 @@ export function LoginForm({ className, ...props }) {
           <Input
             id="password"
             type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => {

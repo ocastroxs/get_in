@@ -79,7 +79,7 @@ export default function SupervisorSidebar() {
               <NavItem 
                 href="/supervisor/aprovacoes" 
                 icon={CheckCircle2} 
-                label="Aprovações Pendentes" 
+                label="Aprovações" 
                 active={pathname === '/supervisor/aprovacoes'} 
                 onClick={() => setIsOpen(false)} 
               />

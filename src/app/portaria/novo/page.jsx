@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Circle } from "lucide-react";
+import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Circle, ScanLine } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,6 +197,7 @@ export default function NovoCadastroPage() {
     motivo: "",
     telefone: "",
     email: "",
+    rfidTag: "",
     setoresAcesso: [],
   });
 
@@ -285,6 +286,31 @@ export default function NovoCadastroPage() {
     }
 
     fetchSetores();
+  }, []);
+
+  useEffect(() => {
+    let ativo = true;
+
+    async function fetchLatestTag() {
+      try {
+        const response = await api.get("/tags/latest");
+        const codigoTag = response?.data?.codigoTag;
+
+        if (ativo && codigoTag) {
+          setForm((current) => current.rfidTag === codigoTag ? current : { ...current, rfidTag: codigoTag });
+        }
+      } catch (error) {
+        console.warn("Nao foi possivel carregar a tag RFID:", error);
+      }
+    }
+
+    fetchLatestTag();
+    const interval = setInterval(fetchLatestTag, 3000);
+
+    return () => {
+      ativo = false;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -454,6 +480,15 @@ export default function NovoCadastroPage() {
     setLoading(true);
     try {
       const visitanteUsuario = await getOrCreateVisitanteUsuario();
+      if (form.rfidTag) {
+        const tagResponse = await api.put(`/tags/code/${encodeURIComponent(form.rfidTag)}/assign`, {
+          idUsuario: visitanteUsuario.id
+        });
+
+        if (!tagResponse.sucesso) {
+          console.warn("Nao foi possivel vincular a TAG RFID:", tagResponse.mensagem || tagResponse.erro);
+        }
+      }
       const idDepartamento = getDepartamentoId();
       const setoresPermitidos = form.setoresAcesso.length > 0 ? form.setoresAcesso.join(", ") : "Nenhum";
       const descricao = [
@@ -462,6 +497,7 @@ export default function NovoCadastroPage() {
         `Telefone: ${form.telefone}`,
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
+        `TAG RFID: ${form.rfidTag || "Nao informada"}`,
         `Setor: ${form.setor || "Nao informado"}`,
         `Setores permitidos: ${setoresPermitidos}`
       ].join(" | ");
@@ -477,6 +513,7 @@ export default function NovoCadastroPage() {
         empresa: form.empresa,
         telefone: form.telefone,
         email: form.email.trim().toLowerCase(),
+        codigoTag: form.rfidTag,
         setoresAcesso: form.setoresAcesso
       };
       
@@ -708,6 +745,22 @@ export default function NovoCadastroPage() {
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       className="h-11 rounded-xl border-border/60 bg-card focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none transition-all duration-200 text-sm hover:border-primary/30 hover:bg-accent/50 shadow-xs"
                     />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                      TAG RFID
+                    </label>
+                    <div className="relative">
+                      <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Aguardando leitura RFID"
+                        value={form.rfidTag}
+                        readOnly
+                        className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 font-mono text-sm shadow-xs"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

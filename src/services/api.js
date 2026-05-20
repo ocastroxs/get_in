@@ -18,6 +18,21 @@ const getHeaders = (tokenOverride = null) => {
   return headers;
 };
 
+const getAuthOnlyHeaders = (tokenOverride = null) => {
+  const headers = {};
+  const token =
+    tokenOverride ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('getin_token') || sessionStorage.getItem('getin_token')
+      : null);
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
 const getDefaultErrorMessage = (status) => {
   if (status === 401) {
     return 'E-mail ou senha incorretos.';
@@ -169,6 +184,14 @@ export const api = {
       headers: getHeaders(),
     });
   },
+
+  async upload(endpoint, formData) {
+    return request(endpoint, {
+      method: 'POST',
+      headers: getAuthOnlyHeaders(),
+      body: formData,
+    });
+  },
 };
 
 export const authService = {
@@ -223,6 +246,7 @@ export const publicService = {
           data: {
             usuariosTotal: data.data.usuariosTotal || 0,
             setoresTotal: data.data.setoresTotal || 0,
+            visitasHoje: data.data.visitasHoje || 0,
           },
         };
       }
@@ -235,6 +259,7 @@ export const publicService = {
       data: {
         usuariosTotal: 0,
         setoresTotal: 0,
+        visitasHoje: 0,
       },
     };
   },

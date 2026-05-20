@@ -1,101 +1,150 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  Building2,
-  Clock,
+  Check,
+  CheckCircle2,
+  ChevronRight,
+  Download,
+  Filter,
   Loader2,
   Search,
-  Users,
-  CheckCircle2,
-  XCircle,
-  Filter,
-  ChevronRight,
   X,
-  Check,
-  Download
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import Topbar from '@/components/Topbar';
-import StatCard from '@/components/StatCard';
-import ModalFiltro from '@/components/ui/ModalFiltro';
-import ModalAprovacaoVisitante from '@/components/supervisor/ModalAprovacaoVisitante';
-import { api } from '@/services/api';
+  XCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import Topbar from "@/components/Topbar";
+import StatCard from "@/components/StatCard";
+import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisitante";
+import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 const STATUS_LABEL = {
-  pendente: 'Pendente',
-  aprovado: 'Aprovado',
-  recusado: 'Recusado'
+  todos: "Todos",
+  pendente: "Pendente",
+  aprovado: "Aprovado",
+  recusado: "Recusado",
+  misto: "Misto",
 };
 
 const STATUS_STYLE = {
-  pendente: 'bg-amber-100 text-amber-700',
-  aprovado: 'bg-green-100 text-green-700',
-  recusado: 'bg-red-100 text-red-600'
-};
-
-const STATUS_DOT = {
-  pendente: 'bg-amber-500',
-  aprovado: 'bg-green-500',
-  recusado: 'bg-red-500'
+  pendente: "bg-amber-100 text-amber-700",
+  aprovado: "bg-green-100 text-green-700",
+  recusado: "bg-red-100 text-red-600",
+  misto: "bg-blue-100 text-blue-700",
 };
 
 function formatDateTime(value) {
-  if (!value) return '—';
+  if (!value) return "-";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
   }).format(date);
 }
 
-function LinhaRequisicao({ requisicao, onAprovar }) {
-  const status = requisicao.status || 'pendente';
-  const statusClass = STATUS_STYLE[status] || STATUS_STYLE.pendente;
-  const dotClass = STATUS_DOT[status] || STATUS_DOT.pendente;
+function getSetorNome(requisicao) {
+  return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
+}
+
+function getGroupKey(requisicao) {
   const usuario = requisicao.usuario || {};
-  const departamento = requisicao.departamento || {};
+  return [
+    requisicao.idUsuario || usuario.id || usuario.cpf || usuario.email || usuario.nome,
+    requisicao.empresa || "",
+    requisicao.motivo || "",
+    requisicao.validade || "",
+    requisicao.descricao || "",
+  ].join("|");
+}
+
+function groupRequisicoes(requisicoes) {
+  const groups = new Map();
+
+  requisicoes.forEach((requisicao) => {
+    const key = getGroupKey(requisicao);
+    const current = groups.get(key);
+    const nextSetor = {
+      ...requisicao,
+      setor: getSetorNome(requisicao),
+    };
+
+    if (!current) {
+      groups.set(key, {
+        ...requisicao,
+        key,
+        setoresSolicitados: [nextSetor],
+      });
+      return;
+    }
+
+    current.setoresSolicitados.push(nextSetor);
+
+    if (new Date(requisicao.dataDaRequisicao).getTime() > new Date(current.dataDaRequisicao).getTime()) {
+      current.dataDaRequisicao = requisicao.dataDaRequisicao;
+    }
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => item.status || "pendente")));
+    return {
+      ...group,
+      status: statuses.length === 1 ? statuses[0] : "misto",
+    };
+  });
+}
+
+function LinhaRequisicao({ requisicao, onAprovar }) {
+  const usuario = requisicao.usuario || {};
+  const status = requisicao.status || "pendente";
+  const statusClass = STATUS_STYLE[status] || STATUS_STYLE.pendente;
 
   return (
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
       <td className="px-4 py-3">
         <div>
-          <p className="text-sm font-bold text-foreground">{usuario.nome || '—'}</p>
-          <p className="text-[11px] text-muted-foreground">{usuario.cpf || 'CPF não informado'}</p>
+          <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
+          <p className="text-[11px] text-muted-foreground">{usuario.cpf || "CPF nao informado"}</p>
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || '—'}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{departamento.nome || '—'}</td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || '—'}</td>
-      <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
+      <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || "-"}</td>
+      <td className="px-4 py-3">
+        <div className="flex max-w-sm flex-wrap gap-1.5">
+          {requisicao.setoresSolicitados.map((item) => (
+            <span key={item.id} className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${STATUS_STYLE[item.status] || STATUS_STYLE.pendente}`}>
+              {item.setor}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || "-"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-[11px] font-mono text-muted-foreground">
         {formatDateTime(requisicao.dataDaRequisicao)}
       </td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
-          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
           {STATUS_LABEL[status] || STATUS_LABEL.pendente}
         </span>
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-          {status === 'pendente' && (
-            <Button
-              size="sm"
-              onClick={() => onAprovar(requisicao)}
-              className="h-8 gap-1.5 bg-blue-600 text-[11px] font-bold hover:bg-blue-700 rounded-lg"
-              type="button"
-            >
-              <ChevronRight size={14} />
-              <span className="hidden xl:inline uppercase">Analisar</span>
-            </Button>
-          )}
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={() => onAprovar(requisicao)}
+            className="h-9 gap-1.5 rounded-xl bg-blue-600 text-[11px] font-bold hover:bg-blue-700"
+            type="button"
+          >
+            <ChevronRight size={14} />
+            <span className="hidden xl:inline uppercase">Analisar</span>
+          </Button>
         </div>
       </td>
     </tr>
@@ -105,13 +154,12 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
 export default function AprovacoesSupervisorPage() {
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('pendente');
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
   const [modalAberto, setModalAberto] = useState(false);
   const [requisicaoSelecionada, setRequisicaoSelecionada] = useState(null);
-  
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
-  const [tempFiltroStatus, setTempFiltroStatus] = useState("pendente");
+  const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
 
   useEffect(() => {
     fetchRequisicoes();
@@ -122,268 +170,186 @@ export default function AprovacoesSupervisorPage() {
   async function fetchRequisicoes() {
     try {
       setLoading(true);
-      const response = await api.get('/requisicao-visitante');
+      const response = await api.get("/requisicao-visitante");
 
-      if (response && typeof response === 'object' && response.sucesso && response.data) {
+      if (response?.sucesso && Array.isArray(response.data)) {
         setRequisicoes(response.data);
-      } else if (!response || typeof response !== 'object') {
-        console.warn('Back-end não está pronto. Exibindo lista vazia.');
+      } else {
         setRequisicoes([]);
       }
     } catch (error) {
-      console.error('Erro ao carregar requisições:', error);
+      console.error("Erro ao carregar requisicoes:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
     }
   }
 
+  const requisicoesAgrupadas = useMemo(() => groupRequisicoes(requisicoes), [requisicoes]);
+
   const requisicoesFiltradas = useMemo(() => {
-    return requisicoes.filter((requisicao) => {
+    return requisicoesAgrupadas.filter((requisicao) => {
       const usuario = requisicao.usuario || {};
-      const nome = usuario.nome?.toLowerCase() || '';
-      const cpf = usuario.cpf || '';
-      const empresa = requisicao.empresa?.toLowerCase() || '';
       const termoBusca = busca.toLowerCase();
-
+      const setores = requisicao.setoresSolicitados.map((item) => item.setor).join(" ").toLowerCase();
       const matchBusca =
-        busca === '' ||
-        nome.includes(termoBusca) ||
-        cpf.includes(busca) ||
-        empresa.includes(termoBusca);
-
-      const matchStatus = filtroStatus === 'todos' || requisicao.status === filtroStatus;
+        busca === "" ||
+        (usuario.nome || "").toLowerCase().includes(termoBusca) ||
+        (usuario.cpf || "").includes(busca) ||
+        (requisicao.empresa || "").toLowerCase().includes(termoBusca) ||
+        setores.includes(termoBusca);
+      const matchStatus =
+        filtroStatus === "todos" ||
+        requisicao.setoresSolicitados.some((item) => item.status === filtroStatus);
 
       return matchBusca && matchStatus;
     });
-  }, [requisicoes, busca, filtroStatus]);
+  }, [requisicoesAgrupadas, busca, filtroStatus]);
+
+  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
+  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
+  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
     setModalAberto(true);
   }
 
-  function handleConfirmacao() {
-    fetchRequisicoes();
-  }
-
-  const countPendentes = requisicoes.filter((r) => r.status === 'pendente').length;
-  const countAprovados = requisicoes.filter((r) => r.status === 'aprovado').length;
-  const countRecusados = requisicoes.filter((r) => r.status === 'recusado').length;
-
-  const aplicarFiltros = () => {
-    setFiltroStatus(tempFiltroStatus);
-  };
+  const aplicarFiltros = () => setFiltroStatus(tempFiltroStatus);
 
   const limparFiltros = () => {
-    setTempFiltroStatus("pendente");
-    setFiltroStatus("pendente");
+    setTempFiltroStatus("todos");
+    setFiltroStatus("todos");
     setBusca("");
   };
 
-  const exportarCSV = () => {
+  async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      alert("Nao ha dados para exportar.");
       return;
     }
 
-    const headers = ["Visitante", "CPF", "Empresa", "Departamento", "Motivo", "Data", "Status"];
-    const rows = requisicoesFiltradas.map(r => {
-      const usuario = r.usuario || {};
-      const departamento = r.departamento || {};
-      return [
-        usuario.nome || "—",
-        usuario.cpf || "—",
-        r.empresa || "—",
-        departamento.nome || "—",
-        r.motivo || "—",
-        formatDateTime(r.dataDaRequisicao),
-        STATUS_LABEL[r.status] || "Pendente"
-      ];
-    });
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `aprovacoes_supervisor_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    try {
+      await exportTableToPdf({
+        title: "Aprovacoes do supervisor",
+        subtitle: "Solicitacoes de visitantes por setor",
+        fileName: `aprovacoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.3 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.1 },
+          { header: "Setores", weight: 1.7 },
+          { header: "Motivo", weight: 1.1 },
+          { header: "Data", weight: 1 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: requisicoesFiltradas.map((r) => {
+          const usuario = r.usuario || {};
+          return [
+            usuario.nome || "-",
+            usuario.cpf || "-",
+            r.empresa || "-",
+            r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[item.status] || item.status})`).join(", "),
+            r.motivo || "-",
+            formatDateTime(r.dataDaRequisicao),
+            STATUS_LABEL[r.status] || r.status,
+          ];
+        }),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Nao foi possivel exportar o PDF.");
+    }
+  }
 
   return (
     <>
       <Topbar
-        title="Aprovação de Visitantes"
-        subtitle="Gerenciamento de solicitações de visitantes da portaria"
+        title="Aprovações"
+        subtitle="Gerenciamento de solicitacoes de visitantes da portaria"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
-        {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard
-            label="Pendentes"
-            value={countPendentes}
-            valueClassName="text-amber-600"
-            icon={<AlertTriangle size={17} className="text-amber-600" />}
-            sub="Aguardando análise"
-            accentVar="var(--warning)"
-          />
-          <StatCard
-            label="Aprovados"
-            value={countAprovados}
-            valueClassName="text-green-600"
-            icon={<CheckCircle2 size={17} className="text-green-600" />}
-            sub="Visitantes autorizados"
-            accentVar="var(--chart-2)"
-          />
-          <StatCard
-            label="Recusados"
-            value={countRecusados}
-            valueClassName="text-red-600"
-            icon={<XCircle size={17} className="text-red-600" />}
-            sub="Acesso não autorizado"
-            accentVar="var(--destructive)"
-          />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
         </div>
 
-        {/* Barra de Filtros Padronizada */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="flex w-full flex-1 items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF ou empresa..."
-                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm"
+                  placeholder="Buscar por nome, CPF, empresa ou setor..."
+                  className="h-11 rounded-xl border-border/60 bg-background/80 pl-10 text-sm"
                   value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
+                  onChange={(event) => setBusca(event.target.value)}
                 />
                 {busca && (
-                  <button
-                    type="button"
-                    onClick={() => setBusca("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
+                  <button type="button" onClick={() => setBusca("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X size={14} />
                   </button>
                 )}
               </div>
-              
-              <Button
-                type="button"
-                onClick={() => setModalFiltroAberto(true)}
-                variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80"
-              >
+
+              <Button type="button" onClick={() => setModalFiltroAberto(true)} variant="outline" className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4">
                 <Filter size={16} />
                 <span className="hidden sm:inline">Filtros</span>
                 {filtroStatus !== "todos" && (
-                  <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
-                    1
-                  </span>
+                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">1</span>
                 )}
               </Button>
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                onClick={exportarCSV}
-                variant="outline"
-                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 text-sm font-medium"
-              >
+              <Button onClick={exportarPDF} variant="outline" className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium" type="button">
                 <Download size={16} />
-                <span className="hidden sm:inline">Exportar CSV</span>
+                <span className="hidden sm:inline">Exportar PDF</span>
               </Button>
-              <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground">
-                {requisicoesFiltradas.length} resultado(s)
+              <div className="rounded-xl border border-border/50 bg-muted/40 px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+                {requisicoesFiltradas.length} pedido(s)
               </div>
             </div>
           </div>
-
-          {(filtroStatus !== "todos" || busca) && (
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
-              {busca && (
-                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Busca: {busca}
-                </span>
-              )}
-              {filtroStatus !== "todos" && (
-                <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Status: {STATUS_LABEL[filtroStatus] || filtroStatus}
-                </span>
-              )}
-              <Button
-                variant="ghost"
-                onClick={limparFiltros}
-                className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
-              >
-                Limpar tudo
-              </Button>
-            </div>
-          )}
         </div>
 
-        {/* Tabela de Requisições */}
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-border bg-muted/20">
-            <h3 className="font-bold text-sm text-foreground">Listagem de Aprovações</h3>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+          <div className="border-b border-border bg-muted/20 p-4">
+            <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
           </div>
-          
-          {loading && requisicoes.length === 0 ? (
+
+          {loading ? (
             <div className="flex items-center justify-center p-20">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : requisicoesFiltradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-20 text-center">
-              <AlertTriangle size={32} className="text-muted/30 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                Nenhuma requisição encontrada com os filtros aplicados.
-              </p>
+              <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
+              <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Visitante
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Empresa
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Departamento
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Motivo
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Data
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      Ações
-                    </th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Visitante</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Empresa</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Setor</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Motivo</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Data</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Acoes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {requisicoesFiltradas.map((requisicao) => (
-                    <LinhaRequisicao
-                      key={requisicao.id}
-                      requisicao={requisicao}
-                      onAprovar={handleAprovar}
-                    />
+                    <LinhaRequisicao key={requisicao.key} requisicao={requisicao} onAprovar={handleAprovar} />
                   ))}
                 </tbody>
               </table>
@@ -396,10 +362,9 @@ export default function AprovacoesSupervisorPage() {
         isOpen={modalAberto}
         onClose={() => setModalAberto(false)}
         requisicao={requisicaoSelecionada}
-        onConfirm={handleConfirmacao}
+        onConfirm={fetchRequisicoes}
       />
 
-      {/* Modal de Filtro Padronizado */}
       <ModalFiltro
         isOpen={modalFiltroAberto}
         onClose={() => setModalFiltroAberto(false)}
@@ -408,8 +373,8 @@ export default function AprovacoesSupervisorPage() {
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
-              Status da Requisição
+            <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Status da Requisicao
             </label>
             <div className="grid grid-cols-1 gap-2">
               {["todos", "pendente", "aprovado", "recusado"].map((status) => (
@@ -417,10 +382,10 @@ export default function AprovacoesSupervisorPage() {
                   key={status}
                   type="button"
                   onClick={() => setTempFiltroStatus(status)}
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all border ${
+                  className={`flex items-center justify-between rounded-xl border px-4 py-3 text-xs font-semibold transition-all ${
                     tempFiltroStatus === status
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
+                      ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
                   <span>{status === "todos" ? "Todos os Status" : STATUS_LABEL[status]}</span>

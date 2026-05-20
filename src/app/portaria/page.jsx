@@ -34,7 +34,8 @@ const STATUS_LABEL = {
   saida: "Saída",
   pendente: "Pendente",
   alerta: "Alerta",
-  recusado: "Recusado"
+  recusado: "Recusado",
+  liberado: "Liberado"
 };
 
 const STATUS_STYLE = {
@@ -42,7 +43,8 @@ const STATUS_STYLE = {
   saida: "bg-blue-100 text-blue-700",
   pendente: "bg-amber-100 text-amber-700",
   alerta: "bg-red-100 text-red-600",
-  recusado: "bg-red-100 text-red-600"
+  recusado: "bg-red-100 text-red-600",
+  liberado: "bg-amber-100 text-amber-700"
 };
 
 const STATUS_DOT = {
@@ -50,11 +52,13 @@ const STATUS_DOT = {
   saida: "bg-blue-500",
   pendente: "bg-amber-500",
   alerta: "bg-red-500",
-  recusado: "bg-red-500"
+  recusado: "bg-red-500",
+  liberado: "bg-amber-500"
 };
 
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
+  { label: "Liberados", value: "liberado" },
   { label: "Dentro", value: "ativo" },
   { label: "Saída", value: "saida" }
 ];
@@ -66,10 +70,11 @@ const SEARCH_INPUT_CLASS =
   "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10";
 
 const BACKEND_STATUS_TO_PORTARIA = {
-  aprovado: "ativo",
+  aprovado: "liberado",
+  aprovada: "liberado",
   ativo: "ativo",
   dentro: "ativo",
-  liberado: "ativo",
+  liberado: "liberado",
   pendente: "pendente",
   recusado: "recusado",
   rejeitado: "recusado",
@@ -317,10 +322,6 @@ function dedupeVisitantesPorIdentidade(registros) {
   return Array.from(porVisitante.values());
 }
 
-function isRequisicaoPendente(registro) {
-  return normalizeStatus(pickFirst(registro?.status, registro?.solicitacao)) === "pendente";
-}
-
 function getSetorLabel(visitante) {
   if (Array.isArray(visitante?.setoresAcesso) && visitante.setoresAcesso.length > 0) {
     return visitante.setoresAcesso.join(", ");
@@ -383,7 +384,8 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
     setLoading(true);
     try {
       const payload = {
-        id: visitante?.id,
+        idUsuario: visitante?.id,
+        idLog: visitante?.idLog,
         dataSaida: new Date().toISOString()
       };
 
@@ -995,7 +997,6 @@ function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
 
 export default function PortariaPage() {
   const [visitantes, setVisitantes] = useState([]);
-  const [pendencias, setPendencias] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("Todos");
@@ -1020,15 +1021,7 @@ export default function PortariaPage() {
   async function fetchVisitantes() {
     try {
       setLoading(true);
-      const [visitantesResult, pendenciasResult] = await Promise.allSettled([
-        api.get("/portaria/vlocal"),
-        api.get("/portaria/pendencias")
-      ]);
-
-      const visitantesResponse =
-        visitantesResult.status === "fulfilled" ? visitantesResult.value : null;
-      const pendenciasResponse =
-        pendenciasResult.status === "fulfilled" ? pendenciasResult.value : null;
+      const visitantesResponse = await api.get("/portaria/vlocal");
 
       if (visitantesResponse?.sucesso) {
         const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
@@ -1037,17 +1030,9 @@ export default function PortariaPage() {
         console.warn("Back-end nao retornou visitantes da portaria.");
         setVisitantes([]);
       }
-
-      if (pendenciasResponse?.sucesso) {
-        const pendenciasPortaria = getResponseArray(pendenciasResponse, ["dados", "requisicoes"]);
-        setPendencias(dedupeVisitantesPorIdentidade(pendenciasPortaria.filter(isRequisicaoPendente)));
-      } else {
-        setPendencias([]);
-      }
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
       setVisitantes([]);
-      setPendencias([]);
     } finally {
       setLoading(false);
     }
@@ -1205,7 +1190,7 @@ export default function PortariaPage() {
   };
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
-  const countPendentes = pendencias.length;
+  const countLiberados = visitantes.filter((v) => v.status === "liberado").length;
   const countSaidas = visitantes.filter((v) => v.status === "saida").length;
 
   return (
@@ -1227,8 +1212,8 @@ export default function PortariaPage() {
             sub="No local agora"
           />
           <StatCard
-            label="Pendentes"
-            value={countPendentes}
+            label="Liberados"
+            value={countLiberados}
             icon={<Clock size={20} className="text-amber-600" />}
             accentVar="#d97706"
             sub="Aguardando aprovação"

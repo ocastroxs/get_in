@@ -63,6 +63,24 @@ function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function splitSetores(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function pickBestCapitalization(current, next) {
+  if (!current) return next || "";
+  if (!next) return current;
+
+  const currentHasUpper = /[A-ZÀ-Ý]/.test(current.slice(1));
+  const nextHasUpper = /[A-ZÀ-Ý]/.test(next.slice(1));
+
+  if (!currentHasUpper && nextHasUpper) return next;
+  return current;
+}
+
 function maskCPF(value) {
   return onlyDigits(value)
     .slice(0, 11)
@@ -91,6 +109,7 @@ function normalizeRegistro(registro) {
     email: pickFirst(registro?.email, usuario?.email, getDescricaoValue(descricao, "Email"), getDescricaoValue(descricao, "E-mail")),
     empresa: pickFirst(registro?.empresa, registro?.empresa_visitante, usuario?.empresa, getDescricaoValue(descricao, "Empresa")),
     setor: pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
+    setoresLista: splitSetores(pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"))),
     dataEntrada: pickFirst(registro?.dataEntrada, registro?.dataDaRequisicao, registro?.dataDeEntrada),
     dataSaida: pickFirst(registro?.dataSaida, registro?.dataDeSaida),
     status: registro?.status || (registro?.dataSaida || registro?.dataDeSaida ? "finalizado" : "ativo"),
@@ -151,9 +170,22 @@ function dedupeRegistrosPorVisitante(registros) {
     const key = getRegistroIdentity(registro);
     const registroAtual = registrosPorVisitante.get(key);
 
-    if (!registroAtual || compareRegistroRecency(registro, registroAtual) >= 0) {
+    if (!registroAtual) {
       registrosPorVisitante.set(key, registro);
+      return;
     }
+
+    const principal = compareRegistroRecency(registro, registroAtual) >= 0 ? registro : registroAtual;
+    const setoresLista = Array.from(
+      new Set([...(registroAtual.setoresLista || []), ...(registro.setoresLista || [])])
+    );
+
+    registrosPorVisitante.set(key, {
+      ...principal,
+      empresa: pickBestCapitalization(registroAtual.empresa, registro.empresa),
+      setoresLista,
+      setor: setoresLista.length > 0 ? setoresLista.join(", ") : principal.setor
+    });
   });
 
   return Array.from(registrosPorVisitante.values()).sort((a, b) => compareRegistroRecency(b, a));
@@ -452,6 +484,8 @@ export default function HistoricoPage() {
   return (
     <>
       <Topbar
+        buttonText="Adicionar visitante"
+        buttonHref="/portaria/novo"
         title="Histórico"
         subtitle="Registro completo de entradas e saídas"
       />

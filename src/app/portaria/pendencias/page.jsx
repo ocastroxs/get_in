@@ -6,6 +6,7 @@ import {
   Check,
   Clock,
   Download,
+  Eye,
   FileText,
   Filter,
   Loader2,
@@ -255,7 +256,10 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
               <FileText size={17} />
             </div>
-            <h2 className="text-lg font-semibold text-foreground">Observacoes</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Observacoes</h2>
+              <p className="text-xs text-muted-foreground">{requisicao.visitante} - {requisicao.setor}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -268,7 +272,8 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
         </div>
 
         <div className="p-4">
-          <div className="rounded-xl border border-border bg-muted/40 p-4">
+          <div className="rounded-2xl border border-border bg-background p-4 shadow-xs">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Registro da portaria</p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {requisicao.observacoes || "Nenhuma observacao cadastrada."}
             </p>
@@ -303,10 +308,10 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
           size="sm"
           variant="outline"
           onClick={() => onAnalise(requisicao)}
-          className="h-8 rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
+          className="h-9 gap-1.5 rounded-xl border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
           type="button"
         >
-          <FileText size={14} className="mr-1.5" />
+          <Eye size={14} />
           Observacoes
         </Button>
       </td>
@@ -438,6 +443,8 @@ export default function PendenciasPage() {
   return (
     <>
       <Topbar
+        buttonText="Adicionar visitante"
+        buttonHref="/portaria/novo"
         title="Pendências"
         subtitle="Requisições de visita aguardando aprovação"
       />

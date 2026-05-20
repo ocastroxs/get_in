@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import { IBM_Plex_Mono, Inter, Poppins } from "next/font/google";
 import ConsoleWarningSuppressor from "@/components/ConsoleWarningSuppressor";
 import { AuthProvider } from "@/lib/AuthContext";
+import RouteChangeIndicator from "@/components/RouteChangeIndicator";
+import { ToastProvider } from "@/components/ui/toast-provider";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -37,7 +39,10 @@ export default function RootLayout({ children }) {
       <body className={cn(poppins.variable, inter.variable, ibmPlexMono.variable, "min-h-full")}
       suppressHydrationWarning> 
         <AuthProvider>
-          <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
+          <ToastProvider>
+            <RouteChangeIndicator />
+            <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

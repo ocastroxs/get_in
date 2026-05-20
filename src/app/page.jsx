@@ -212,6 +212,7 @@ export default function LoginPage() {
   
   // Estados para estatísticas reais
   const [stats, setStats] = useState({
+    visitasHoje: "0",
     usuariosTotal: "0",
     setoresTotal: "0"
   });
@@ -233,6 +234,7 @@ export default function LoginPage() {
       const response = await publicService.getStats();
       if (response.sucesso && response.data) {
         setStats({
+          visitasHoje: response.data.visitasHoje.toString(),
           usuariosTotal: response.data.usuariosTotal.toString(),
           setoresTotal: response.data.setoresTotal.toString()
         });

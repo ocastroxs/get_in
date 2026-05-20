@@ -10,6 +10,7 @@ import AlertaBanner from "@/components/AlertaBanner";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
+import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
