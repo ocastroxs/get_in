@@ -19,6 +19,7 @@ export default function EntradasChart({
   subtitle = "Fluxo registrado ao longo do dia",
   data = ENTRADAS_POR_HORA,
   weekData = data,
+  monthData = weekData,
   dataKey = "value",
   nameKey = "hora",
   barColor = "var(--primary)",
@@ -27,13 +28,13 @@ export default function EntradasChart({
 }) {
   const [view, setView] = useState("hoje");
   const chartData = useMemo(() => {
-    const baseData = view === "semana" ? weekData : data;
+    const baseData = view === "mes" ? monthData : view === "semana" ? weekData : data;
     return mobileLayout && view === "hoje"
       ? baseData.slice(0, 8)
       : !mobileLayout && view === "hoje"
         ? baseData.slice(0, 9)
         : baseData;
-  }, [data, mobileLayout, view, weekData]);
+  }, [data, mobileLayout, monthData, view, weekData]);
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
@@ -70,7 +71,7 @@ export default function EntradasChart({
           </div>
 
           <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
-            {["hoje", "semana"].map((item) => (
+            {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
@@ -81,7 +82,7 @@ export default function EntradasChart({
                     : "hover:bg-white/80 hover:text-foreground",
                 ].join(" ")}
               >
-                {item}
+                {item === "mes" ? "mês" : item}
               </button>
             ))}
           </div>

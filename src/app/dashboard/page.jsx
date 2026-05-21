@@ -8,11 +8,20 @@ import EntradasChart from "@/components/EntradasChart";
 import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
-import { STATS_TODAY } from "@/lib/mockData";
 import { api } from "@/services/api";
 import { AlertTriangle, ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const HORAS_DIA = Array.from({ length: 13 }, (_, index) => index + 6);
+const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+const LIMITE_ALERTA_HORAS = 8;
+
+const STATS_VAZIAS = {
+  visitantes: { value: 0, delta: 0, deltaDir: "up" },
+  entradas: { value: 0, pct: 0, ultimas2h: 0 },
+  saidas: { value: 0, aindaDentro: 0 },
+  ativos: { value: 0, alertas: 0 },
+};
 
 // Helper: Parse data from multiple possible field names
 function parseDataRequisicao(item) {
@@ -35,6 +44,27 @@ function parseDataRequisicao(item) {
     }
   }
   
+  return null;
+}
+
+function parseDataValor(valor) {
+  if (!valor) return null;
+
+  let dateStr = String(valor);
+  if (dateStr.includes(" ") && !dateStr.includes("T")) {
+    dateStr = dateStr.replace(" ", "T");
+  }
+
+  const data = new Date(dateStr);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function parseDataCampos(item, campos) {
+  for (const campo of campos) {
+    const data = parseDataValor(item?.[campo]);
+    if (data) return data;
+  }
+
   return null;
 }
 
@@ -177,70 +207,236 @@ function agruparMotivosMes(requisicoes) {
 }
 
 // Helper: Process status counts for today
-function processarStatusHoje(requisicoes) {
-  const hoje = new Date();
+function processarStatusHoje(requisicoes, visitantesLocal = [], logs = []) {
+  return processarStatusPeriodo(requisicoes, visitantesLocal, "hoje", logs);
+}
+
+// Helper: Process status counts for the last 7 days
+function processarStatusSemana(requisicoes, visitantesLocal = [], logs = []) {
+  return processarStatusPeriodo(requisicoes, visitantesLocal, "semana", logs);
+}
+
+function estaNoPeriodo(data, periodo, referencia = new Date()) {
+  if (!data) return false;
+
+  if (periodo === "hoje") {
+    return diferencaEmDias(referencia, data) === 0;
+  }
+
+  if (periodo === "semana") {
+    const diferenca = diferencaEmDias(referencia, data);
+    return diferenca >= 0 && diferenca <= 6;
+  }
+
+  if (periodo === "mes") {
+    return data.getMonth() === referencia.getMonth() && data.getFullYear() === referencia.getFullYear();
+  }
+
+  return false;
+}
+
+function getIdentidadeVisitante(item, fallbackPrefix = "item") {
+  return String(item?.idUsuario || item?.usuario?.id || item?.id || item?.cpf || `${fallbackPrefix}-${Math.random()}`);
+}
+
+function getEntradaVisitante(item) {
+  return parseDataCampos(item, ["dataEntrada", "entrada", "dataDeEntrada", "horario_entrada"]);
+}
+
+function getSaidaVisitante(item) {
+  return parseDataCampos(item, ["dataSaida", "saida", "dataDeSaida"]);
+}
+
+function isDentro(item) {
+  const status = String(item?.status || "").toLowerCase();
+  return status === "dentro" || status === "ativo" || (!!getEntradaVisitante(item) && !getSaidaVisitante(item));
+}
+
+function isSaida(item) {
+  const status = String(item?.status || "").toLowerCase();
+  return status === "saida" || status === "saiu" || status === "finalizado" || !!getSaidaVisitante(item);
+}
+
+function isAlertaPermanencia(item, agora = new Date()) {
+  if (!isDentro(item)) return false;
+
+  const entrada = getEntradaVisitante(item);
+  if (!entrada) return false;
+
+  const horas = (agora - entrada) / (1000 * 60 * 60);
+  return horas >= LIMITE_ALERTA_HORAS;
+}
+
+function normalizarArrayResponse(response, keys = []) {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.dados)) return response.dados;
+
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) return response[key];
+    if (Array.isArray(response?.data?.[key])) return response.data[key];
+    if (Array.isArray(response?.dados?.[key])) return response.dados[key];
+  }
+
+  return [];
+}
+
+function contarUnicos(items, getKey) {
+  return new Set(items.map(getKey).filter(Boolean)).size;
+}
+
+function calcularVariacao(atual, anterior) {
+  if (anterior === 0) return atual > 0 ? 100 : 0;
+  return Math.round(((atual - anterior) / anterior) * 100);
+}
+
+function processarStatusPeriodo(requisicoes, visitantesLocal, periodo, logs = []) {
+  const referencia = new Date();
   const counts = {
-    ativo: 0,
+    dentro: 0,
     pendente: 0,
-    semsaida: 0,
+    alerta: 0,
     finalizado: 0,
   };
 
   requisicoes.forEach((req) => {
     const data = parseDataRequisicao(req);
-    if (!data) return;
-
-    const mesmoDia = data.getDate() === hoje.getDate() && 
-                    data.getMonth() === hoje.getMonth() && 
-                    data.getFullYear() === hoje.getFullYear();
-    if (!mesmoDia) return;
+    if (!estaNoPeriodo(data, periodo, referencia)) return;
 
     const status = String(req.status || "").toLowerCase();
-    if (counts.hasOwnProperty(status)) {
-      counts[status] += 1;
+    if (status === "pendente") counts.pendente += 1;
+  });
+
+  visitantesLocal.forEach((visitante) => {
+    const entrada = getEntradaVisitante(visitante);
+    const saida = getSaidaVisitante(visitante);
+
+    if (isDentro(visitante) && estaNoPeriodo(entrada, periodo, referencia)) {
+      counts.dentro += 1;
+      if (isAlertaPermanencia(visitante, referencia)) counts.alerta += 1;
+    }
+
+    if (logs.length === 0 && isSaida(visitante) && estaNoPeriodo(saida || entrada, periodo, referencia)) {
+      counts.finalizado += 1;
     }
   });
 
+  logs.forEach((log) => {
+    const saida = getSaidaVisitante(log);
+    if (estaNoPeriodo(saida, periodo, referencia)) counts.finalizado += 1;
+  });
+
   return [
-    { name: "Dentro da fábrica", value: counts.ativo, color: "var(--chart-2)" },
+    { name: "Dentro da fábrica", value: counts.dentro, color: "var(--chart-2)" },
     { name: "Aguard. aprovação", value: counts.pendente, color: "var(--chart-3)" },
-    { name: "Alerta permanência", value: counts.semsaida, color: "var(--chart-5)" },
+    { name: "Alerta permanência", value: counts.alerta, color: "var(--chart-5)" },
     { name: "Check-out realizado", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
   ];
 }
 
-// Helper: Process status counts for the last 7 days
-function processarStatusSemana(requisicoes) {
-  const hoje = new Date();
-  const counts = {
-    ativo: 0,
-    pendente: 0,
-    semsaida: 0,
-    finalizado: 0,
-  };
+function entradasPorHoraHoje(visitantesLocal) {
+  const mapa = new Map(HORAS_DIA.map((hora) => [`${String(hora).padStart(2, "0")}h`, 0]));
+  const referencia = new Date();
 
-  requisicoes.forEach((req) => {
-    const data = parseDataRequisicao(req);
-    if (!data) return;
+  visitantesLocal.forEach((visitante) => {
+    const data = getEntradaVisitante(visitante);
+    if (!estaNoPeriodo(data, "hoje", referencia)) return;
 
-    const d1 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-    const d2 = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-    const diferenca = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
-    
-    if (diferenca < 0 || diferenca > 6) return;
-
-    const status = String(req.status || "").toLowerCase();
-    if (counts.hasOwnProperty(status)) {
-      counts[status] += 1;
-    }
+    const label = `${String(data.getHours()).padStart(2, "0")}h`;
+    mapa.set(label, (mapa.get(label) || 0) + 1);
   });
 
-  return [
-    { name: "Dentro da fábrica", value: counts.ativo, color: "var(--chart-2)" },
-    { name: "Aguard. aprovação", value: counts.pendente, color: "var(--chart-3)" },
-    { name: "Alerta permanência", value: counts.semsaida, color: "var(--chart-5)" },
-    { name: "Check-out realizado", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
+  return [...mapa.entries()].map(([hora, value]) => ({ hora, value }));
+}
+
+function entradasPorSemana(visitantesLocal) {
+  const referencia = new Date();
+  const dias = Array.from({ length: 7 }, (_, index) => {
+    const data = new Date(referencia);
+    data.setDate(referencia.getDate() - (6 - index));
+    return {
+      data,
+      hora: DIAS_SEMANA[data.getDay()],
+      value: 0,
+    };
+  });
+
+  visitantesLocal.forEach((visitante) => {
+    const entrada = getEntradaVisitante(visitante);
+    if (!estaNoPeriodo(entrada, "semana", referencia)) return;
+
+    const item = dias.find((dia) => diferencaEmDias(dia.data, entrada) === 0);
+    if (item) item.value += 1;
+  });
+
+  return dias.map(({ hora, value }) => ({ hora, value }));
+}
+
+function entradasPorMes(visitantesLocal) {
+  const referencia = new Date();
+  const diasNoMes = new Date(referencia.getFullYear(), referencia.getMonth() + 1, 0).getDate();
+  const buckets = [
+    { inicio: 1, fim: 7, hora: "1-7", value: 0 },
+    { inicio: 8, fim: 14, hora: "8-14", value: 0 },
+    { inicio: 15, fim: 21, hora: "15-21", value: 0 },
+    { inicio: 22, fim: diasNoMes, hora: `22-${diasNoMes}`, value: 0 },
   ];
+
+  visitantesLocal.forEach((visitante) => {
+    const entrada = getEntradaVisitante(visitante);
+    if (!estaNoPeriodo(entrada, "mes", referencia)) return;
+
+    const dia = entrada.getDate();
+    const bucket = buckets.find((item) => dia >= item.inicio && dia <= item.fim);
+    if (bucket) bucket.value += 1;
+  });
+
+  return buckets.map(({ hora, value }) => ({ hora, value }));
+}
+
+function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
+  const hoje = new Date();
+  const entradasHoje = logs.filter((item) => estaNoPeriodo(getEntradaVisitante(item), "hoje", hoje));
+  const entradasOntem = logs.filter((item) => diferencaEmDias(hoje, getEntradaVisitante(item)) === 1);
+  const saidasHoje = logs.filter((item) => estaNoPeriodo(getSaidaVisitante(item), "hoje", hoje));
+  const visitantesHojeReq = requisicoes.filter((item) => estaNoPeriodo(parseDataRequisicao(item), "hoje", hoje));
+  const visitantesOntemReq = requisicoes.filter((item) => diferencaEmDias(hoje, parseDataRequisicao(item)) === 1);
+  const ativosAgora = visitantesLocal.filter(isDentro);
+  const alertas = ativosAgora.filter((item) => isAlertaPermanencia(item, hoje)).length;
+  const duasHorasAtras = new Date(hoje.getTime() - 2 * 60 * 60 * 1000);
+  const ultimas2h = entradasHoje.filter((item) => {
+    const entrada = getEntradaVisitante(item);
+    return entrada && entrada >= duasHorasAtras;
+  }).length;
+
+  const visitantesHoje = Math.max(
+    contarUnicos(visitantesHojeReq, (item) => getIdentidadeVisitante(item, "req")),
+    contarUnicos(entradasHoje, (item) => getIdentidadeVisitante(item, "entrada"))
+  );
+  const visitantesOntem = Math.max(
+    contarUnicos(visitantesOntemReq, (item) => getIdentidadeVisitante(item, "req-ontem")),
+    contarUnicos(entradasOntem, (item) => getIdentidadeVisitante(item, "entrada-ontem"))
+  );
+
+  return {
+    visitantes: {
+      value: visitantesHoje,
+      delta: Math.abs(calcularVariacao(visitantesHoje, visitantesOntem)),
+      deltaDir: visitantesHoje >= visitantesOntem ? "up" : "down",
+    },
+    entradas: {
+      value: entradasHoje.length,
+      pct: Math.abs(calcularVariacao(entradasHoje.length, entradasOntem.length)),
+      ultimas2h,
+    },
+    saidas: {
+      value: saidasHoje.length,
+      aindaDentro: ativosAgora.length,
+    },
+    ativos: {
+      value: ativosAgora.length,
+      alertas,
+    },
+  };
 }
 
 export default function DashboardPage() {
@@ -252,16 +448,28 @@ export default function DashboardPage() {
   const [picoSetores, setPicoSetores] = useState([]);
   const [statusHoje, setStatusHoje] = useState([]);
   const [statusSemana, setStatusSemana] = useState([]);
+  const [statusMes, setStatusMes] = useState([]);
+  const [entradasHoje, setEntradasHoje] = useState([]);
+  const [entradasSemana, setEntradasSemana] = useState([]);
+  const [entradasMes, setEntradasMes] = useState([]);
+  const [statsDashboard, setStatsDashboard] = useState(STATS_VAZIAS);
 
   useEffect(() => {
     async function carregarDados() {
       try {
-        const response = await api.get("/requisicao-visitante");
-        if (response.sucesso) {
-          const requisicoes = response.data || [];
+        const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
+          api.get("/requisicao-visitante"),
+          api.get("/portaria/vlocal"),
+          api.get("/logs"),
+        ]);
+
+        if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
+          const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes"]);
+          const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes"]);
+          const logs = normalizarArrayResponse(logsResponse, ["logs"]);
           
           // Filter alerts
-          const alertas = requisicoes.filter((visitante) => visitante.status === "semsaida");
+          const alertas = visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante));
           setVisitantesEmAlerta(alertas);
           setMostrarBanner(alertas.length > 0);
           
@@ -270,10 +478,15 @@ export default function DashboardPage() {
           setMotivosSemana(agruparMotivosSemana(requisicoes));
           setMotivosMes(agruparMotivosMes(requisicoes));
           setPicoSetores(agruparPicoPorSetor(requisicoes));
+          setEntradasHoje(entradasPorHoraHoje(logs));
+          setEntradasSemana(entradasPorSemana(logs));
+          setEntradasMes(entradasPorMes(logs));
+          setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
           
           // Process status
-          setStatusHoje(processarStatusHoje(requisicoes));
-          setStatusSemana(processarStatusSemana(requisicoes));
+          setStatusHoje(processarStatusHoje(requisicoes, visitantesLocal, logs));
+          setStatusSemana(processarStatusSemana(requisicoes, visitantesLocal, logs));
+          setStatusMes(processarStatusPeriodo(requisicoes, visitantesLocal, "mes", logs));
         }
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
@@ -285,6 +498,11 @@ export default function DashboardPage() {
         setPicoSetores([]);
         setStatusHoje([]);
         setStatusSemana([]);
+        setStatusMes([]);
+        setEntradasHoje([]);
+        setEntradasSemana([]);
+        setEntradasMes([]);
+        setStatsDashboard(STATS_VAZIAS);
       }
     }
 
@@ -296,14 +514,16 @@ export default function DashboardPage() {
     [mostrarBanner, visitantesEmAlerta.length]
   );
 
+  const stats = statsDashboard;
+
   const saidasPct =
-    STATS_TODAY.visitantes.value > 0
-      ? Math.round((STATS_TODAY.saidas.value / STATS_TODAY.visitantes.value) * 100)
+    stats.visitantes.value > 0
+      ? Math.round((stats.saidas.value / stats.visitantes.value) * 100)
       : 0;
 
   const ativosDelta =
-    STATS_TODAY.entradas.value > 0
-      ? Math.round((STATS_TODAY.ativos.value / STATS_TODAY.entradas.value) * 100)
+    stats.entradas.value > 0
+      ? Math.round((stats.ativos.value / stats.entradas.value) * 100)
       : 0;
 
   return (
@@ -340,22 +560,22 @@ export default function DashboardPage() {
             compact
             featured
             label="Visitantes Hoje"
-            value={STATS_TODAY.visitantes.value}
+            value={stats.visitantes.value}
             valueClassName="text-primary"
             icon={<Users size={16} className="text-primary" strokeWidth={1.75} />}
-            delta={STATS_TODAY.visitantes.delta}
-            deltaDir={STATS_TODAY.visitantes.deltaDir}
+            delta={stats.visitantes.delta}
+            deltaDir={stats.visitantes.deltaDir}
             sub="Comparativo com ontem"
-            insight="+3 acessos nas ultimas 2h"
+            insight={`+${stats.entradas.ultimas2h} acessos nas ultimas 2h`}
             accentVar="var(--primary)"
           />
           <StatCard
             compact
             label="Entradas"
-            value={STATS_TODAY.entradas.value}
+            value={stats.entradas.value}
             valueClassName="text-secondary"
             icon={<ArrowRightLeft size={16} className="text-secondary" strokeWidth={1.75} />}
-            delta={STATS_TODAY.entradas.pct}
+            delta={stats.entradas.pct}
             deltaDir="up"
             sub="Registros validados"
             insight="100% confirmadas"
@@ -364,25 +584,25 @@ export default function DashboardPage() {
           <StatCard
             compact
             label="Saidas"
-            value={STATS_TODAY.saidas.value}
+            value={stats.saidas.value}
             valueClassName="text-red-600"
             icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
             delta={saidasPct}
             deltaDir="up"
             sub="Check-outs concluidos"
-            insight={`${STATS_TODAY.saidas.aindaDentro} ainda dentro`}
+            insight={`${stats.saidas.aindaDentro} ainda dentro`}
             accentVar="#dc2626"
           />
           <StatCard
             compact
             label="Ativos Agora"
-            value={STATS_TODAY.ativos.value}
+            value={stats.ativos.value}
             valueClassName="text-blue-900"
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
             delta={ativosDelta}
-            deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
+            deltaDir={stats.ativos.alertas > 0 ? "down" : "up"}
             sub="Permanencia ativa"
-            insight={`${STATS_TODAY.ativos.alertas} alerta(s)`}
+            insight={`${stats.ativos.alertas} alerta(s)`}
             accentVar="#1e3a8a"
           />
         </section>
@@ -391,7 +611,7 @@ export default function DashboardPage() {
           <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
         ) : null}
 
-        <EntradasChart mobileLayout />
+        <EntradasChart mobileLayout data={entradasHoje} weekData={entradasSemana} monthData={entradasMes} />
         <PicoMovimentoChart mobileLayout data={picoSetores} />
         <TiposVisitanteChart
           mobileLayout
@@ -399,7 +619,7 @@ export default function DashboardPage() {
           weekData={motivosSemana}
           monthData={motivosMes}
         />
-        <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} />
+        <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} monthData={statusMes} />
 
         <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
           <div className="flex items-start gap-3">
@@ -410,7 +630,7 @@ export default function DashboardPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Estado Critico</p>
               <h3 className="text-base font-semibold text-foreground">Atencao para permanencia prolongada</h3>
               <p className="text-sm text-muted-foreground">
-                Existem {STATS_TODAY.ativos.alertas} visitante(s) acima da janela prevista.
+                Existem {stats.ativos.alertas} visitante(s) acima da janela prevista.
               </p>
             </div>
           </div>
@@ -428,13 +648,13 @@ export default function DashboardPage() {
             <StatCard
               featured
               label="Visitantes Hoje"
-              value={STATS_TODAY.visitantes.value}
+              value={stats.visitantes.value}
               valueClassName="text-primary"
               icon={<Users size={18} className="text-primary" strokeWidth={1.75} />}
-              delta={STATS_TODAY.visitantes.delta}
-              deltaDir={STATS_TODAY.visitantes.deltaDir}
+              delta={stats.visitantes.delta}
+              deltaDir={stats.visitantes.deltaDir}
               sub="Comparativo com o mesmo horario de ontem"
-              insight="+3 acessos nas ultimas 2h"
+              insight={`+${stats.entradas.ultimas2h} acessos nas ultimas 2h`}
               accentVar="var(--primary)"
             />
           </div>
@@ -442,10 +662,10 @@ export default function DashboardPage() {
           <div className="grid gap-6 md:grid-cols-3 xl:col-span-7">
             <StatCard
               label="Entradas"
-              value={STATS_TODAY.entradas.value}
+              value={stats.entradas.value}
               valueClassName="text-secondary"
               icon={<ArrowRightLeft size={17} className="text-secondary" strokeWidth={1.75} />}
-              delta={STATS_TODAY.entradas.pct}
+              delta={stats.entradas.pct}
               deltaDir="up"
               sub="Registros confirmados hoje"
               insight="100% das entradas validadas"
@@ -453,24 +673,24 @@ export default function DashboardPage() {
             />
             <StatCard
               label="Saidas"
-              value={STATS_TODAY.saidas.value}
+              value={stats.saidas.value}
               valueClassName="text-red-600"
               icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
               delta={saidasPct}
               deltaDir="up"
               sub="Check-outs concluidos"
-              insight={`${STATS_TODAY.saidas.aindaDentro} pessoas ainda dentro`}
+              insight={`${stats.saidas.aindaDentro} pessoas ainda dentro`}
               accentVar="#dc2626"
             />
             <StatCard
               label="Ativos Agora"
-              value={STATS_TODAY.ativos.value}
+              value={stats.ativos.value}
               valueClassName="text-blue-900"
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
               delta={ativosDelta}
-              deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
+              deltaDir={stats.ativos.alertas > 0 ? "down" : "up"}
               sub="Pessoas em permanencia ativa"
-              insight={`${STATS_TODAY.ativos.alertas} alerta(s) exigem revisao`}
+              insight={`${stats.ativos.alertas} alerta(s) exigem revisao`}
               accentVar="#1e3a8a"
             />
           </div>
@@ -481,7 +701,7 @@ export default function DashboardPage() {
         ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
-          <EntradasChart />
+          <EntradasChart data={entradasHoje} weekData={entradasSemana} monthData={entradasMes} />
           <PicoMovimentoChart data={picoSetores} />
         </section>
 
@@ -492,7 +712,7 @@ export default function DashboardPage() {
             monthData={motivosMes}
           />
           <div className="space-y-6">
-            <StatusVisitantesChart data={statusHoje} weekData={statusSemana} />
+            <StatusVisitantesChart data={statusHoje} weekData={statusSemana} monthData={statusMes} />
           </div>
         </section>
       </div>

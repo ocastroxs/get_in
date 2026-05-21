@@ -27,14 +27,16 @@ function StatusPieTooltip({ active, payload }) {
 export default function StatusVisitantesChart({ 
   mobileLayout = "default",
   data = STATUS_VISITANTES,
-  weekData = STATUS_VISITANTES
+  weekData = STATUS_VISITANTES,
+  monthData = STATUS_VISITANTES
 }) {
   const [view, setView] = useState("hoje");
 
   // Select data based on view
   const chartData = useMemo(() => {
+    if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, weekData, view]);
+  }, [data, monthData, weekData, view]);
 
   // "Ativos" is usually the first item (Dentro da fábrica)
   const ativos = useMemo(() => {
@@ -57,7 +59,7 @@ export default function StatusVisitantesChart({
           </div>
 
           <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
-            {["hoje", "semana"].map((item) => (
+            {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
@@ -68,7 +70,7 @@ export default function StatusVisitantesChart({
                     : "hover:bg-white/80 hover:text-foreground",
                 ].join(" ")}
               >
-                {item}
+                {item === "mes" ? "mês" : item}
               </button>
             ))}
           </div>

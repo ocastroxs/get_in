@@ -24,10 +24,12 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
           <p className="text-sm text-muted-foreground">Requisicoes de visita agrupadas por setor.</p>
         </div>
 
-        <div className="min-w-[124px] rounded-2xl border border-border bg-muted/50 px-4 py-3 shadow-sm shadow-slate-200/40">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Maior fluxo</p>
-          <p className="mt-1 font-mono text-xl font-semibold text-foreground">{peak.value}</p>
-          <p className="text-xs text-muted-foreground">{peak.setor}</p>
+        <div className="min-w-[124px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30">
+          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Maior fluxo</p>
+          <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
+            {peak.value}
+            <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peak.setor}</span>
+          </p>
         </div>
       </div>
 
