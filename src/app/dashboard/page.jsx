@@ -457,6 +457,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function carregarDados() {
       try {
+        // Carregando dados consolidados do back-end
         const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
           api.get("/requisicao-visitante"),
           api.get("/portaria/vlocal"),
@@ -464,9 +465,10 @@ export default function DashboardPage() {
         ]);
 
         if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
-          const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes"]);
-          const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes"]);
-          const logs = normalizarArrayResponse(logsResponse, ["logs"]);
+          // Normalizando respostas do back-end
+          const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
+          const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
+          const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
           
           // Filter alerts
           const alertas = visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante));
