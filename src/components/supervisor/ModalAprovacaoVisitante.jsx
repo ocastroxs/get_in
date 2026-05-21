@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
+import { formatCPF, formatPhone } from "@/lib/utils";
 
 const STATUS_STYLE = {
   pendente: "border-amber-200 bg-amber-50 text-amber-700",
@@ -49,6 +50,32 @@ function getSetorNome(item) {
   return item?.setor || item?.setores?.nome || item?.departamento?.nome || "-";
 }
 
+function pickFirst(...values) {
+  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
+}
+
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function getObservacaoPortaria(requisicao) {
+  const descricao = requisicao?.descricao || "";
+  const observacao = pickFirst(
+    requisicao?.observacoes,
+    getDescricaoValue(descricao, "Observacao da Portaria"),
+    getDescricaoValue(descricao, "Observacao"),
+    getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observações")
+  );
+
+  return observacao || "Nenhuma observacao registrada pela portaria.";
+}
+
 function getSolicitacoes(requisicao) {
   const itens = requisicao?.setoresSolicitados || requisicao?.requisicoes || requisicao?.itens || [requisicao];
 
@@ -64,7 +91,6 @@ function getSolicitacoes(requisicao) {
 export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, onConfirm }) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [observacoes, setObservacoes] = useState("");
   const [decisoes, setDecisoes] = useState({});
 
   const solicitacoes = useMemo(() => getSolicitacoes(requisicao), [requisicao]);
@@ -79,7 +105,6 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
       initial[item.id] = item.status || "pendente";
     });
     setDecisoes(initial);
-    setObservacoes("");
   }, [requisicao]);
 
   async function handleConfirmar() {
@@ -104,7 +129,6 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
     try {
       const response = await api.put("/requisicao-visitante/lote", {
         updates,
-        observacoes: observacoes || null,
       });
 
       if (!response.sucesso) {
@@ -132,6 +156,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
   if (!isOpen || !requisicao) return null;
 
   const usuario = requisicao.usuario || {};
+  const observacaoPortaria = getObservacaoPortaria(requisicao);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -159,9 +184,9 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <Info label="Nome" value={usuario.nome || "-"} />
-              <Info label="CPF" value={usuario.cpf || "-"} />
+              <Info label="CPF" value={formatCPF(usuario.cpf) || "-"} />
               <Info label="E-mail" value={usuario.email || "-"} icon={<Mail size={14} />} />
-              <Info label="Telefone" value={usuario.celular || usuario.telefone || "-"} icon={<Phone size={14} />} />
+              <Info label="Telefone" value={formatPhone(usuario.celular || usuario.telefone) || "-"} icon={<Phone size={14} />} />
               <Info label="Empresa" value={requisicao.empresa || "-"} icon={<Building2 size={14} />} />
               <Info label="Solicitado em" value={formatDateTime(requisicao.dataDaRequisicao)} icon={<Clock size={14} />} />
             </div>
@@ -225,16 +250,13 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
             </section>
           )}
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observacoes</span>
-            <textarea
-              placeholder="Adicione observacoes para auditoria interna"
-              value={observacoes}
-              onChange={(event) => setObservacoes(event.target.value)}
-              className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-              disabled={loading}
-            />
-          </label>
+          <section className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-900">
+              <FileText size={16} className="text-blue-700" />
+              Observacao da portaria
+            </h3>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-900/80">{observacaoPortaria}</p>
+          </section>
         </div>
 
         <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-card p-5 sm:flex-row">

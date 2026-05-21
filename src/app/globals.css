@@ -208,6 +208,28 @@
   input[type="password"]::-ms-clear {
     display: none;
   }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    border-color: color-mix(in oklch, var(--border) 78%, transparent);
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 200ms;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):hover,
+  select:hover,
+  textarea:hover {
+    border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+  select:focus,
+  textarea:focus {
+    border-color: color-mix(in oklch, var(--primary) 55%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 14%, transparent);
+    outline: none;
+  }
 }
 
 @keyframes route-progress {

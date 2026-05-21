@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  Eye,
   Filter,
   Info,
   Loader2,
@@ -19,6 +20,7 @@ import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -94,7 +96,7 @@ function groupByUsuarioEStatus(requisicoes) {
   );
 }
 
-function LinhaHistorico({ registro }) {
+function LinhaHistorico({ registro, onDetalhes }) {
   const statusClass = STATUS_STYLE[registro.status] || STATUS_STYLE.pendente;
 
   return (
@@ -102,7 +104,7 @@ function LinhaHistorico({ registro }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-foreground">{registro.usuario.nome || "-"}</p>
-          <p className="text-xs text-muted-foreground">{registro.usuario.cpf || "CPF nao informado"}</p>
+          <p className="text-xs text-muted-foreground">{formatCPF(registro.usuario.cpf) || "CPF nao informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "-"}</td>
@@ -124,7 +126,62 @@ function LinhaHistorico({ registro }) {
           {STATUS_LABEL[registro.status] || STATUS_LABEL.pendente}
         </span>
       </td>
+      <td className="px-4 py-3 text-right">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onDetalhes(registro)}
+          className="h-8 gap-1.5 rounded-lg text-[11px] font-bold"
+          type="button"
+        >
+          <Eye size={13} />
+          Detalhes
+        </Button>
+      </td>
     </tr>
+  );
+}
+
+function ModalDetalhesHistorico({ registro, onClose }) {
+  if (!registro) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Detalhes da requisicao</h2>
+            <p className="text-xs text-muted-foreground">{registro.usuario.nome || "-"} - {STATUS_LABEL[registro.status] || registro.status}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-3 p-5 text-sm">
+          <Detail label="CPF" value={formatCPF(registro.usuario.cpf) || "-"} />
+          <Detail label="Empresa" value={registro.empresa || "-"} />
+          <Detail label="Setores" value={registro.setores.join(", ") || "-"} />
+          <Detail label="Motivo" value={registro.motivo || "-"} />
+          <Detail label="Solicitacao" value={formatDateTime(registro.dataDaRequisicao)} />
+        </div>
+
+        <div className="border-t border-border p-5">
+          <Button type="button" onClick={onClose} className="h-10 w-full rounded-xl">
+            Fechar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Detail({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/60 px-4 py-3">
+      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-semibold text-foreground">{value}</span>
+    </div>
   );
 }
 
@@ -133,6 +190,7 @@ export default function HistoricoSupervisorPage() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [registroSelecionado, setRegistroSelecionado] = useState(null);
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
 
@@ -208,7 +266,7 @@ export default function HistoricoSupervisorPage() {
         ],
         rows: registrosFiltrados.map((registro) => [
           registro.usuario.nome || "-",
-          registro.usuario.cpf || "-",
+          formatCPF(registro.usuario.cpf) || "-",
           registro.empresa || "-",
           registro.setores.join(", ") || "-",
           registro.motivo || "-",
@@ -312,11 +370,12 @@ export default function HistoricoSupervisorPage() {
                     <th className="px-4 py-3 text-left">Motivo</th>
                     <th className="px-4 py-3 text-left">Solicitacao</th>
                     <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-right">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {registrosFiltrados.map((registro) => (
-                    <LinhaHistorico key={registro.key} registro={registro} />
+                    <LinhaHistorico key={registro.key} registro={registro} onDetalhes={setRegistroSelecionado} />
                   ))}
                 </tbody>
               </table>
@@ -338,6 +397,11 @@ export default function HistoricoSupervisorPage() {
           </div>
         </div>
       </div>
+
+      <ModalDetalhesHistorico
+        registro={registroSelecionado}
+        onClose={() => setRegistroSelecionado(null)}
+      />
 
       <ModalFiltro
         isOpen={modalFiltroAberto}

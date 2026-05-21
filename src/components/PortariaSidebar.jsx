@@ -11,14 +11,18 @@ import {
   Settings,
   Home,
   AlertTriangle,
-  FileText
+  FileText,
+  CheckCircle2
 } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
+import BrandLogo from '@/components/BrandLogo';
 
 export default function PortariaSidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const { logout, user } = useAuth();
+  const { logout, user, funcionario } = useAuth();
+  const isConfiguracoes = pathname === '/configuracoes';
+  const avatarSrc = user?.avatarUrl || user?.imagem || funcionario?.avatarUrl || funcionario?.imagem;
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -53,16 +57,8 @@ export default function PortariaSidebar() {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Cabeçalho com Logo/Texto */}
-        <div className="p-8 ml-18 mb-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3 group cursor-pointer">
-           
-            <h1 className="text-2xl  font-black text-white tracking-tighter group-hover:tracking-normal transition-all duration-300">
-              GET<span className="text-[#4DA8EA]">IN</span>
-            </h1>
-          </div>
-          
-          
-        
+        <div className="p-8 mb-4 flex items-center justify-between">
+          <BrandLogo variant="light" />
         </div>
 
         {/* Navegação Principal */}
@@ -87,6 +83,13 @@ export default function PortariaSidebar() {
                 onClick={() => setIsOpen(false)} 
               />
               <NavItem 
+                href="/portaria/aprovacoes" 
+                icon={CheckCircle2} 
+                label="Aprovações" 
+                active={pathname === '/portaria/aprovacoes'} 
+                onClick={() => setIsOpen(false)} 
+              />
+              <NavItem 
                 href="/portaria/historico" 
                 icon={FileText} 
                 label="Histórico" 
@@ -104,6 +107,7 @@ export default function PortariaSidebar() {
                 <UserAvatar 
                   name={user?.nome || 'Portaria'} 
                   email={user?.email || 'portaria@getin.com'} 
+                  src={avatarSrc}
                   className="w-8 h-8 text-[10px]" 
                 />
                 <div className="flex-1 overflow-hidden">
@@ -111,7 +115,15 @@ export default function PortariaSidebar() {
                   <p className="text-[10px] text-gray-400 truncate">{user?.email || 'portaria@getin.com'}</p>
                 </div>
               </div>
-              <Link href="/configuracoes" onClick={() => setIsOpen(false)} className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group">
+              <Link
+                href="/configuracoes"
+                onClick={() => setIsOpen(false)}
+                className={`w-full py-2 px-3 rounded-xl text-[10px] font-bold transition-all flex items-center justify-center space-x-2 group ${
+                  isConfiguracoes
+                    ? 'bg-[#4DA8EA] text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white'
+                }`}
+              >
                 <Settings className="w-3 h-3 group-hover:rotate-90 transition-transform duration-500" />
                 <span>Configurações</span>
               </Link>

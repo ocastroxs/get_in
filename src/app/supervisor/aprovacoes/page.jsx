@@ -21,6 +21,7 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisitante";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
 
 const STATUS_LABEL = {
   todos: "Todos",
@@ -49,6 +50,14 @@ function formatDateTime(value) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+function isToday(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
 }
 
 function getSetorNome(requisicao) {
@@ -95,9 +104,12 @@ function groupRequisicoes(requisicoes) {
 
   return Array.from(groups.values()).map((group) => {
     const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => item.status || "pendente")));
+    const hasPendencia = group.setoresSolicitados.some((item) => (item.status || "pendente") === "pendente");
+
     return {
       ...group,
-      status: statuses.length === 1 ? statuses[0] : "misto",
+      hasPendencia,
+      status: hasPendencia ? "pendente" : statuses.length === 1 ? statuses[0] : "misto",
     };
   });
 }
@@ -112,7 +124,7 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-          <p className="text-[11px] text-muted-foreground">{usuario.cpf || "CPF nao informado"}</p>
+          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF nao informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || "-"}</td>
@@ -173,7 +185,7 @@ export default function AprovacoesSupervisorPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(response.data.filter((requisicao) => isToday(requisicao.dataDaRequisicao)));
       } else {
         setRequisicoes([]);
       }
@@ -206,9 +218,18 @@ export default function AprovacoesSupervisorPage() {
     });
   }, [requisicoesAgrupadas, busca, filtroStatus]);
 
-  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
-  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
-  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
+  const countPendentes = requisicoesAgrupadas.reduce(
+    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => (item.status || "pendente") === "pendente").length,
+    0
+  );
+  const countAprovados = requisicoesAgrupadas.reduce(
+    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => item.status === "aprovado").length,
+    0
+  );
+  const countRecusados = requisicoesAgrupadas.reduce(
+    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => item.status === "recusado").length,
+    0
+  );
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
@@ -232,7 +253,7 @@ export default function AprovacoesSupervisorPage() {
     try {
       await exportTableToPdf({
         title: "Aprovacoes do supervisor",
-        subtitle: "Solicitacoes de visitantes por setor",
+        subtitle: "Solicitacoes de visitantes de hoje por setor",
         fileName: `aprovacoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -251,7 +272,7 @@ export default function AprovacoesSupervisorPage() {
           const usuario = r.usuario || {};
           return [
             usuario.nome || "-",
-            usuario.cpf || "-",
+            formatCPF(usuario.cpf) || "-",
             r.empresa || "-",
             r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[item.status] || item.status})`).join(", "),
             r.motivo || "-",
@@ -270,14 +291,14 @@ export default function AprovacoesSupervisorPage() {
     <>
       <Topbar
         title="Aprovações"
-        subtitle="Gerenciamento de solicitacoes de visitantes da portaria"
+        subtitle="Gerenciamento das solicitacoes de visitantes de hoje"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
-          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
-          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Pendentes de hoje" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+          <StatCard label="Aprovados de hoje" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Recusados de hoje" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -322,6 +343,7 @@ export default function AprovacoesSupervisorPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
             <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
+            <p className="text-xs text-muted-foreground">Visitantes cadastrados hoje aparecem com status pendente, aprovado ou recusado.</p>
           </div>
 
           {loading ? (
@@ -374,7 +396,7 @@ export default function AprovacoesSupervisorPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Status da Requisicao
+              Status do setor
             </label>
             <div className="grid grid-cols-1 gap-2">
               {["todos", "pendente", "aprovado", "recusado"].map((status) => (

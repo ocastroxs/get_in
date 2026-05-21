@@ -198,6 +198,7 @@ export default function NovoCadastroPage() {
     telefone: "",
     email: "",
     rfidTag: "",
+    observacao: "",
     setoresAcesso: [],
   });
 
@@ -367,11 +368,6 @@ export default function NovoCadastroPage() {
 
   const getSetoresSelecionados = () => {
     const setoresSelecionados = new Map();
-    const setorDestino = getSetorSelecionado();
-
-    if (setorDestino?.id) {
-      setoresSelecionados.set(setorDestino.id, setorDestino);
-    }
 
     form.setoresAcesso.forEach((setorNome) => {
       const setor = setorOptions.find((option) => option.value === setorNome);
@@ -461,9 +457,15 @@ export default function NovoCadastroPage() {
     const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
     const emailValidoForm = isValidEmail(form.email);
     const setoresSelecionados = getSetoresSelecionados();
+    const observacao = form.observacao.trim();
 
     if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !form.setor || !form.motivo || !telefoneCompletoForm || !emailValidoForm) {
-      alert("Preencha nome, CPF, empresa, setor de destino, motivo, telefone e e-mail validos.");
+      alert("Preencha nome, CPF, empresa, setor responsavel, motivo, telefone e e-mail validos.");
+      return;
+    }
+
+    if (form.setoresAcesso.length === 0) {
+      alert("Selecione ao menos um setor permitido.");
       return;
     }
 
@@ -498,8 +500,9 @@ export default function NovoCadastroPage() {
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
         `TAG RFID: ${form.rfidTag || "Nao informada"}`,
-        `Setor: ${form.setor || "Nao informado"}`,
-        `Setores permitidos: ${setoresPermitidos}`
+        `Setor responsavel: ${form.setor || "Nao informado"}`,
+        `Setores permitidos: ${setoresPermitidos}`,
+        `Observacoes: ${observacao || "Nenhuma"}`
       ].join(" | ");
 
       const payload = {
@@ -511,6 +514,7 @@ export default function NovoCadastroPage() {
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         descricao,
         empresa: form.empresa,
+        setorResponsavel: form.setor,
         telefone: form.telefone,
         email: form.email.trim().toLowerCase(),
         codigoTag: form.rfidTag,
@@ -549,7 +553,8 @@ export default function NovoCadastroPage() {
     },
     { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
     { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
-    { key: "setorDestino", label: "Setor de destino", completed: Boolean(form.setor) },
+    { key: "setorResponsavel", label: "Setor responsavel", completed: Boolean(form.setor) },
+    { key: "setoresPermitidos", label: "Setores permitidos", completed: form.setoresAcesso.length > 0 },
     { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
     { key: "emailContato", label: "E-mail de contato", completed: emailValido }
   ];
@@ -654,6 +659,19 @@ export default function NovoCadastroPage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
+                      Observacao da Portaria
+                    </label>
+                    <textarea
+                      placeholder="Informe contexto importante para o supervisor, se houver."
+                      value={form.observacao}
+                      onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+                      rows={3}
+                      className="w-full resize-none rounded-xl border border-border/60 bg-card px-3 py-2 text-sm text-foreground shadow-xs outline-none transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0"
+                    />
+                  </div>
+
                 </div>
               </div>
 
@@ -683,12 +701,12 @@ export default function NovoCadastroPage() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        Setor de Destino
+                        Setor Responsavel
                       </label>
                       <PrettySelect
                         value={form.setor}
                         onChange={(setor) => setForm({ ...form, setor })}
-                        placeholder={loadingSetores ? "Carregando setores..." : "Selecione..."}
+                        placeholder={loadingSetores ? "Carregando setores..." : "Selecione a area..."}
                         options={setoresDisponiveis}
                         Icon={MapPin}
                       />
@@ -854,11 +872,11 @@ export default function NovoCadastroPage() {
                       </div>
                     </div>
 
-                    {/* Setor de Destino */}
+                    {/* Setor responsavel */}
                     {form.setor && (
                       <div className="mb-4 pb-4 border-b border-border/60">
                         <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
-                          Setor de Destino
+                          Setor Responsavel
                         </div>
                         <div className="inline-flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-full px-3 py-1.5">
                           <div className="w-2 h-2 rounded-full bg-primary/70"></div>
@@ -867,11 +885,11 @@ export default function NovoCadastroPage() {
                       </div>
                     )}
 
-                    {/* Setores de Acesso */}
+                    {/* Setores permitidos */}
                     {form.setoresAcesso.length > 0 && (
                       <div className="mb-4 pb-4 border-b border-border/60">
                         <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
-                          Acesso Permitido
+                          Setores Permitidos
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {form.setoresAcesso.map((setor, idx) => (
@@ -1046,6 +1064,7 @@ export default function NovoCadastroPage() {
                 { label: "Nome", value: form.nome || "—" },
                 { label: "Empresa", value: form.empresa || "—" },
                 { label: "Tipo", value: form.motivo || "—" },
+                { label: "Setor responsavel", value: form.setor || "—" },
                 { label: "CPF", value: form.cpf || "—" },
                 { label: "Telefone", value: form.telefone || "—" },
                 { label: "E-mail", value: form.email || "—" },
@@ -1057,7 +1076,7 @@ export default function NovoCadastroPage() {
                 </div>
               ))}
               <div className="flex justify-between items-center pt-1 md:col-span-2">
-                <span className="text-xs text-muted-foreground font-medium">Setores de Acesso</span>
+                <span className="text-xs text-muted-foreground font-medium">Setores permitidos</span>
                 <div className="flex gap-2">
                   {form.setoresAcesso.length > 0 ? (
                     form.setoresAcesso.map((setor, idx) => (
@@ -1070,6 +1089,12 @@ export default function NovoCadastroPage() {
                   )}
                 </div>
               </div>
+              {form.observacao.trim() && (
+                <div className="flex justify-between items-start pt-1 md:col-span-2">
+                  <span className="text-xs text-muted-foreground font-medium">Observacao</span>
+                  <span className="max-w-xl text-right text-xs font-bold text-foreground">{form.observacao.trim()}</span>
+                </div>
+              )}
             </div>
           </div>
 

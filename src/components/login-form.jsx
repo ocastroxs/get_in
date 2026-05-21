@@ -10,6 +10,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 import { authService } from "@/services/api";
 import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
 
 export function LoginForm({ className, ...props }) {
   const { login: updateAuthContext } = useAuth();
@@ -92,7 +93,7 @@ export function LoginForm({ className, ...props }) {
     >
       {/* Logo visível apenas em mobile (painel esquerdo oculto) */}
       <div className="flex lg:hidden justify-center mb-2">
-        <img src="/logo-b.svg" alt="GetIN" className="h-10 w-auto" />
+        <BrandLogo variant="dark" />
       </div>
 
       {/* Cabeçalho */}

@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
 import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext"
-import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
+import { Building2, ChevronRight, ShieldCheck, Users } from "lucide-react"
 import { publicService } from "@/services/api"
+import BrandLogo from "@/components/BrandLogo"
 
 /* ─────────────────────────────────────────────
    Componente de Título Animado (da branch castro)
@@ -279,15 +280,12 @@ export default function LoginPage() {
         {/* Gradiente de vinheta nas bordas */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0B2447]/60 via-transparent to-[#0B2447]/80 pointer-events-none" />
 
-        {/* Brilho central suave */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
-
         {/* Conteúdo */}
         <div className="relative z-10 flex h-full flex-col p-10">
 
           {/* Logo */}
           <div className="animate-in fade-in slide-in-from-top-4 duration-700">
-            <img src="/logo-w.svg" alt="GetIN" className="h-10 w-auto" />
+            <BrandLogo variant="light" />
           </div>
 
           {/* Texto central */}
@@ -334,7 +332,10 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
               <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
               <div className="pl-4">
-                <StatItem value={stats.setoresTotal} label="Setores cadastrados" icon={Activity} />
+                <StatItem value={stats.setoresTotal} label="Setores cadastrados" icon={Building2} />
+              </div>
+              <div className="pl-4">
+                <StatItem value={stats.usuariosTotal} label="Usuarios ativos" icon={ShieldCheck} />
               </div>
             </div>
           </div>

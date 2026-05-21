@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Camera,
@@ -8,10 +8,12 @@ import {
   EyeOff,
   Loader2,
   Lock,
+  LogOut,
   Mail,
   RotateCcw,
   Save,
   Shield,
+  SlidersHorizontal,
   Smartphone,
   User,
 } from "lucide-react";
@@ -21,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { getAuthTipo, useAuth } from "@/lib/AuthContext";
+import { maskPhone } from "@/lib/utils";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -50,10 +53,6 @@ function getCargoLabel(tipo) {
   return CARGOS.find((cargo) => cargo.value === tipo)?.label || "Funcionario";
 }
 
-function getSetorNome(setor) {
-  return String(setor?.nome || setor?.setor || setor?.departamento?.nome || "").trim();
-}
-
 function mapProfileResponse(response, fallbackUser, fallbackFuncionario) {
   const data = response?.data || {};
   const perfil = data.perfil || {};
@@ -64,7 +63,7 @@ function mapProfileResponse(response, fallbackUser, fallbackFuncionario) {
   return {
     nome: pickFirst(perfil.nome, usuario.nome, "Usuario"),
     email: pickFirst(perfil.email, usuario.email),
-    telefone: pickFirst(perfil.telefone, perfil.celular, usuario.celular),
+    telefone: maskPhone(pickFirst(perfil.telefone, perfil.celular, usuario.celular)),
     setor: pickFirst(perfil.setor, funcionario.setor?.nome, funcionario.setores?.nome),
     idSetor: pickFirst(funcionario.idSetor, funcionario.setor?.id, funcionario.setores?.id),
     cargo: tipo || "func",
@@ -88,18 +87,15 @@ function loadNotificationPreferences() {
 }
 
 export default function ConfiguracoesPage() {
-  const { user, funcionario, updateAuthData } = useAuth();
+  const { user, funcionario, logout, updateAuthData } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
-  const tipoAtual = getAuthTipo(funcionario, user);
-  const podeAlterarCargo = tipoAtual === "adm";
 
   const [abaAtiva, setAbaAtiva] = useState("perfil");
   const [loading, setLoading] = useState(false);
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [setores, setSetores] = useState([]);
 
   const [perfil, setPerfil] = useState(() => mapProfileResponse(null, user, funcionario));
   const [perfilOriginal, setPerfilOriginal] = useState(perfil);
@@ -111,25 +107,12 @@ export default function ConfiguracoesPage() {
   const [notificacoes, setNotificacoes] = useState(DEFAULT_NOTIFICACOES);
   const [notificacoesOriginal, setNotificacoesOriginal] = useState(DEFAULT_NOTIFICACOES);
 
-  const setoresOptions = useMemo(() => {
-    return setores
-      .map((setor) => {
-        const nome = getSetorNome(setor);
-        return nome ? { id: setor.id, nome } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [setores]);
-
   useEffect(() => {
     async function carregarConfiguracoes() {
       setLoadingPerfil(true);
 
       try {
-        const [profileResponse, setoresResponse] = await Promise.all([
-          api.get("/user/me/profile"),
-          api.get("/setores"),
-        ]);
+        const profileResponse = await api.get("/user/me/profile");
 
         const nextPerfil = profileResponse.sucesso
           ? mapProfileResponse(profileResponse, user, funcionario)
@@ -138,9 +121,6 @@ export default function ConfiguracoesPage() {
         setPerfil(nextPerfil);
         setPerfilOriginal(nextPerfil);
 
-        if (setoresResponse.sucesso && Array.isArray(setoresResponse.data)) {
-          setSetores(setoresResponse.data);
-        }
       } catch (error) {
         console.error("Erro ao carregar configuracoes:", error);
         showToast({
@@ -167,8 +147,6 @@ export default function ConfiguracoesPage() {
         nome: perfil.nome,
         email: perfil.email,
         telefone: perfil.telefone,
-        idSetor: perfil.idSetor || undefined,
-        cargo: perfil.cargo,
       });
 
       if (!response.sucesso) {
@@ -287,9 +265,18 @@ export default function ConfiguracoesPage() {
         throw new Error(response.mensagem || response.erro || "Erro ao enviar imagem.");
       }
 
-      const avatarUrl = response.data?.imagem;
+      const avatarUrl = response.data?.avatarUrl || response.data?.imagem;
       setPerfil((current) => ({ ...current, avatarUrl }));
       setPerfilOriginal((current) => ({ ...current, avatarUrl }));
+      updateAuthData(
+        {
+          data: {
+            usuario: { ...(user || {}), avatarUrl },
+            funcionario: { ...(funcionario || {}), avatarUrl, imagem: avatarUrl },
+          },
+        },
+        { ...(funcionario || {}), avatarUrl, imagem: avatarUrl }
+      );
 
       showToast({
         type: "success",
@@ -320,6 +307,7 @@ export default function ConfiguracoesPage() {
           <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
           <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Seguranca" />
           <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificacoes" />
+          <TabButton active={abaAtiva === "preferencias"} onClick={() => setAbaAtiva("preferencias")} icon={<SlidersHorizontal size={16} />} label="Preferências" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
@@ -353,28 +341,21 @@ export default function ConfiguracoesPage() {
                       <Input type="email" value={perfil.email} onChange={(event) => setPerfil({ ...perfil, email: event.target.value })} className="h-11 rounded-xl" />
                     </Field>
                     <Field label="Telefone">
-                      <Input value={perfil.telefone} onChange={(event) => setPerfil({ ...perfil, telefone: event.target.value })} className="h-11 rounded-xl" />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        value={perfil.telefone}
+                        onChange={(event) => setPerfil({ ...perfil, telefone: maskPhone(event.target.value) })}
+                        className="h-11 rounded-xl"
+                      />
                     </Field>
                     <Field label="Setor principal">
-                      <select
-                        value={perfil.idSetor || ""}
-                        onChange={(event) => {
-                          const selected = setoresOptions.find((setor) => String(setor.id) === event.target.value);
-                          setPerfil({ ...perfil, idSetor: event.target.value, setor: selected?.nome || "" });
-                        }}
-                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary"
-                      >
-                        <option value="">{perfil.setor || "Selecione um setor"}</option>
-                        {setoresOptions.map((setor) => (
-                          <option key={setor.id} value={setor.id}>{setor.nome}</option>
-                        ))}
-                      </select>
+                      <Input value={perfil.setor || "Nao informado"} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Cargo">
                       <select
                         value={perfil.cargo}
-                        disabled={!podeAlterarCargo}
-                        onChange={(event) => setPerfil({ ...perfil, cargo: event.target.value })}
+                        disabled
                         className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {CARGOS.map((cargo) => (
@@ -393,6 +374,17 @@ export default function ConfiguracoesPage() {
                     loading={loading}
                     saveLabel="Salvar alteracoes"
                   />
+
+                  <section className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-red-900">Sessao da conta</h3>
+                      <p className="text-xs text-red-700/80">Encerre o acesso deste navegador ao sistema.</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={logout} className="h-10 gap-2 rounded-xl border-red-200 bg-white text-red-700 hover:bg-red-50">
+                      <LogOut size={14} />
+                      Sair da conta
+                    </Button>
+                  </section>
                 </div>
               )}
 
@@ -450,6 +442,29 @@ export default function ConfiguracoesPage() {
                     loading={false}
                     saveLabel="Salvar notificacoes"
                   />
+                </div>
+              )}
+
+              {abaAtiva === "preferencias" && (
+                <div className="space-y-4">
+                  <section className="rounded-2xl border border-border/70 bg-background/60 p-5">
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                      <SlidersHorizontal size={18} />
+                      Preferências
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      Esta área está reservada para preferências pessoais de visualização, idioma e atalhos do sistema.
+                    </p>
+                  </section>
+
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {["Tema do sistema", "Densidade das tabelas", "Atalhos de navegação"].map((label) => (
+                      <div key={label} className="rounded-2xl border border-border bg-muted/30 p-4">
+                        <p className="text-sm font-bold text-foreground">{label}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Em breve</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </>

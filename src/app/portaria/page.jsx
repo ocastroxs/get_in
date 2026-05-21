@@ -34,8 +34,7 @@ const STATUS_LABEL = {
   saida: "Saída",
   pendente: "Pendente",
   alerta: "Alerta",
-  recusado: "Recusado",
-  liberado: "Liberado"
+  recusado: "Recusado"
 };
 
 const STATUS_STYLE = {
@@ -43,8 +42,7 @@ const STATUS_STYLE = {
   saida: "bg-blue-100 text-blue-700",
   pendente: "bg-amber-100 text-amber-700",
   alerta: "bg-red-100 text-red-600",
-  recusado: "bg-red-100 text-red-600",
-  liberado: "bg-amber-100 text-amber-700"
+  recusado: "bg-red-100 text-red-600"
 };
 
 const STATUS_DOT = {
@@ -52,13 +50,11 @@ const STATUS_DOT = {
   saida: "bg-blue-500",
   pendente: "bg-amber-500",
   alerta: "bg-red-500",
-  recusado: "bg-red-500",
-  liberado: "bg-amber-500"
+  recusado: "bg-red-500"
 };
 
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
-  { label: "Liberados", value: "liberado" },
   { label: "Dentro", value: "ativo" },
   { label: "Saída", value: "saida" }
 ];
@@ -70,11 +66,11 @@ const SEARCH_INPUT_CLASS =
   "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10";
 
 const BACKEND_STATUS_TO_PORTARIA = {
-  aprovado: "liberado",
-  aprovada: "liberado",
+  aprovado: "ativo",
+  aprovada: "ativo",
   ativo: "ativo",
   dentro: "ativo",
-  liberado: "liberado",
+  liberado: "ativo",
   pendente: "pendente",
   recusado: "recusado",
   rejeitado: "recusado",
@@ -100,6 +96,40 @@ function getDescricaoValue(descricao, label) {
   const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
 
   return match?.[1]?.trim() || "";
+}
+
+function isToday(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
+
+function splitSetores(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item && item.toLowerCase() !== "nenhum");
+}
+
+function getSetorResponsavelFromDescricao(descricao, fallback = "") {
+  return pickFirst(
+    getDescricaoValue(descricao, "Setor responsavel"),
+    getDescricaoValue(descricao, "Area responsavel"),
+    getDescricaoValue(descricao, "Setor"),
+    fallback
+  );
+}
+
+function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
+  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
+
+  if (setoresPermitidos.length > 0) {
+    return setoresPermitidos;
+  }
+
+  return splitSetores(fallback);
 }
 
 function normalizeStatus(value) {
@@ -183,13 +213,16 @@ function normalizeVisitante(visitante) {
   const departamento = visitante?.departamento || visitante?.setores || {};
   const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
   const descricao = visitante?.descricao || "";
-  const dataEntrada = pickFirst(
+  const setorBackend = pickFirst(visitante?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"));
+  const setorResponsavel = getSetorResponsavelFromDescricao(descricao, setorBackend);
+  const setoresPermitidos = getSetoresPermitidosFromDescricao(descricao, setorBackend);
+  const dataEntradaLog = pickFirst(
     visitante?.dataEntrada,
     visitante?.entrada,
     visitante?.dataDeEntrada,
-    visitante?.dataDaEntrada,
-    visitante?.dataDaRequisicao
+    visitante?.dataDaEntrada
   );
+  const dataEntrada = pickFirst(dataEntradaLog, visitante?.dataDaRequisicao);
   const dataSaida = pickFirst(
     visitante?.dataSaida,
     visitante?.saida,
@@ -225,14 +258,18 @@ function normalizeVisitante(visitante) {
       usuario?.empresa,
       getDescricaoValue(descricao, "Empresa")
     ),
-    setor: pickFirst(visitante?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
+    setor: setorResponsavel,
+    setorResponsavel,
+    setoresPermitidos,
+    setoresAcesso: setoresPermitidos,
     dataEntrada,
     dataSaida,
+    dataDaRequisicao: pickFirst(visitante?.dataDaRequisicao, visitante?.createdAt),
     status,
     statusOriginal: visitante?.status,
     podeCheckout: Boolean(
       visitante?.podeCheckout ||
-        (dataEntrada && !dataSaida && status === "ativo")
+        (dataEntradaLog && !dataSaida && status === "ativo")
     )
   };
 }
@@ -323,11 +360,19 @@ function dedupeVisitantesPorIdentidade(registros) {
 }
 
 function getSetorLabel(visitante) {
+  return visitante?.setorResponsavel || visitante?.setor || "—";
+}
+
+function getSetoresPermitidosLabel(visitante) {
+  if (Array.isArray(visitante?.setoresPermitidos) && visitante.setoresPermitidos.length > 0) {
+    return visitante.setoresPermitidos.join(", ");
+  }
+
   if (Array.isArray(visitante?.setoresAcesso) && visitante.setoresAcesso.length > 0) {
     return visitante.setoresAcesso.join(", ");
   }
 
-  return visitante?.setor || "—";
+  return "—";
 }
 
 function onlyDigits(value) {
@@ -354,13 +399,14 @@ function isValidEmail(value) {
 }
 
 function getVisitanteForm(visitante) {
-  const setor = visitante?.setor || getSetorLabel(visitante);
+  const setor = visitante?.setorResponsavel || getSetorLabel(visitante);
 
   return {
     nome: visitante?.nome || "",
     cpf: visitante?.cpf || "",
     empresa: visitante?.empresa || "",
     setor: setor === "—" ? "" : setor,
+    setoresPermitidos: getSetoresPermitidosLabel(visitante),
     telefone: formatPhone(visitante?.telefone) || visitante?.telefone || "",
     email: visitante?.email || ""
   };
@@ -373,7 +419,8 @@ function buildVisitanteDescricao(form) {
     `Telefone: ${form.telefone.trim()}`,
     `Email: ${form.email.trim().toLowerCase()}`,
     `Empresa: ${form.empresa.trim()}`,
-    `Setor: ${form.setor.trim() || "Nao informado"}`
+    `Setor responsavel: ${form.setor.trim() || "Nao informado"}`,
+    `Setores permitidos: ${form.setoresPermitidos && form.setoresPermitidos !== "—" ? form.setoresPermitidos : "Nao informado"}`
   ].join(" | ");
 }
 
@@ -656,8 +703,6 @@ function ModalEditarVisitante({
       return;
     }
 
-    const idSetor = Number(setorSelecionado.id);
-
     setSaving(true);
     setErro("");
 
@@ -666,8 +711,7 @@ function ModalEditarVisitante({
         nome: form.nome.trim(),
         cpf: form.cpf.trim(),
         empresa: form.empresa.trim(),
-        setor: form.setor.trim(),
-        idSetor: Number.isInteger(idSetor) && idSetor > 0 ? idSetor : undefined,
+        setorResponsavel: form.setor.trim(),
         telefone: form.telefone.trim(),
         celular: form.telefone.trim(),
         email: form.email.trim().toLowerCase(),
@@ -755,11 +799,11 @@ function ModalEditarVisitante({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor responsavel</label>
               <SelectField
                 value={form.setor}
                 onChange={(setor) => setField("setor", setor)}
-                placeholder="Selecione o setor"
+                placeholder="Selecione o setor responsavel"
                 emptyLabel="Nenhum setor cadastrado"
                 options={setorOptions}
                 Icon={MapPin}
@@ -1025,7 +1069,13 @@ export default function PortariaPage() {
 
       if (visitantesResponse?.sucesso) {
         const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
-        setVisitantes(dedupeVisitantesPorIdentidade(visitantesPortaria.map(normalizeVisitante)));
+        setVisitantes(
+          dedupeVisitantesPorIdentidade(
+            visitantesPortaria
+              .map(normalizeVisitante)
+              .filter((visitante) => isToday(visitante.dataDaRequisicao || visitante.dataEntrada))
+          )
+        );
       } else {
         console.warn("Back-end nao retornou visitantes da portaria.");
         setVisitantes([]);
@@ -1064,6 +1114,7 @@ export default function PortariaPage() {
       const cpf = visitante?.cpf || "";
       const empresa = visitante?.empresa?.toLowerCase() || "";
       const setor = getSetorLabel(visitante).toLowerCase();
+      const setoresPermitidos = getSetoresPermitidosLabel(visitante).toLowerCase();
       const telefone = visitante?.telefone?.toLowerCase() || "";
       const telefoneFormatado = formatPhone(visitante?.telefone).toLowerCase();
       const telefoneDigitos = onlyDigits(visitante?.telefone);
@@ -1077,6 +1128,7 @@ export default function PortariaPage() {
         cpf.includes(busca) ||
         empresa.includes(termoBusca) ||
         setor.includes(termoBusca) ||
+        setoresPermitidos.includes(termoBusca) ||
         telefone.includes(termoBusca) ||
         telefoneFormatado.includes(termoBusca) ||
         (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
@@ -1167,7 +1219,7 @@ export default function PortariaPage() {
         columns: [
           { header: "Nome", weight: 1.5 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor", weight: 1 },
+          { header: "Setor responsavel", weight: 1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Celular", weight: 1 },
           { header: "E-mail", weight: 1.4 },
@@ -1190,8 +1242,12 @@ export default function PortariaPage() {
   };
 
   const countDentro = visitantes.filter((v) => v.status === "ativo").length;
-  const countLiberados = visitantes.filter((v) => v.status === "liberado").length;
   const countSaidas = visitantes.filter((v) => v.status === "saida").length;
+  const countEmpresas = new Set(
+    visitantes
+      .filter((v) => v.status === "ativo" && v.empresa)
+      .map((v) => String(v.empresa).toLowerCase())
+  ).size;
 
   return (
     <>
@@ -1212,11 +1268,11 @@ export default function PortariaPage() {
             sub="No local agora"
           />
           <StatCard
-            label="Liberados"
-            value={countLiberados}
-            icon={<Clock size={20} className="text-amber-600" />}
+            label="Empresas Presentes"
+            value={countEmpresas}
+            icon={<Building2 size={20} className="text-amber-600" />}
             accentVar="#d97706"
-            sub="Aguardando aprovação"
+            sub="Com visitantes dentro"
           />
           <StatCard
             label="Saídas"
@@ -1234,7 +1290,7 @@ export default function PortariaPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, empresa, setor, celular ou e-mail..."
+                  placeholder="Buscar por nome, empresa, setor responsavel, setor permitido, celular ou e-mail..."
                   className={SEARCH_INPUT_CLASS}
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -1317,7 +1373,7 @@ export default function PortariaPage() {
                 <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
-                  <th className="px-4 py-3">Setor</th>
+                  <th className="px-4 py-3">Setor responsavel</th>
                   <th className="px-4 py-3">Entrada</th>
                   <th className="px-4 py-3">Celular</th>
                   <th className="px-4 py-3">E-mail</th>

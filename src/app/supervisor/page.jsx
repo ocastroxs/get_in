@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   Check,
@@ -23,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -126,6 +128,7 @@ export default function SupervisorDashboardPage() {
         ].filter(Boolean),
         columns: [
           { header: "Visitante", weight: 1.4 },
+          { header: "CPF", weight: 1 },
           { header: "Empresa", weight: 1.1 },
           { header: "Setor", weight: 1.1 },
           { header: "Motivo", weight: 1.2 },
@@ -136,6 +139,7 @@ export default function SupervisorDashboardPage() {
           const usuario = requisicao.usuario || {};
           return [
             usuario.nome || "-",
+            formatCPF(usuario.cpf) || "-",
             requisicao.empresa || "-",
             getSetorNome(requisicao),
             requisicao.motivo || "-",
@@ -155,6 +159,8 @@ export default function SupervisorDashboardPage() {
       <Topbar
         title="Dashboard do Supervisor"
         subtitle="Visao geral das solicitacoes de visitantes"
+        buttonText="Analisar pendentes"
+        buttonHref="/supervisor/aprovacoes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
@@ -222,30 +228,61 @@ export default function SupervisorDashboardPage() {
               <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {requisicoesFiltradas.slice(0, 10).map((requisicao) => {
-                const usuario = requisicao.usuario || {};
-                const status = requisicao.status || "pendente";
-                const statusColor = {
-                  pendente: "bg-amber-100 text-amber-700",
-                  aprovado: "bg-green-100 text-green-700",
-                  recusado: "bg-red-100 text-red-600",
-                }[status] || "bg-gray-100 text-gray-700";
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3">Visitante</th>
+                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3">Setor</th>
+                    <th className="px-4 py-3">Solicitacao</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {requisicoesFiltradas.slice(0, 10).map((requisicao) => {
+                    const usuario = requisicao.usuario || {};
+                    const status = requisicao.status || "pendente";
+                    const statusColor = {
+                      pendente: "bg-amber-100 text-amber-700",
+                      aprovado: "bg-green-100 text-green-700",
+                      recusado: "bg-red-100 text-red-600",
+                    }[status] || "bg-gray-100 text-gray-700";
+                    const actionHref = status === "pendente" ? "/supervisor/aprovacoes" : "/supervisor/historico";
+                    const actionLabel = status === "pendente" ? "Analisar" : "Historico";
 
-                return (
-                  <div key={requisicao.id} className="grid gap-3 p-4 transition hover:bg-muted/30 md:grid-cols-[1.5fr_1fr_1fr_auto] md:items-center">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-                      <p className="mt-1 truncate text-[11px] text-muted-foreground">{requisicao.empresa || "-"} - {requisicao.motivo || "-"}</p>
-                    </div>
-                    <p className="text-xs font-semibold text-foreground">{getSetorNome(requisicao)}</p>
-                    <span className="text-[10px] font-mono text-muted-foreground">{formatDateTime(requisicao.dataDaRequisicao)}</span>
-                    <span className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                      {STATUS_LABEL[status] || status}
-                    </span>
-                  </div>
-                );
-              })}
+                    return (
+                      <tr key={requisicao.id} className="transition hover:bg-muted/40">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF nao informado"}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-foreground">{requisicao.empresa || "-"}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{requisicao.motivo || "-"}</p>
+                        </td>
+                        <td className="px-4 py-3 text-xs font-semibold text-foreground">{getSetorNome(requisicao)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-[10px] font-mono text-muted-foreground">
+                          {formatDateTime(requisicao.dataDaRequisicao)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                            {STATUS_LABEL[status] || status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link href={actionHref}>
+                            <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] font-bold">
+                              {actionLabel}
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
