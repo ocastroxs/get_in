@@ -453,6 +453,7 @@ export default function DashboardPage() {
   const [entradasSemana, setEntradasSemana] = useState([]);
   const [entradasMes, setEntradasMes] = useState([]);
   const [statsDashboard, setStatsDashboard] = useState(STATS_VAZIAS);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
     async function carregarDados() {
@@ -505,6 +506,8 @@ export default function DashboardPage() {
         setEntradasSemana([]);
         setEntradasMes([]);
         setStatsDashboard(STATS_VAZIAS);
+      } finally {
+        setIsDataLoading(false);
       }
     }
 
@@ -527,6 +530,17 @@ export default function DashboardPage() {
     stats.entradas.value > 0
       ? Math.round((stats.ativos.value / stats.entradas.value) * 100)
       : 0;
+
+  if (isDataLoading) {
+    return (
+      <div className="flex h-[80vh] w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="animate-pulse text-sm font-medium text-muted-foreground">Carregando dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 pb-6 animate-in fade-in duration-700">
