@@ -94,6 +94,8 @@ export default function StatusVisitantesChart({
                   strokeWidth={3}
                   stroke="var(--card)"
                   paddingAngle={2}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
@@ -145,6 +147,8 @@ export default function StatusVisitantesChart({
                   strokeWidth={3}
                   stroke="var(--card)"
                   paddingAngle={2}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
