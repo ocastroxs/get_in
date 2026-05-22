@@ -105,7 +105,7 @@ const parseStoredJson = (value) => {
   try {
     return JSON.parse(value);
   } catch (error) {
-    console.error("Erro ao recuperar dados da sessao:", error);
+    console.error("Erro ao recuperar dados da sessão:", error);
     return null;
   }
 };

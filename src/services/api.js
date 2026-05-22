@@ -39,14 +39,14 @@ const getDefaultErrorMessage = (status) => {
   }
 
   if (status === 403) {
-    return 'Voce nao tem permissao para acessar este recurso.';
+    return 'Você não tem permissão para acessar este recurso.';
   }
 
   if (status === 404) {
-    return 'Recurso nao encontrado.';
+    return 'Recurso não encontrado.';
   }
 
-  return 'Nao foi possivel completar a solicitacao.';
+  return 'Não foi possível completar a solicitação.';
 };
 
 const parseResponse = async (response) => {
@@ -252,7 +252,7 @@ export const publicService = {
         };
       }
     } catch (error) {
-      console.warn('Nao foi possivel buscar estatisticas publicas:', error);
+      console.warn('Não foi possível buscar estatísticas públicas:', error);
     }
 
     return {

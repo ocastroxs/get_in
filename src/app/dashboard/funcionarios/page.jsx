@@ -40,44 +40,100 @@ const TIPO_ICON = {
   adm: <Briefcase size={14} />,
 };
 
+// Função para garantir que o Excel trate o CPF como texto (com pontos e traço)
+const formatarCpfParaCSV = (cpf) => {
+  if (!cpf) return "—";
+  const cpfLimpo = String(cpf).replace(/\D/g, "");
+  // Formata o CPF. A presença dos pontos e traço impede o Excel de converter para número matemático
+  return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+};
+const formatarTelefone = (tel) => {
+  if (!tel) return "";
+  const t = String(tel).replace(/\D/g, "");
+  if (t.length === 11) {
+    return t.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+  }
+  return t; // Retorna o bruto se não tiver 11 dígitos
+};
+
+
 function toCSV(rows) {
-  const cols = ["Nome", "CPF", "Email", "Telefone", "Departamento", "Tipo"];
-  const lines = rows.map((r) =>
-    [r.nome, r.cpf, r.email, r.celular || r.telefone || "—", r.departamento || "—", TIPO_LABEL[r.tipo] || r.tipo].join(";")
-  );
+  const cols = ["Nome", "CPF", "Email", "Telefone", "Departamento", "Nível de Acesso"];
+  
+  const lines = rows.map((r) => {
+    const nome = r.usuario_nome || "Sem Nome";
+    const cpf = formatarCpfParaCSV(r.cpf);
+    const email = r.email || "—";
+    
+    // O TRUQUE PARA O TELEFONE:
+    // Envolver em =" " força o Excel a mostrar exatamente o que está dentro das aspas como texto
+    const telBruto = r.celular || r.telefone || "";
+    const telefone = telBruto ? `="${formatarTelefone(telBruto)}"` : "—";
+    
+    const departamento = r.departamento_nome || "Geral";
+    const tipo = TIPO_LABEL[r.cargo] || r.cargo || r.tipo || "—";
+
+    return [nome, cpf, email, telefone, departamento, tipo].join(";");
+  });
+  
   return [cols.join(";"), ...lines].join("\n");
 }
 
 function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
+  // O "\uFEFF" garante que os acentos fiquem certos no Excel
+  const blob = new Blob(["\uFEFF" + toCSV(data)], { type: "text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-  a.href = url; a.download = "funcionarios.csv"; a.click();
+  a.href = url; 
+  a.download = "funcionarios.csv"; 
+  a.click();
   URL.revokeObjectURL(url);
 }
+
 
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
 function LinhaFuncionario({ f }) {
-  if (!f || !f.nome) return null;
+  // Se f não existir por algum motivo bizarro, paramos aqui
+  if (!f) return null;
+  const formatarCPF = (cpf) => {
+   if (!cpf) return "000.000.000-00";
   
+  // Remove qualquer caractere que não seja número
+  const cpfLimpo = cpf.replace(/\D/g, "");
+
+  // Aplica a máscara usando Regex
+  return cpfLimpo
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  };
+  
+  // Se o nome não existir, usamos um placeholder para não quebrar o .charAt(0)
+  const nomeExibicao = f.usuario_nome || "Usuário sem Nome";
+  const primeiraLetra = nomeExibicao.charAt(0).toUpperCase();
+
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {(f.nome || "?").charAt(0).toUpperCase()}
+            {primeiraLetra}
           </div>
           <div>
-            <div className="font-medium text-sm text-foreground whitespace-nowrap">{f.nome || "Sem nome"}</div>
-            <div className="text-[11px] text-muted-foreground font-mono">{f.cpf || "—"}</div>
+            <div className="font-medium text-sm text-foreground whitespace-nowrap">
+              {nomeExibicao}
+            </div>
+            <div className="text-[11px] text-muted-foreground font-mono">
+              {f.cpf ? formatarCPF(f.cpf) : "000.000.000-00"}
+            </div>
           </div>
         </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Mail size={12} /> {f.email || "—"}
+            <Mail size={12} /> {f.email || "sem@email.com"}
           </div>
           {f.celular && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -89,13 +145,13 @@ function LinhaFuncionario({ f }) {
       <td className="py-3 px-4">
         <div className="flex items-center gap-1.5 text-sm text-foreground">
           <Building2 size={14} className="text-muted-foreground" />
-          {f.departamento || "Geral"}
+          {f.departamento_nome || "Geral"}
         </div>
       </td>
       <td className="py-3 px-4">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIPO_STYLE[f.tipo] || "bg-gray-100 text-gray-700"}`}>
-          {TIPO_ICON[f.tipo] || <User size={14} />}
-          {TIPO_LABEL[f.tipo] || f.tipo || "Sem tipo"}
+          {TIPO_ICON[f.cargo] || <User size={14} />}
+          {TIPO_LABEL[f.cargo] || f.tipo || "Sem tipo"}
         </span>
       </td>
       <td className="py-3 px-4 text-right">
@@ -123,40 +179,60 @@ export default function FuncionariosPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroTipo, setTempFiltroTipo] = useState("Todos");
 
-  const carregarFuncionarios = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/func');
-      if (response.sucesso) {
-        setFuncionarios(response.data || []);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar funcionários:", error);
-    } finally {
-      setLoading(false);
+ const carregarFuncionarios = async () => {
+  setLoading(true);
+  try {
+    const response = await api.get('/func/view');
+    
+
+    // Se a sua API retorna { sucesso: true, data: [...] }
+    if (response?.data?.sucesso || response?.sucesso) {
+      const lista = response.data?.data || response.data || [];
+      setFuncionarios(lista);
+    } 
+    // Se a API retornar o array direto
+    else if (Array.isArray(response)) {
+      setFuncionarios(response);
     }
-  };
+  } catch (error) {
+    console.error("Erro ao carregar funcionários:", error);
+  } finally {
+    // Adicionamos um pequeno delay para garantir que o React processe a mudança de estado
+    setTimeout(() => setLoading(false), 300);
+  }
+};
 
   useEffect(() => {
     carregarFuncionarios();
   }, []);
 
   const filtrados = useMemo(() => {
-    return funcionarios.filter((f) => {
-      const matchTipo = filtroTipo === "Todos" || f.tipo === filtroTipo;
-      const matchBusca = busca.trim() === "" ||
-        f.nome.toLowerCase().includes(busca.toLowerCase()) ||
-        f.cpf.includes(busca) ||
-        f.email.toLowerCase().includes(busca.toLowerCase());
-      return matchTipo && matchBusca;
-    });
-  }, [funcionarios, filtroTipo, busca]);
+  return funcionarios.filter((f) => {
+    // 1. Filtro de Tipo
+    const matchTipo = filtroTipo === "Todos" || f.cargo === filtroTipo;
+
+    // 2. Filtro de Busca (Blindado contra campos nulos)
+    const termo = busca.toLowerCase();
+    
+    // Convertemos tudo para string com fallback "" para evitar o erro de undefined
+    const nome = (f.usuario_nome || "").toLowerCase();
+    const cpf = (f.cpf || "");
+    const email = (f.email || "").toLowerCase();
+
+    const matchBusca = busca.trim() === "" ||
+      nome.includes(termo) ||
+      cpf.includes(termo) ||
+      email.includes(termo);
+
+    return matchTipo && matchBusca;
+  });
+}, [funcionarios, filtroTipo, busca]);
 
   const stats = useMemo(() => ({
     total: funcionarios.length,
-    gerentes: funcionarios.filter(f => f.tipo === 'ger').length,
-    supervisores: funcionarios.filter(f => f.tipo === 'sup').length,
-    portaria: funcionarios.filter(f => f.tipo === 'port').length,
+    gerentes: funcionarios.filter(f => f.cargo === 'ger').length,
+    supervisores: funcionarios.filter(f => f.cargo === 'sup').length,
+    portaria: funcionarios.filter(f => f.cargo === 'port').length,
   }), [funcionarios]);
 
   const aplicarFiltros = () => {
@@ -312,7 +388,7 @@ export default function FuncionariosPage() {
                 </tr>
               ) : filtrados.length > 0 ? (
                 filtrados.map((f) => (
-                  <LinhaFuncionario key={f.id} f={f} />
+                  <LinhaFuncionario key={f.id || f.cpf || index} f={f} />
                 ))
               ) : (
                 <tr>

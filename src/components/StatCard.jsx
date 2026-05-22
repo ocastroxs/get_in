@@ -17,8 +17,8 @@ export default function StatCard({
     <div
       className={[
         "group flex flex-col rounded-[20px] border border-border bg-card text-card-foreground transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg animate-in fade-in slide-in-from-bottom-4",
-        compact ? "min-h-[112px] gap-2 p-4" : "gap-4 p-5",
-        featured ? "min-h-[168px] justify-between bg-[linear-gradient(180deg,rgba(15,58,125,0.03),rgba(255,255,255,0.98))]" : "",
+         compact ? "min-h-[112px] gap-2 p-4" : "gap-4 p-5",
+        featured ? "min-h-[168px] justify-between" : "",
       ].join(" ")}
       style={{
         borderTopColor: accentVar,

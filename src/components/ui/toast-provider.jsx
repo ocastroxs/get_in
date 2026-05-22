@@ -75,7 +75,7 @@ export function ToastProvider({ children }) {
                   type="button"
                   onClick={() => dismiss(toast.id)}
                   className="rounded-lg p-1 opacity-60 transition hover:bg-black/5 hover:opacity-100"
-                  aria-label="Fechar notificacao"
+                  aria-label="Fechar notificação"
                 >
                   <X className="h-4 w-4" />
                 </button>

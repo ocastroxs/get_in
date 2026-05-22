@@ -128,6 +128,7 @@ export default function SupervisorDashboardPage() {
   const countPendentes = ultimasRequisicoes.filter((r) => r.status === "pendente").length;
   const countAprovados = ultimasRequisicoes.filter((r) => r.status === "aprovado").length;
   const countRecusados = ultimasRequisicoes.filter((r) => r.status === "recusado").length;
+  const countExpirados = ultimasRequisicoes.filter((r) => r.status === "expirado").length;
   const countTotal = ultimasRequisicoes.length;
 
   const aplicarFiltros = () => setFiltroStatus(tempFiltroStatus);
@@ -140,14 +141,14 @@ export default function SupervisorDashboardPage() {
 
   async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
         title: "Dashboard do supervisor",
-        subtitle: "Solicitacoes de visitantes por setor",
+        subtitle: "Solicitações de visitantes por setor",
         fileName: `requisicoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -177,7 +178,7 @@ export default function SupervisorDashboardPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -185,17 +186,18 @@ export default function SupervisorDashboardPage() {
     <>
       <Topbar
         title="Dashboard do Supervisor"
-        subtitle="Visao geral das ultimas 10 solicitacoes de visitantes"
+        subtitle="Visão geral das últimas 10 solicitações de visitantes"
         buttonText="Analisar pendentes"
         buttonHref="/supervisor/aprovacoes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Ultimas 10 requisicoes" />
-          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub="Nas ultimas 10" />
-          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Nas ultimas 10" : "Nenhuma nas ultimas 10"} />
-          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub="Nas ultimas 10" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Últimas 10 requisições" />
+          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub="Nas últimas 10" />
+          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Ação necessária" : "Nenhuma nas últimas 10"} />
+          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub="Nas últimas 10" />
+          <StatCard label="Expirados" value={countExpirados} icon={<XCircle size={20} className="text-slate-600" />} accentVar="#64748b" sub="Nas últimas 10" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -239,8 +241,8 @@ export default function SupervisorDashboardPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
             <div>
-              <h2 className="text-sm font-bold text-foreground">Ultimas 10 Requisicoes</h2>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">KPIs, filtros e tabela consideram apenas as ultimas 10 solicitacoes</p>
+              <h2 className="text-sm font-bold text-foreground">Últimas 10 Requisições</h2>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">KPIs, filtros e tabela consideram apenas as últimas 10 solicitações</p>
             </div>
             <Clock size={20} className="text-primary opacity-60" />
           </div>
@@ -252,7 +254,7 @@ export default function SupervisorDashboardPage() {
           ) : requisicoesFiltradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -278,13 +280,13 @@ export default function SupervisorDashboardPage() {
                       expirado: "bg-slate-100 text-slate-700",
                     }[status] || "bg-gray-100 text-gray-700";
                     const actionHref = status === "pendente" ? "/supervisor/aprovacoes" : "/supervisor/historico";
-                    const actionLabel = status === "pendente" ? "Analisar" : "Historico";
+                    const actionLabel = status === "pendente" ? "Analisar" : "Histórico";
 
                     return (
                       <tr key={requisicao.id} className="transition hover:bg-muted/40">
                         <td className="px-4 py-3">
                           <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-                          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF nao informado"}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF não informado"}</p>
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm text-foreground">{requisicao.empresa || "-"}</p>
@@ -322,10 +324,10 @@ export default function SupervisorDashboardPage() {
             <InfoItem number="3" text="A portaria recebe o resultado e libera o fluxo aprovado." />
           </InfoPanel>
 
-          <InfoPanel icon={<ShieldCheck size={18} />} title="Seguranca" accent="green">
+          <InfoPanel icon={<ShieldCheck size={18} />} title="Segurança" accent="green">
             <InfoItem icon={<Check size={12} />} text="Confira dados pessoais e empresa antes da decisao." />
-            <InfoItem icon={<Check size={12} />} text="Aprove somente os setores realmente necessarios." />
-            <InfoItem icon={<Check size={12} />} text="Use o historico para auditar decisoes anteriores." />
+            <InfoItem icon={<Check size={12} />} text="Aprove somente os setores realmente necessários." />
+            <InfoItem icon={<Check size={12} />} text="Use o histórico para auditar decisões anteriores." />
           </InfoPanel>
         </div>
       </div>

@@ -294,7 +294,7 @@ export default function NovoCadastroPage() {
           setForm((current) => current.rfidTag === codigoTag ? current : { ...current, rfidTag: codigoTag });
         }
       } catch (error) {
-        console.warn("Nao foi possivel carregar a tag RFID:", error);
+        console.warn("Não foi possível carregar a tag RFID:", error);
       }
     }
 
@@ -453,7 +453,7 @@ export default function NovoCadastroPage() {
     const observacao = form.observacao.trim();
 
     if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !form.setor || !form.motivo || !telefoneCompletoForm || !emailValidoForm) {
-      alert("Preencha nome, CPF, empresa, setor responsavel, motivo, telefone e e-mail validos.");
+      alert("Preencha nome, CPF, empresa, setor responsável, motivo, telefone e e-mail válidos.");
       return;
     }
 
@@ -463,7 +463,7 @@ export default function NovoCadastroPage() {
     }
 
     if (loadingSetores || setorOptions.length === 0 || setoresSelecionados.length === 0) {
-      alert("Nao foi possivel carregar os setores. Atualize a pagina e tente novamente.");
+      alert("Não foi possível carregar os setores. Atualize a página e tente novamente.");
       return;
     }
     
@@ -481,7 +481,7 @@ export default function NovoCadastroPage() {
         });
 
         if (!tagResponse.sucesso) {
-          console.warn("Nao foi possivel vincular a TAG RFID:", tagResponse.mensagem || tagResponse.erro);
+          console.warn("Não foi possível vincular a TAG RFID:", tagResponse.mensagem || tagResponse.erro);
         }
       }
       const idDepartamento = getDepartamentoId();
@@ -492,8 +492,8 @@ export default function NovoCadastroPage() {
         `Telefone: ${form.telefone}`,
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
-        `TAG RFID: ${form.rfidTag || "Nao informada"}`,
-        `Setor responsavel: ${form.setor || "Nao informado"}`,
+        `TAG RFID: ${form.rfidTag || "Não informada"}`,
+        `Setor responsavel: ${form.setor || "Não informado"}`,
         `Setores permitidos: ${setoresPermitidos}`,
         `Observacoes: ${observacao || "Nenhuma"}`
       ].join(" | ");

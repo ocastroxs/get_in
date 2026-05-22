@@ -24,10 +24,11 @@ export default function Topbar({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-700 delay-200">
-        <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-white/70 px-3 py-1.5 shadow-sm shadow-slate-200/40 backdrop-blur transition-all duration-300 hover:border-primary/15 hover:shadow-md hover:shadow-slate-200/40">
-          <span className="h-2 w-2 rounded-full bg-secondary animate-pulse" />
-          <span className="text-xs font-medium text-accent-foreground">Tempo Real</span>
-        </div>
+      <div className="flex items-center gap-1.5 rounded-full border border-border/70 dark:border-white/10 bg-white/70 dark:bg-white/5 px-3 py-1.5 shadow-sm shadow-slate-200/40 dark:shadow-none backdrop-blur transition-all duration-300 hover:border-primary/15 dark:hover:border-white/20 hover:shadow-md hover:shadow-slate-200/40 dark:hover:shadow-black/20">
+        <span className="h-2 w-2 rounded-full bg-secondary dark:bg-[#4DA8EA] animate-pulse" />
+        <span className="text-xs font-medium text-accent-foreground dark:text-gray-200">Tempo Real</span>
+      </div>
+
 
         {secondaryButtonText && secondaryButtonHref ? (
           <Link href={secondaryButtonHref}>

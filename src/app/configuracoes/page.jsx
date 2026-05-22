@@ -122,11 +122,11 @@ export default function ConfiguracoesPage() {
         setPerfilOriginal(nextPerfil);
 
       } catch (error) {
-        console.error("Erro ao carregar configuracoes:", error);
+        console.error("Erro ao carregar configurações:", error);
         showToast({
           type: "error",
-          title: "Configuracoes nao carregadas",
-          description: "Usando os dados locais da sessao.",
+          title: "Configurações não carregadas",
+          description: "Usando os dados locais da sessão.",
         });
       } finally {
         setLoadingPerfil(false);
@@ -165,7 +165,7 @@ export default function ConfiguracoesPage() {
       showToast({
         type: "success",
         title: "Perfil atualizado",
-        description: "Suas informacoes foram salvas.",
+        description: "Suas informações foram salvas.",
       });
     } catch (error) {
       showToast({
@@ -231,7 +231,7 @@ export default function ConfiguracoesPage() {
     setNotificacoesOriginal(notificacoes);
     showToast({
       type: "success",
-      title: "Notificacoes atualizadas",
+      title: "Notificações atualizadas",
       description: "Os avisos visuais e preferenciais foram salvos.",
     });
   }
@@ -244,11 +244,11 @@ export default function ConfiguracoesPage() {
 
     const funcionarioId = perfil.funcionarioId || funcionario?.id;
 
-    if (!funcionarioId) {
+      if (!funcionarioId) {
       showToast({
         type: "error",
-        title: "Foto nao enviada",
-        description: "Nao foi possivel identificar seu funcionario.",
+        title: "Foto não enviada",
+        description: "Não foi possível identificar seu funcionário.",
       });
       return;
     }
@@ -298,15 +298,15 @@ export default function ConfiguracoesPage() {
   return (
     <>
       <Topbar
-        title="Configuracoes"
-        subtitle="Gerencie perfil, seguranca e notificacoes do sistema"
+        title="Configurações"
+        subtitle="Gerencie perfil, segurança e notificações do sistema"
       />
 
       <div className="space-y-6 animate-in fade-in duration-700">
         <div className="flex gap-2 overflow-x-auto border-b border-border">
           <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
-          <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Seguranca" />
-          <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificacoes" />
+          <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
+          <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
           <TabButton active={abaAtiva === "preferencias"} onClick={() => setAbaAtiva("preferencias")} icon={<SlidersHorizontal size={16} />} label="Preferências" />
         </div>
 
@@ -363,7 +363,7 @@ export default function ConfiguracoesPage() {
                         ))}
                       </select>
                     </Field>
-                    <Field label="Data de admissao">
+                    <Field label="Data de admissão">
                       <Input type="date" value={perfil.dataAdmissao ? String(perfil.dataAdmissao).slice(0, 10) : ""} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                   </div>
@@ -372,7 +372,7 @@ export default function ConfiguracoesPage() {
                     onReset={() => setPerfil(perfilOriginal)}
                     onSave={handleSalvarPerfil}
                     loading={loading}
-                    saveLabel="Salvar alteracoes"
+                    saveLabel="Salvar alterações"
                   />
 
                   <section className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -426,21 +426,21 @@ export default function ConfiguracoesPage() {
                   <NotificationGroup title="E-mail" icon={<Mail size={18} />}>
                     <CheckboxItem label="Novo visitante registrado" checked={notificacoes.emailNovoVisitante} onChange={(checked) => setNotificacoes({ ...notificacoes, emailNovoVisitante: checked })} />
                     <CheckboxItem label="Check-in e check-out" checked={notificacoes.emailCheckIn} onChange={(checked) => setNotificacoes({ ...notificacoes, emailCheckIn: checked })} />
-                    <CheckboxItem label="Alertas de seguranca" checked={notificacoes.emailAlerta} onChange={(checked) => setNotificacoes({ ...notificacoes, emailAlerta: checked })} />
-                    <CheckboxItem label="Relatorios periodicos" checked={notificacoes.emailRelatorio} onChange={(checked) => setNotificacoes({ ...notificacoes, emailRelatorio: checked })} />
+                    <CheckboxItem label="Alertas de segurança" checked={notificacoes.emailAlerta} onChange={(checked) => setNotificacoes({ ...notificacoes, emailAlerta: checked })} />
+                    <CheckboxItem label="Relatórios periódicos" checked={notificacoes.emailRelatorio} onChange={(checked) => setNotificacoes({ ...notificacoes, emailRelatorio: checked })} />
                   </NotificationGroup>
 
                   <NotificationGroup title="Avisos visuais" icon={<Smartphone size={18} />}>
-                    <CheckboxItem label="Notificacoes gerais no canto inferior" checked={notificacoes.pushNotificacoes} onChange={(checked) => setNotificacoes({ ...notificacoes, pushNotificacoes: checked })} />
-                    <CheckboxItem label="Alertas criticos" checked={notificacoes.pushAlertas} onChange={(checked) => setNotificacoes({ ...notificacoes, pushAlertas: checked })} />
-                    <CheckboxItem label="Toasts de acoes importantes" checked={notificacoes.toastSistema} onChange={(checked) => setNotificacoes({ ...notificacoes, toastSistema: checked })} />
+                    <CheckboxItem label="Notificações gerais no canto inferior" checked={notificacoes.pushNotificacoes} onChange={(checked) => setNotificacoes({ ...notificacoes, pushNotificacoes: checked })} />
+                    <CheckboxItem label="Alertas críticos" checked={notificacoes.pushAlertas} onChange={(checked) => setNotificacoes({ ...notificacoes, pushAlertas: checked })} />
+                    <CheckboxItem label="Toasts de ações importantes" checked={notificacoes.toastSistema} onChange={(checked) => setNotificacoes({ ...notificacoes, toastSistema: checked })} />
                   </NotificationGroup>
 
                   <ActionRow
                     onReset={() => setNotificacoes(notificacoesOriginal)}
                     onSave={handleSalvarNotificacoes}
                     loading={false}
-                    saveLabel="Salvar notificacoes"
+                    saveLabel="Salvar notificações"
                   />
                 </div>
               )}

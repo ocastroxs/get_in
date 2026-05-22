@@ -73,10 +73,12 @@ function getObservacaoPortaria(requisicao) {
     getDescricaoValue(descricao, "Observacao da Portaria"),
     getDescricaoValue(descricao, "Observacao"),
     getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observação da Portaria"),
+    getDescricaoValue(descricao, "Observação"),
     getDescricaoValue(descricao, "Observações")
   );
 
-  return observacao || "Nenhuma observacao registrada pela portaria.";
+  return observacao || "Nenhuma observação registrada pela portaria.";
 }
 
 function getSolicitacoes(requisicao) {
@@ -94,6 +96,7 @@ function getSolicitacoes(requisicao) {
 export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, onConfirm }) {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [observacoes, setObservacoes] = useState("");
   const [decisoes, setDecisoes] = useState({});
 
   const solicitacoes = useMemo(() => getSolicitacoes(requisicao), [requisicao]);
@@ -108,6 +111,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
       initial[item.id] = item.status || "pendente";
     });
     setDecisoes(initial);
+    setObservacoes("");
   }, [requisicao]);
 
   async function handleConfirmar() {
@@ -122,7 +126,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
       showToast({
         type: "error",
         title: "Pedido sem setores",
-        description: "Nao foi possivel identificar os setores da solicitacao.",
+        description: "Não foi possível identificar os setores da solicitação.",
       });
       return;
     }
@@ -132,16 +136,17 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
     try {
       const response = await api.put("/requisicao-visitante/lote", {
         updates,
+        observacoes: observacoes || null,
       });
 
       if (!response.sucesso) {
-        throw new Error(response.mensagem || response.erro || "Erro ao processar requisicao.");
+        throw new Error(response.mensagem || response.erro || "Erro ao processar requisição.");
       }
 
       showToast({
         type: "success",
-        title: "Solicitacao analisada",
-        description: "As decisoes por setor foram salvas.",
+        title: "Solicitação analisada",
+        description: "As decisões por setor foram salvas.",
       });
       onConfirm?.();
       onClose?.();
@@ -256,10 +261,21 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
           <section className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4">
             <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-900">
               <FileText size={16} className="text-blue-700" />
-              Observacao da portaria
+              Observação da portaria
             </h3>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-900/80">{observacaoPortaria}</p>
           </section>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observações internas</span>
+            <textarea
+              placeholder="Adicione observações para auditoria interna"
+              value={observacoes}
+              onChange={(event) => setObservacoes(event.target.value)}
+              className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              disabled={loading}
+            />
+          </label>
         </div>
 
         <div className="sticky bottom-0 flex flex-col gap-2 border-t border-border bg-card p-5 sm:flex-row">
