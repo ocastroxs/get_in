@@ -32,11 +32,11 @@ export default function Sidebar() {
   // Estado para controlar o tema
   const [isDark, setIsDark] = useState(true);
 
-  // Efeito para checar o tema atual quando a página carrega
+  // Efeito para verificar o tema atual ao carregar a página
   useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains('dark');
     setIsDark(isDarkMode);
-    // Força o tema escuro como padrão se nenhum estiver setado
+    // Define o tema escuro como padrão se nenhum estiver definido
     if (!isDarkMode) {
       document.documentElement.classList.add('dark');
       setIsDark(true);
@@ -49,7 +49,7 @@ export default function Sidebar() {
     const isNowDark = html.classList.contains('dark');
     setIsDark(isNowDark);
 
-    // A MÁGICA AQUI: Dispara um evento global pro site inteiro saber que o tema mudou
+    // Dispara um evento global para que todo o site saiba que o tema mudou
     window.dispatchEvent(new CustomEvent('themeChanged', { detail: isNowDark }));
   };
 
@@ -61,7 +61,7 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Botão Hambúrguer (Visível apenas em telas pequenas) */}
+      {/* Botão hambúrguer (visível apenas em telas pequenas) */}
       <button
         onClick={toggleSidebar}
         aria-label={isOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
@@ -72,7 +72,7 @@ export default function Sidebar() {
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
       </button>
 
-      {/* Overlay (Sombra ao abrir no mobile) */}
+      {/* Overlay (sombra ao abrir em dispositivos móveis) */}
       {isOpen && (
         <div
           onClick={toggleSidebar}
@@ -80,7 +80,7 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Sidebar Principal - Agora com cores dinâmicas (Claro / Escuro) */}
+      {/* Barra lateral principal — com cores dinâmicas (claro / escuro) */}
     <aside id="app-sidebar" className={`
       fixed lg:sticky top-0 left-0 h-screen w-72 
       flex flex-col shadow-2xl z-[55] transition-all duration-500 ease-in-out 
@@ -90,7 +90,7 @@ export default function Sidebar() {
       
       ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
     `}> 
-            {/* Cabeçalho com Logo/Texto e Botão de Tema */}
+            {/* Cabeçalho com logo/texto e botão de tema */}
             <div className="p-8 lg:ml-0 mb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3 group cursor-pointer">
                 <h1 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter group-hover:tracking-normal transition-all duration-300">
@@ -98,17 +98,17 @@ export default function Sidebar() {
                 </h1>
               </div>
 
-              {/* BOTÃO DE TROCAR TEMA */}
+              {/* Botão para alternar o tema */}
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-all active:scale-90"
-                title={isDark ? "Mudar para Modo Claro" : "Mudar para Modo Escuro"}
+                title={isDark ? "Alternar para o modo claro" : "Alternar para o modo escuro"}
               >
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
 
-            {/* Navegação Principal */}
+            {/* Navegação principal */}
             <div className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
               <div>
                 <p className="px-4 text-[10px] font-bold text-gray-500 dark:text-gray-300 tracking-[0.2em] uppercase mb-4 dark:opacity-70">
@@ -137,7 +137,7 @@ export default function Sidebar() {
               </div>
             </div>
 
-            {/* Rodapé da Sidebar */}
+            {/* Rodapé da barra lateral */}
             <div className="p-4 mt-auto border-t border-gray-100 dark:border-white/5">
               <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-transparent rounded-2xl p-4 mb-4 transition-colors duration-300">
                 <div className="flex items-center space-x-3 mb-3">
@@ -162,7 +162,7 @@ export default function Sidebar() {
                 className="w-full py-3 px-4 rounded-xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs font-bold transition-all flex items-center space-x-3 group cursor-pointer active:scale-95 transition-transform"
               >
                 <LogOut className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span>Sair do Sistema</span>
+                <span>Sair do sistema</span>
               </button>
             </div>
           </aside>

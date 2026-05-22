@@ -132,7 +132,7 @@ function splitSetores(value) {
 function getObservacoes(registro, descricao) {
   return pickFirst(
     registro?.observacoes,
-    getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observações"),
     getDescricaoValue(descricao, "Observações"),
     descricao,
     "Nenhuma observacao cadastrada."
@@ -257,7 +257,7 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
               <FileText size={17} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Observacoes</h2>
+              <h2 className="text-lg font-semibold text-foreground">Observações</h2>
               <p className="text-xs text-muted-foreground">{requisicao.visitante} - {requisicao.setor}</p>
             </div>
           </div>
@@ -275,7 +275,7 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
           <div className="rounded-2xl border border-border bg-background p-4 shadow-xs">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Registro da portaria</p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {requisicao.observacoes || "Nenhuma observacao cadastrada."}
+              {requisicao.observacoes || "Nenhuma observação cadastrada."}
             </p>
           </div>
         </div>
@@ -404,7 +404,7 @@ export default function PendenciasPage() {
 
   const exportarPDF = async () => {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
@@ -436,7 +436,7 @@ export default function PendenciasPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   };
 
@@ -554,7 +554,7 @@ export default function PendenciasPage() {
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Motivo</th>
                   <th className="px-4 py-3">Solicitacao</th>
-                  <th className="px-4 py-3 text-right">Acoes</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>

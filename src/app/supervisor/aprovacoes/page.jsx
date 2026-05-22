@@ -112,7 +112,7 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-          <p className="text-[11px] text-muted-foreground">{usuario.cpf || "CPF nao informado"}</p>
+          <p className="text-[11px] text-muted-foreground">{usuario.cpf || "CPF não informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || "-"}</td>
@@ -225,15 +225,15 @@ export default function AprovacoesSupervisorPage() {
 
   async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
-        title: "Aprovacoes do supervisor",
-        subtitle: "Solicitacoes de visitantes por setor",
-        fileName: `aprovacoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
+        title: "Aprovações do supervisor",
+        subtitle: "Solicitações de visitantes por setor",
+          fileName: `aprovações_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
           filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
@@ -262,7 +262,7 @@ export default function AprovacoesSupervisorPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+        alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -270,14 +270,15 @@ export default function AprovacoesSupervisorPage() {
     <>
       <Topbar
         title="Aprovações"
-        subtitle="Gerenciamento de solicitacoes de visitantes da portaria"
+        subtitle="Gerenciamento de solicitações de visitantes da portaria"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
           <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
-          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
+                  <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -332,6 +333,7 @@ export default function AprovacoesSupervisorPage() {
             <div className="flex flex-col items-center justify-center p-20 text-center">
               <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
               <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
+                          <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -344,7 +346,7 @@ export default function AprovacoesSupervisorPage() {
                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Motivo</th>
                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Data</th>
                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Acoes</th>
+                    <th className="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

@@ -275,14 +275,14 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-xl font-semibold tracking-[-0.03em] text-white">Dashboard Geral</h1>
-              <p className="mt-1 text-sm text-slate-300">Visao rapida do fluxo e dos alertas do dia.</p>
+              <p className="mt-1 text-sm text-slate-300">Visão rápida do fluxo e dos alertas do dia.</p>
             </div>
 
             <div className="ml-3 flex items-center gap-2">
               <button
                 type="button"
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white/90 transition hover:bg-white/15"
-                aria-label="Notificacoes"
+                aria-label="Notificações"
               >
                 <Bell size={16} />
               </button>
@@ -308,7 +308,7 @@ export default function DashboardPage() {
             delta={STATS_TODAY.visitantes.delta}
             deltaDir={STATS_TODAY.visitantes.deltaDir}
             sub="Comparativo com ontem"
-            insight="+3 acessos nas ultimas 2h"
+            insight="+3 acessos nas últimas 2h"
             accentVar="var(--primary)"
           />
           <StatCard
@@ -325,13 +325,13 @@ export default function DashboardPage() {
           />
           <StatCard
             compact
-            label="Saidas"
+            label="Saídas"
             value={STATS_TODAY.saidas.value}
             valueClassName="text-red-600"
             icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
             delta={saidasPct}
             deltaDir="up"
-            sub="Check-outs concluidos"
+            sub="Check-outs concluídos"
             insight={`${STATS_TODAY.saidas.aindaDentro} ainda dentro`}
             accentVar="#dc2626"
           />
@@ -343,7 +343,7 @@ export default function DashboardPage() {
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
             delta={ativosDelta}
             deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
-            sub="Permanencia ativa"
+            sub="Permanência ativa"
             insight={`${STATS_TODAY.ativos.alertas} alerta(s)`}
             accentVar="#1e3a8a"
           />
@@ -370,7 +370,7 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Estado Critico</p>
-              <h3 className="text-base font-semibold text-foreground">Atencao para permanencia prolongada</h3>
+              <h3 className="text-base font-semibold text-foreground">Atenção para permanência prolongada</h3>
               <p className="text-sm text-muted-foreground">
                 Existem {STATS_TODAY.ativos.alertas} visitante(s) acima da janela prevista.
               </p>
@@ -382,7 +382,7 @@ export default function DashboardPage() {
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
         <Topbar
           title="Dashboard Geral"
-          subtitle="Monitoramento operacional com foco em fluxo, permanencia e alertas em tempo real."
+          subtitle="Monitoramento operacional com foco em fluxo, permanência e alertas em tempo real."
         />
 
         <section className="grid gap-6 xl:grid-cols-12">
@@ -395,8 +395,8 @@ export default function DashboardPage() {
               icon={<Users size={18} className="text-primary" strokeWidth={1.75} />}
               delta={STATS_TODAY.visitantes.delta}
               deltaDir={STATS_TODAY.visitantes.deltaDir}
-              sub="Comparativo com o mesmo horario de ontem"
-              insight="+3 acessos nas ultimas 2h"
+              sub="Comparativo com o mesmo horário de ontem"
+              insight="+3 acessos nas últimas 2h"
               accentVar="var(--primary)"
             />
           </div>
@@ -414,13 +414,13 @@ export default function DashboardPage() {
               accentVar="var(--secondary)"
             />
             <StatCard
-              label="Saidas"
+              label="Saídas"
               value={STATS_TODAY.saidas.value}
               valueClassName="text-red-600"
               icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
               delta={saidasPct}
               deltaDir="up"
-              sub="Check-outs concluidos"
+              sub="Check-outs concluídos"
               insight={`${STATS_TODAY.saidas.aindaDentro} pessoas ainda dentro`}
               accentVar="#dc2626"
             />
@@ -431,8 +431,8 @@ export default function DashboardPage() {
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
               delta={ativosDelta}
               deltaDir={STATS_TODAY.ativos.alertas > 0 ? "down" : "up"}
-              sub="Pessoas em permanencia ativa"
-              insight={`${STATS_TODAY.ativos.alertas} alerta(s) exigem revisao`}
+              sub="Pessoas em permanência ativa"
+              insight={`${STATS_TODAY.ativos.alertas} alerta(s) exigem revisão`}
               accentVar="#1e3a8a"
             />
           </div>

@@ -174,7 +174,7 @@ export default function RelatoriosPage() {
   const [stats, setStats] = useState({
     visitas: { value: 0, delta: 0, deltaDir: "up", sub: "Total carregado do backend" },
     checkoutRate: "0%",
-    permanencia: { value: "-", delta: 0, deltaDir: "down", sub: "Media por visitante" },
+    permanencia: { value: "-", delta: 0, deltaDir: "down", sub: "Média por visitante" },
     alertas: { value: 0, sub: "Status de alerta nos registros" },
   });
   const [historico, setHistorico] = useState([]);
@@ -208,7 +208,7 @@ export default function RelatoriosPage() {
       setStats({
         visitas: { value: totalVisitas, delta: 0, deltaDir: "up", sub: "Total carregado do backend" },
         checkoutRate: `${checkoutRate}%`,
-        permanencia: { value: calcularTempoMedio(logs), delta: 0, deltaDir: "down", sub: "Media por visitante" },
+        permanencia: { value: calcularTempoMedio(logs), delta: 0, deltaDir: "down", sub: "Média por visitante" },
         alertas: { value: alertas, sub: "Status de alerta nos registros" },
       });
 
@@ -223,7 +223,7 @@ export default function RelatoriosPage() {
         setEmpresasMaisVisitas(rankingEmpresas);
       }
     } catch (error) {
-      console.error("Erro ao carregar relatorios:", error);
+      console.error("Erro ao carregar relatórios:", error);
     } finally {
       setLoading(false);
     }
@@ -239,21 +239,21 @@ export default function RelatoriosPage() {
 
   const handleCompartilhar = async () => {
     if (navigator.share) {
-      await navigator.share({ title: "Relatorios GETIN", url: window.location.href });
+      await navigator.share({ title: "Relatórios GETIN", url: window.location.href });
       return;
     }
     await navigator.clipboard?.writeText(window.location.href);
-    alert("Link dos relatorios copiado.");
+    alert("Link dos relatórios copiado.");
   };
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-x-hidden pb-10 animate-in fade-in duration-700">
       <Topbar
-        title="Relatorios e Analises"
+        title="Relatórios e Análises"
         subtitle="Historico e metricas de acessos integrados ao backend."
         secondaryButtonText="Exportar PDF"
         onSecondaryButtonClick={handleExportarPDF}
-        buttonText="Atualizar Relatorios"
+        buttonText="Atualizar Relatórios"
         onButtonClick={carregarRelatorios}
       />
 
@@ -273,7 +273,7 @@ export default function RelatoriosPage() {
 
       <div className="flex border-b border-border gap-6 px-2">
         {[
-          ["geral", "Visao Geral"],
+          ["geral", "Visão Geral"],
           ["visitantes", "Analise de Visitantes"],
           ["setores", "Fluxo por Setor"],
         ].map(([id, label]) => (
@@ -298,15 +298,15 @@ export default function RelatoriosPage() {
           {activeTab === "geral" && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total de Visitas no Periodo" value={stats.visitas.value} icon={<Users size={17} className="text-primary" />} delta={stats.visitas.delta} deltaDir={stats.visitas.deltaDir} sub={stats.visitas.sub} accentVar="var(--primary)" />
+                <StatCard label="Total de Visitas no Período" value={stats.visitas.value} icon={<Users size={17} className="text-primary" />} delta={stats.visitas.delta} deltaDir={stats.visitas.deltaDir} sub={stats.visitas.sub} accentVar="var(--primary)" />
                 <StatCard label="Taxa de Check-out" value={stats.checkoutRate} valueClassName="text-secondary" icon={<ArrowRightLeft size={17} className="text-secondary" />} sub="Visitas com saida registrada" accentVar="var(--chart-2)" />
-                <StatCard label="Tempo Medio de Estadia" value={stats.permanencia.value} valueClassName="text-foreground" icon={<Clock size={17} className="text-foreground" />} delta={stats.permanencia.delta} deltaDir={stats.permanencia.deltaDir} sub={stats.permanencia.sub} accentVar="var(--chart-4)" />
+                <StatCard label="Tempo Médio de Estadia" value={stats.permanencia.value} valueClassName="text-foreground" icon={<Clock size={17} className="text-foreground" />} delta={stats.permanencia.delta} deltaDir={stats.permanencia.deltaDir} sub={stats.permanencia.sub} accentVar="var(--chart-4)" />
                 <StatCard label="Incidentes / Alertas" value={stats.alertas.value} valueClassName="text-destructive" icon={<AlertTriangle size={17} className="text-destructive" />} sub={stats.alertas.sub} accentVar="var(--destructive)" />
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 <div className="xl:col-span-2">
-                  <EntradasChart title="Historico de Volume de Acessos" subtitle="Comparativo diario no periodo selecionado" data={entradas} weekData={entradasSemana} />
+                  <EntradasChart title="Histórico de Volume de Acessos" subtitle="Comparativo diário no período selecionado" data={entradas} weekData={entradasSemana} />
                 </div>
                 <TiposVisitantesChart title="Perfil dos Visitantes" subtitle="Distribuicao por categoria" data={tipos} />
               </div>

@@ -373,7 +373,7 @@ function buildVisitanteDescricao(form) {
     `Telefone: ${form.telefone.trim()}`,
     `Email: ${form.email.trim().toLowerCase()}`,
     `Empresa: ${form.empresa.trim()}`,
-    `Setor: ${form.setor.trim() || "Nao informado"}`
+    `Setor: ${form.setor.trim() || "Não informado"}`
   ].join(" | ");
 }
 
@@ -629,12 +629,12 @@ function ModalEditarVisitante({
     event.preventDefault();
 
     if (!form.nome.trim()) {
-      setErro("Nome do visitante e obrigatorio.");
+      setErro("Nome do visitante é obrigatório.");
       return;
     }
 
     if (!form.email.trim() || !isValidEmail(form.email)) {
-      setErro("Informe um e-mail valido.");
+      setErro("Informe um e-mail válido.");
       return;
     }
 
@@ -679,11 +679,11 @@ function ModalEditarVisitante({
       if (response?.sucesso) {
         onClose();
       } else {
-        setErro(response?.mensagem || "Nao foi possivel salvar o visitante.");
+        setErro(response?.mensagem || "Não foi possível salvar o visitante.");
       }
     } catch (error) {
       console.error(error);
-      setErro("Erro de conexao com o servidor.");
+      setErro("Erro de conexão com o servidor.");
     } finally {
       setSaving(false);
     }
@@ -812,7 +812,7 @@ function ModalEditarVisitante({
             ) : (
               <>
                 <Check size={14} className="mr-2" />
-                Salvar alteracoes
+                Salvar alterações
               </>
             )}
           </Button>
@@ -840,11 +840,11 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
       if (response?.sucesso) {
         onClose();
       } else {
-        setErro(response?.mensagem || "Nao foi possivel excluir o visitante.");
+        setErro(response?.mensagem || "Não foi possível excluir o visitante.");
       }
     } catch (error) {
       console.error(error);
-      setErro("Erro de conexao com o servidor.");
+      setErro("Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -1027,7 +1027,7 @@ export default function PortariaPage() {
         const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
         setVisitantes(dedupeVisitantesPorIdentidade(visitantesPortaria.map(normalizeVisitante)));
       } else {
-        console.warn("Back-end nao retornou visitantes da portaria.");
+        console.warn("Back-end não retornou visitantes da portaria.");
         setVisitantes([]);
       }
     } catch (error) {
@@ -1113,7 +1113,7 @@ export default function PortariaPage() {
 
   async function salvarVisitante(payload) {
     if (!visitanteSelecionado?.id) {
-      return { sucesso: false, mensagem: "Visitante nao identificado." };
+      return { sucesso: false, mensagem: "Visitante não identificado." };
     }
 
     const response = await api.put(`/portaria/visitante/${visitanteSelecionado.id}`, payload);
@@ -1127,7 +1127,7 @@ export default function PortariaPage() {
 
   async function excluirVisitante() {
     if (!visitanteSelecionado?.id) {
-      return { sucesso: false, mensagem: "Visitante nao identificado." };
+      return { sucesso: false, mensagem: "Visitante não identificado." };
     }
 
     const response = await api.delete(`/portaria/visitante/${visitanteSelecionado.id}`);

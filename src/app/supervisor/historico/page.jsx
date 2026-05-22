@@ -102,7 +102,7 @@ function LinhaHistorico({ registro }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-foreground">{registro.usuario.nome || "-"}</p>
-          <p className="text-xs text-muted-foreground">{registro.usuario.cpf || "CPF nao informado"}</p>
+          <p className="text-xs text-muted-foreground">{registro.usuario.cpf || "CPF não informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "-"}</td>
@@ -184,14 +184,14 @@ export default function HistoricoSupervisorPage() {
 
   async function exportarPDF() {
     if (registrosFiltrados.length === 0) {
-      alert("Nenhuma requisicao para exportar.");
+      alert("Nenhuma requisição para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
-        title: "Historico de aprovacoes",
-        subtitle: "Registros agrupados por usuario e status",
+        title: "Histórico de aprovações",
+        subtitle: "Registros agrupados por usuário e status",
         fileName: `historico-requisicoes-${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -218,7 +218,7 @@ export default function HistoricoSupervisorPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -233,7 +233,7 @@ export default function HistoricoSupervisorPage() {
   return (
     <>
       <Topbar
-        title="Historico de Aprovacoes"
+        title="Histórico de Aprovações"
         subtitle="Visualize todas as requisicoes processadas"
       />
 
@@ -241,7 +241,7 @@ export default function HistoricoSupervisorPage() {
         <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
           <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
-          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
         </div>
 
         <div className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -286,7 +286,7 @@ export default function HistoricoSupervisorPage() {
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
             <h3 className="text-sm font-bold">Registros de Acesso</h3>
-            <p className="text-xs text-muted-foreground">Solicitacoes agrupadas por usuario e status</p>
+            <p className="text-xs text-muted-foreground">Solicitações agrupadas por usuário e status</p>
           </div>
 
           {loading ? (

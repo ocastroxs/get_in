@@ -67,10 +67,10 @@ export default function PicoMovimentoChart({ mobileLayout = false }) {
       </div>
 
       <div className="mt-5 border-t border-border pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Leitura rapida</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Leitura rápida</p>
         <p className="mt-1 text-sm text-foreground">
-          O horario de maior pressao foi <span className="font-semibold">{peak.hora}</span>, com fluxo{" "}
-          <span className="font-semibold">concentrado e acima da media diaria</span>.
+          O horário de maior pressão foi <span className="font-semibold">{peak.hora}</span>, com fluxo{" "}
+          <span className="font-semibold">concentrado e acima da média diária</span>.
         </p>
       </div>
     </section>

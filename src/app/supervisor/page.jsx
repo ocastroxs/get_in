@@ -111,14 +111,14 @@ export default function SupervisorDashboardPage() {
 
   async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
         title: "Dashboard do supervisor",
-        subtitle: "Solicitacoes de visitantes por setor",
+        subtitle: "Solicitações de visitantes por setor",
         fileName: `requisicoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -146,7 +146,7 @@ export default function SupervisorDashboardPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -154,15 +154,15 @@ export default function SupervisorDashboardPage() {
     <>
       <Topbar
         title="Dashboard do Supervisor"
-        subtitle="Visao geral das solicitacoes de visitantes"
+          subtitle="Visão geral das solicitações de visitantes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Acao necessaria" : "Nenhuma"} />
+          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Ação necessária" : "Nenhuma"} />
           <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub={`${countAprovados} setor(es)`} />
           <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub={`${countRecusados} rejeitado(s)`} />
-          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Requisicoes" />
+          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Requisições" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -207,7 +207,7 @@ export default function SupervisorDashboardPage() {
           <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
             <div>
               <h2 className="text-sm font-bold text-foreground">Listagem de Requisicoes</h2>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">Historico e pendencias recentes por setor</p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">Histórico e pendências recentes por setor</p>
             </div>
             <Clock size={20} className="text-primary opacity-60" />
           </div>
@@ -219,7 +219,7 @@ export default function SupervisorDashboardPage() {
           ) : requisicoesFiltradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -257,10 +257,10 @@ export default function SupervisorDashboardPage() {
             <InfoItem number="3" text="A portaria recebe o resultado e libera o fluxo aprovado." />
           </InfoPanel>
 
-          <InfoPanel icon={<ShieldCheck size={18} />} title="Seguranca" accent="green">
+          <InfoPanel icon={<ShieldCheck size={18} />} title="Segurança" accent="green">
             <InfoItem icon={<Check size={12} />} text="Confira dados pessoais e empresa antes da decisao." />
-            <InfoItem icon={<Check size={12} />} text="Aprove somente os setores realmente necessarios." />
-            <InfoItem icon={<Check size={12} />} text="Use o historico para auditar decisoes anteriores." />
+            <InfoItem icon={<Check size={12} />} text="Aprove somente os setores realmente necessários." />
+            <InfoItem icon={<Check size={12} />} text="Use o histórico para auditar decisões anteriores." />
           </InfoPanel>
         </div>
       </div>

@@ -62,7 +62,7 @@ export function LoginForm({ className, ...props }) {
       const tipo = getAuthTipo(funcionario, usuario);
 
       if (getFlowRouteByTipo(tipo) === "/") {
-        setGeneralError("Seu usuario nao possui perfil de acesso para este sistema.");
+        setGeneralError("Seu usuário não possui perfil de acesso a este sistema.");
         return;
       }
 
@@ -90,7 +90,7 @@ export function LoginForm({ className, ...props }) {
       )}
       {...props}
     >
-      {/* Logo visível apenas em mobile (painel esquerdo oculto) */}
+      {/* Logo visível apenas em dispositivos móveis (painel esquerdo oculto) */}
       <div className="flex lg:hidden justify-center mb-2">
         <img src="/logo-b.svg" alt="GetIN" className="h-10 w-auto" />
       </div>

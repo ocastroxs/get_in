@@ -53,7 +53,7 @@ export default function StatusVisitantesChart({
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
             <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-            <p className="text-sm text-muted-foreground">Situacao atual com leitura imediata de risco e permanencia.</p>
+            <p className="text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
           </div>
 
           <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">

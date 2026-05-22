@@ -74,7 +74,7 @@ function ModalNovoVisitante({ onClose, onSave }) {
 
   async function handleSubmit() {
     if (!form.nome || !form.empresa || !form.cpf) {
-      alert("Preencha os campos obrigatorios.");
+      alert("Preencha os campos obrigatórios.");
       return;
     }
 
@@ -97,7 +97,7 @@ function ModalNovoVisitante({ onClose, onSave }) {
       }
     } catch (error) {
       console.error(error);
-      alert("Erro de conexao com o servidor.");
+      alert("Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -120,7 +120,7 @@ function ModalNovoVisitante({ onClose, onSave }) {
 
         <div className="space-y-4 px-6 py-5">
           <p className="text-xs text-muted-foreground">
-            Registre um novo visitante no sistema. Todos os campos marcados com * sao obrigatorios.
+            Registre um novo visitante no sistema. Todos os campos marcados com * são obrigatórios.
           </p>
 
           <div>

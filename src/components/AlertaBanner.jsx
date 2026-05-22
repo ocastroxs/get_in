@@ -13,7 +13,7 @@ function buildMessage(alertas) {
   const remaining = alertas.length - Math.min(alertas.length, 3);
 
   if (alertas.length === 1) {
-    return `${preview} esta com permanencia sem saida registrada.`;
+    return `${preview} está com permanência sem saída registrada.`;
   }
 
   if (remaining > 0) {
@@ -28,8 +28,8 @@ export default function AlertaBanner({ alertas = [], onDismiss }) {
 
   const title =
     alertas.length === 1
-      ? "1 visitante precisa de atencao"
-      : `${alertas.length} visitantes precisam de atencao`;
+      ? "1 visitante precisa de atenção"
+      : `${alertas.length} visitantes precisam de atenção`;
 
   return (
     <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-950">

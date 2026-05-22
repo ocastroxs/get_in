@@ -94,7 +94,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
       showToast({
         type: "error",
         title: "Pedido sem setores",
-        description: "Nao foi possivel identificar os setores da solicitacao.",
+        description: "Não foi possível identificar os setores da solicitação.",
       });
       return;
     }
@@ -108,13 +108,13 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
       });
 
       if (!response.sucesso) {
-        throw new Error(response.mensagem || response.erro || "Erro ao processar requisicao.");
+        throw new Error(response.mensagem || response.erro || "Erro ao processar requisição.");
       }
 
       showToast({
         type: "success",
-        title: "Solicitacao analisada",
-        description: "As decisoes por setor foram salvas.",
+        title: "Solicitação analisada",
+        description: "As decisões por setor foram salvas.",
       });
       onConfirm?.();
       onClose?.();
@@ -228,7 +228,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observacoes</span>
             <textarea
-              placeholder="Adicione observacoes para auditoria interna"
+              placeholder="Adicione observações para auditoria interna"
               value={observacoes}
               onChange={(event) => setObservacoes(event.target.value)}
               className="min-h-24 w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
