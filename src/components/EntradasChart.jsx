@@ -29,13 +29,9 @@ export default function EntradasChart({
 }) {
   const [view, setView] = useState("hoje");
   const chartData = useMemo(() => {
-    const baseData = view === "mes" ? monthData : view === "semana" ? weekData : data;
-    return mobileLayout && view === "hoje"
-      ? baseData.slice(0, 8)
-      : !mobileLayout && view === "hoje"
-        ? baseData.slice(0, 9)
-        : baseData;
-  }, [data, mobileLayout, monthData, view, weekData]);
+    return view === "mes" ? monthData : view === "semana" ? weekData : data;
+  }, [data, monthData, view, weekData]);
+  const xTickInterval = view === "hoje" ? (mobileLayout ? 3 : 1) : 0;
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
@@ -64,8 +60,8 @@ export default function EntradasChart({
           <p className="max-w-xl text-sm text-muted-foreground">{subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30">
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30 sm:w-auto">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
             <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
               {chartMeta.peakItem?.[dataKey] ?? 0}
@@ -73,13 +69,13 @@ export default function EntradasChart({
             </p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
+          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
                   view === item
                     ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
                     : "hover:bg-white/80 hover:text-foreground",
@@ -123,6 +119,7 @@ export default function EntradasChart({
                 <CartesianGrid vertical={false} stroke="rgba(15,58,125,0.08)" />
                 <XAxis
                   dataKey={nameKey}
+                  interval={xTickInterval}
                   tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
                   axisLine={false}
                   tickLine={false}
@@ -144,7 +141,7 @@ export default function EntradasChart({
                     boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
                   }}
                 />
-                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={mobileLayout ? 32 : 42}>
+                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={view === "hoje" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}>
                   {chartData.map((entry, index) => {
                     const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
                     return (

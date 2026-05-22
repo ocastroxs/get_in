@@ -57,18 +57,20 @@ export const STATS_TODAY = {
   tempo: { value : "1h 24m"}
 };
 
-export const ENTRADAS_POR_HORA = [
-  { hora: "08h", value: 2 },
-  { hora: "09h", value: 4 },
-  { hora: "10h", value: 6 },
-  { hora: "11h", value: 8 },
-  { hora: "12h", value: 5 },
-  { hora: "13h", value: 3 },
-  { hora: "14h", value: 2 },
-  { hora: "15h", value: 1 },
-  { hora: "16h", value: 1 },
-  { hora: "17h", value: 0 },
-];
+export const ENTRADAS_POR_HORA = Array.from({ length: 24 }, (_, hora) => ({
+  hora: `${String(hora).padStart(2, "0")}h`,
+  value: {
+    8: 2,
+    9: 4,
+    10: 6,
+    11: 8,
+    12: 5,
+    13: 3,
+    14: 2,
+    15: 1,
+    16: 1,
+  }[hora] ?? 0,
+}));
 
 export const ENTRADAS_POR_SEMANA = [
   { hora: "Seg", value: 24 },

@@ -9,10 +9,10 @@ import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
 import { api } from "@/services/api";
-import { AlertTriangle, ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
+import { ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
-const HORAS_DIA = Array.from({ length: 13 }, (_, index) => index + 6);
+const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
 
@@ -570,6 +570,10 @@ export default function DashboardPage() {
             </div>
           </div>
         </header>
+        
+        {mostrarAlertaBanner ? (
+          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
+        ) : null}
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatCard
@@ -623,9 +627,7 @@ export default function DashboardPage() {
           />
         </section>
 
-        {mostrarAlertaBanner ? (
-          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
+        
 
         <EntradasChart mobileLayout data={entradasHoje} weekData={entradasSemana} monthData={entradasMes} />
         <PicoMovimentoChart mobileLayout data={picoSetores} />
@@ -637,20 +639,6 @@ export default function DashboardPage() {
         />
         <StatusVisitantesChart mobileLayout="list" data={statusHoje} weekData={statusSemana} monthData={statusMes} />
 
-        <div className="rounded-[24px] border border-border bg-card p-5 shadow-md">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-600">
-              <AlertTriangle size={18} strokeWidth={1.75} />
-            </div>
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Estado Critico</p>
-              <h3 className="text-base font-semibold text-foreground">Atencao para permanencia prolongada</h3>
-              <p className="text-sm text-muted-foreground">
-                Existem {stats.ativos.alertas} visitante(s) acima da janela prevista.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
@@ -658,6 +646,10 @@ export default function DashboardPage() {
           title="Dashboard Geral"
           subtitle="Monitoramento operacional com foco em fluxo, permanencia e alertas em tempo real."
         />
+
+        {mostrarAlertaBanner ? (
+          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-12">
           <div className="xl:col-span-5">
@@ -711,10 +703,6 @@ export default function DashboardPage() {
             />
           </div>
         </section>
-
-        {mostrarAlertaBanner ? (
-          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
           <EntradasChart data={entradasHoje} weekData={entradasSemana} monthData={entradasMes} />

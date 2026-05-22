@@ -5,7 +5,7 @@ import { api } from "./api";
  * Consolida lógica de transformação e normalização de dados do back-end
  */
 
-const HORAS_DIA = Array.from({ length: 13 }, (_, index) => index + 6);
+const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
 

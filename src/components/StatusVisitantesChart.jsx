@@ -58,13 +58,13 @@ export default function StatusVisitantesChart({
             <p className="max-w-[280px] text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
+          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
                   view === item
                     ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
                     : "hover:bg-white/80 hover:text-foreground",
