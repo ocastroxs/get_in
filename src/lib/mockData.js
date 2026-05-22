@@ -73,13 +73,13 @@ export const ENTRADAS_POR_HORA = Array.from({ length: 24 }, (_, hora) => ({
 }));
 
 export const ENTRADAS_POR_SEMANA = [
-  { hora: "Seg", value: 24 },
-  { hora: "Ter", value: 28 },
-  { hora: "Qua", value: 35 },
-  { hora: "Qui", value: 31 },
-  { hora: "Sex", value: 39 },
-  { hora: "Sab", value: 17 },
-  { hora: "Dom", value: 12 },
+  { hora: "16/05", diaSemana: "Sab", value: 24 },
+  { hora: "17/05", diaSemana: "Dom", value: 28 },
+  { hora: "18/05", diaSemana: "Seg", value: 35 },
+  { hora: "19/05", diaSemana: "Ter", value: 31 },
+  { hora: "20/05", diaSemana: "Qua", value: 39 },
+  { hora: "21/05", diaSemana: "Qui", value: 17 },
+  { hora: "22/05", diaSemana: "Sex", value: 12 },
 ];
 
 export const PICO_MOVIMENTO = [

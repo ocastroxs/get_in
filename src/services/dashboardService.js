@@ -8,6 +8,12 @@ import { api } from "./api";
 const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
+const formatarDiaMes = (data) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(data);
 
 /**
  * Normaliza array response do back-end
@@ -199,7 +205,8 @@ function entradasPorSemana(visitantesLocal) {
     data.setDate(referencia.getDate() - (6 - index));
     return {
       data,
-      hora: DIAS_SEMANA[data.getDay()],
+      hora: formatarDiaMes(data),
+      diaSemana: DIAS_SEMANA[data.getDay()],
       value: 0,
     };
   });
@@ -212,7 +219,7 @@ function entradasPorSemana(visitantesLocal) {
     if (item) item.value += 1;
   });
 
-  return dias.map(({ hora, value }) => ({ hora, value }));
+  return dias.map(({ hora, diaSemana, value }) => ({ hora, diaSemana, value }));
 }
 
 /**
@@ -225,23 +232,28 @@ function entradasPorMes(visitantesLocal) {
     referencia.getMonth() + 1,
     0
   ).getDate();
-  const buckets = [
-    { inicio: 1, fim: 7, hora: "1-7", value: 0 },
-    { inicio: 8, fim: 14, hora: "8-14", value: 0 },
-    { inicio: 15, fim: 21, hora: "15-21", value: 0 },
-    { inicio: 22, fim: diasNoMes, hora: `22-${diasNoMes}`, value: 0 },
-  ];
+  const dias = Array.from({ length: diasNoMes }, (_, index) => {
+    const data = new Date(
+      referencia.getFullYear(),
+      referencia.getMonth(),
+      index + 1
+    );
+    return {
+      data,
+      hora: formatarDiaMes(data),
+      value: 0,
+    };
+  });
 
   visitantesLocal.forEach((visitante) => {
     const entrada = getEntradaVisitante(visitante);
     if (!estaNoPeriodo(entrada, "mes", referencia)) return;
 
-    const dia = entrada.getDate();
-    const bucket = buckets.find((item) => dia >= item.inicio && dia <= item.fim);
-    if (bucket) bucket.value += 1;
+    const item = dias[entrada.getDate() - 1];
+    if (item) item.value += 1;
   });
 
-  return buckets.map(({ hora, value }) => ({ hora, value }));
+  return dias.map(({ hora, value }) => ({ hora, value }));
 }
 
 /**

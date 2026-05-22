@@ -15,6 +15,37 @@ import {
 import { BarChart3 } from "lucide-react";
 import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 
+const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+const DATA_BR_RE = /^\d{2}\/\d{2}$/;
+
+function formatarDiaMes(data) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(data);
+}
+
+function normalizarSemanaBrasileira(items) {
+  const hoje = new Date();
+  const total = items.length || 7;
+
+  return items.map((item, index) => {
+    if (DATA_BR_RE.test(String(item.hora ?? ""))) {
+      return item;
+    }
+
+    const data = new Date(hoje);
+    data.setDate(hoje.getDate() - (total - 1 - index));
+
+    return {
+      ...item,
+      hora: formatarDiaMes(data),
+      diaSemana: item.diaSemana || item.hora || DIAS_SEMANA[data.getDay()],
+    };
+  });
+}
+
 export default function EntradasChart({
   title = "Entradas por Periodo",
   subtitle = "Fluxo registrado ao longo do dia",
@@ -29,9 +60,12 @@ export default function EntradasChart({
 }) {
   const [view, setView] = useState("hoje");
   const chartData = useMemo(() => {
-    return view === "mes" ? monthData : view === "semana" ? weekData : data;
+    if (view === "mes") return monthData;
+    if (view === "semana") return normalizarSemanaBrasileira(weekData);
+    return data;
   }, [data, monthData, view, weekData]);
-  const xTickInterval = view === "hoje" ? (mobileLayout ? 3 : 1) : 0;
+  const xTickInterval =
+    view === "hoje" ? (mobileLayout ? 3 : 1) : view === "mes" ? (mobileLayout ? 6 : 3) : 0;
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
@@ -50,6 +84,11 @@ export default function EntradasChart({
   }, [chartData, dataKey]);
 
   const hasUsableData = chartData.length > 0 && chartMeta.total > 0;
+  const peakLabel = chartMeta.peakItem
+    ? view === "semana" && chartMeta.peakItem.diaSemana
+      ? `${chartMeta.peakItem[nameKey]} ${chartMeta.peakItem.diaSemana}`
+      : chartMeta.peakItem[nameKey]
+    : "--";
 
   return (
     <section className="rounded-[24px] border border-border bg-card p-5 text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg animate-in fade-in slide-in-from-bottom-4">
@@ -65,7 +104,7 @@ export default function EntradasChart({
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
             <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
               {chartMeta.peakItem?.[dataKey] ?? 0}
-              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{chartMeta.peakItem?.[nameKey] ?? "--"}</span>
+              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
             </p>
           </div>
 
@@ -141,7 +180,7 @@ export default function EntradasChart({
                     boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
                   }}
                 />
-                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={view === "hoje" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}>
+                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={view === "hoje" || view === "mes" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}>
                   {chartData.map((entry, index) => {
                     const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
                     return (
@@ -169,7 +208,7 @@ export default function EntradasChart({
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automatico</p>
               <p className="mt-1 text-sm text-foreground">
-                Pico as <span className="font-semibold">{chartMeta.peakItem?.[nameKey] ?? "--"}</span> com{" "}
+                Pico as <span className="font-semibold">{peakLabel}</span> com{" "}
                 <span className="font-semibold">{chartMeta.peakItem?.[dataKey] ?? 0} visitantes</span>.
               </p>
             </div>
