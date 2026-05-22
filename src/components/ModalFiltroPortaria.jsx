@@ -45,7 +45,6 @@ export default function ModalFiltroPortaria({
       opcoes: [
         { label: "Todos", value: "Todos" },
         { label: "Ativo", value: "ativo" },
-        { label: "Pendente", value: "pendente" },
         { label: "Saída", value: "saida" }
       ]
     },

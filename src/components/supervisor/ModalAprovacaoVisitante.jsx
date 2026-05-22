@@ -24,12 +24,14 @@ const STATUS_STYLE = {
   pendente: "border-amber-200 bg-amber-50 text-amber-700",
   aprovado: "border-green-200 bg-green-50 text-green-700",
   recusado: "border-red-200 bg-red-50 text-red-700",
+  expirado: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
 const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 function formatDateTime(value) {

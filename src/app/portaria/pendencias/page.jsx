@@ -22,6 +22,7 @@ import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF, formatPhone } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -150,18 +151,6 @@ function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
   return splitSetores(fallback);
 }
 
-function formatWaitingTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  const minutes = Math.max(0, Math.round((Date.now() - date.getTime()) / 60000));
-  const hours = Math.floor(minutes / 60);
-  const remaining = minutes % 60;
-
-  if (hours === 0) return `${remaining} min`;
-  return `${hours}h ${String(remaining).padStart(2, "0")}min`;
-}
-
 function hasObservacaoRelevante(value) {
   const normalized = String(value || "")
     .trim()
@@ -219,7 +208,7 @@ function normalizeRequisicao(registro) {
     getDescricaoValue(descricao, "E-mail")
   );
   const empresa = pickFirst(getEmpresaNome(registro), getDescricaoValue(descricao, "Empresa"));
-  const motivo = pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "-");
+  const motivo = normalizeMotivoVisita(pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "Outro"));
   const key = getRequisicaoIdentity({ ...registro, visitante, cpf, email });
 
   return {
@@ -520,15 +509,10 @@ export default function PendenciasPage() {
         .filter((setor) => setor && setor !== "-")
     );
     const comObservacao = requisicoes.filter((requisicao) => hasObservacaoRelevante(requisicao.observacoes)).length;
-    const datas = requisicoes
-      .map((requisicao) => new Date(requisicao.dataDaRequisicao).getTime())
-      .filter((timestamp) => !Number.isNaN(timestamp));
-    const maisAntiga = datas.length > 0 ? new Date(Math.min(...datas)).toISOString() : null;
-
     return {
+      totalPendentes: requisicoes.length,
       setoresPermitidos: setoresPermitidos.size,
-      comObservacao,
-      esperaMaisAntiga: maisAntiga ? formatWaitingTime(maisAntiga) : "-"
+      comObservacao
     };
   }, [requisicoes]);
 
@@ -542,7 +526,24 @@ export default function PendenciasPage() {
       />
 
       <div className="flex flex-col gap-5 p-4 md:p-6 animate-in fade-in duration-700">
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-500/50 dark:bg-amber-950/60">
+          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-amber-600" />
+          <div>
+            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">Requisicoes pendentes</h3>
+            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+              A lista considera apenas visitantes cadastrados hoje e separa setor responsavel de setores permitidos.
+            </p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard
+            label="Total pendentes"
+            value={stats.totalPendentes}
+            icon={<AlertTriangle size={18} className="text-amber-600" />}
+            accentVar="#d97706"
+            sub="Aguardando aprovacao"
+          />
           <StatCard
             label="Setores permitidos"
             value={stats.setoresPermitidos}
@@ -557,22 +558,6 @@ export default function PendenciasPage() {
             accentVar="#d97706"
             sub="Contexto adicional da portaria"
           />
-          <StatCard
-            label="Espera mais antiga"
-            value={stats.esperaMaisAntiga}
-            icon={<Clock size={18} className="text-red-600" />}
-            accentVar="#dc2626"
-            sub="Desde a solicitacao"
-          />
-        </div>
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 shadow-sm">
-          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-blue-600" />
-          <div>
-            <h3 className="text-sm font-bold text-blue-900 dark:text-blue-300">Requisições Pendentes</h3>
-            <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
-              A lista considera apenas visitantes cadastrados hoje e separa setor responsavel de setores permitidos.
-            </p>
-          </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">

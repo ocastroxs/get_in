@@ -158,6 +158,7 @@ export const api = {
   async get(endpoint) {
     return request(endpoint, {
       method: 'GET',
+      cache: 'no-store',
       headers: getHeaders(),
     });
   },

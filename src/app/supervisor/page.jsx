@@ -30,6 +30,7 @@ const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 function formatDateTime(value) {
@@ -165,10 +166,10 @@ export default function SupervisorDashboardPage() {
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Acao necessaria" : "Nenhuma"} />
-          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub={`${countAprovados} setor(es)`} />
-          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub={`${countRecusados} rejeitado(s)`} />
           <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Requisicoes" />
+          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub={`${countAprovados} setor(es)`} />
+          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Acao necessaria" : "Nenhuma"} />
+          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub={`${countRecusados} rejeitado(s)`} />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -248,6 +249,7 @@ export default function SupervisorDashboardPage() {
                       pendente: "bg-amber-100 text-amber-700",
                       aprovado: "bg-green-100 text-green-700",
                       recusado: "bg-red-100 text-red-600",
+                      expirado: "bg-slate-100 text-slate-700",
                     }[status] || "bg-gray-100 text-gray-700";
                     const actionHref = status === "pendente" ? "/supervisor/aprovacoes" : "/supervisor/historico";
                     const actionLabel = status === "pendente" ? "Analisar" : "Historico";

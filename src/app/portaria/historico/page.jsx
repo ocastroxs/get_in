@@ -12,34 +12,35 @@ import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
 
-const STATUS_OPTIONS = ["Todos", "Em andamento", "Finalizadas", "Pendente", "Aprovado", "Recusado"];
+const STATUS_OPTIONS = ["Todos", "Finalizado", "Pendente", "Em andamento", "Aprovado", "Recusado", "Expirado"];
 
 const STATUS_FILTER_VALUE = {
-  "Em andamento": "dentro",
-  Finalizadas: "saida",
+  Finalizado: "saida",
   Pendente: "pendente",
+  "Em andamento": "dentro",
   Aprovado: "aprovado",
-  Recusado: "recusado"
+  Recusado: "recusado",
+  Expirado: "expirado"
 };
 
 const STATUS_LABEL = {
+  saida: "Finalizado",
+  dentro: "Em andamento",
+  ativo: "Em andamento",
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
-  dentro: "Em andamento",
-  ativo: "Em andamento",
-  saida: "Saida",
-  finalizado: "Saida"
+  expirado: "Expirado"
 };
 
 const STATUS_STYLE = {
+  saida: "bg-blue-100 text-blue-700",
+  dentro: "bg-green-100 text-green-700",
+  ativo: "bg-green-100 text-green-700",
   pendente: "bg-amber-100 text-amber-700",
   aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-600",
-  dentro: "bg-green-100 text-green-700",
-  ativo: "bg-green-100 text-green-700",
-  saida: "bg-blue-100 text-blue-700",
-  finalizado: "bg-blue-100 text-blue-700"
+  expirado: "bg-slate-100 text-slate-700"
 };
 
 function pickFirst(...values) {
@@ -56,6 +57,28 @@ function getDescricaoValue(descricao, label) {
   const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
 
   return match?.[1]?.trim() || "";
+}
+
+function getResponseArray(response, keys = []) {
+  if (!response || typeof response !== "object" || !response.sucesso) {
+    return [];
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(response.data?.[key])) {
+      return response.data[key];
+    }
+
+    if (Array.isArray(response[key])) {
+      return response[key];
+    }
+  }
+
+  return [];
 }
 
 function formatDateTime(value) {
@@ -102,7 +125,7 @@ function normalizeHistoricoStatus(value, dataSaida, dataEntrada) {
 
   if (["dentro", "ativo", "liberado"].includes(normalized)) return "dentro";
   if (["saida", "saiu", "finalizado", "concluido"].includes(normalized)) return "saida";
-  if (["pendente", "aprovado", "recusado"].includes(normalized)) return normalized;
+  if (["pendente", "aprovado", "recusado", "expirado"].includes(normalized)) return normalized;
   if (dataSaida) return "saida";
   if (dataEntrada) return "dentro";
   return normalized || "pendente";
@@ -167,6 +190,27 @@ function normalizeRegistro(registro) {
   };
 }
 
+function isFuncionarioRegistro(registro) {
+  const usuario = registro?.usuario || {};
+  const tipo = String(
+    pickFirst(
+      registro?.tipo,
+      registro?.cargo,
+      usuario?.tipo,
+      usuario?.cargo,
+      usuario?.funcionario?.tipo,
+      usuario?.funcionario?.cargo
+    )
+  )
+    .trim()
+    .toLowerCase();
+
+  return Boolean(
+    usuario?.funcionario ||
+      ["func", "funcionario", "funcionário", "port", "portaria", "sup", "supervisor", "ger", "gerente"].includes(tipo)
+  );
+}
+
 // Helpers do historico
 function getRegistroIdentity(registro) {
   const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
@@ -217,7 +261,7 @@ function dedupeRegistrosPorVisitante(registros) {
   const registrosPorVisitante = new Map();
 
   registros.forEach((registro) => {
-    const key = getRegistroIdentity(registro);
+    const key = `${getRegistroIdentity(registro)}|${registro.status || "pendente"}`;
     const registroAtual = registrosPorVisitante.get(key);
 
     if (!registroAtual) {
@@ -365,9 +409,6 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
 
 // ─── LINHA DO HISTÓRICO ─────────────────────────────────────────────────────
 function LinhaHistorico({ registro, onDetalhes }) {
-  const status = STATUS_LABEL[registro.status] || registro.status || "Ativo";
-  const statusClass = STATUS_STYLE[registro.status] || "bg-muted text-muted-foreground";
-
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="px-4 py-3">
@@ -392,8 +433,8 @@ function LinhaHistorico({ registro, onDetalhes }) {
       <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
       <td className="px-4 py-3">
-        <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass}`}>
-          {status}
+        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[registro.status] || STATUS_STYLE.pendente}`}>
+          {STATUS_LABEL[registro.status] || registro.status || "Pendente"}
         </span>
       </td>
       <td className="px-4 py-3 text-right">
@@ -431,13 +472,24 @@ export default function HistoricoPage() {
   async function fetchHistorico() {
     try {
       setLoading(true);
-      const response = await api.get('/portaria/historico');
+      const [historicoResponse, requisicoesResponse] = await Promise.all([
+        api.get("/portaria/historico"),
+        api.get("/requisicao-visitante")
+      ]);
+      const historico = getResponseArray(historicoResponse, ["dados", "historico", "visitantes"]);
+      const requisicoes = getResponseArray(requisicoesResponse, ["dados", "requisicoes"]);
+      const dados = [...historico, ...requisicoes];
 
-      if (response.sucesso && Array.isArray(response.data)) {
-        setRegistros(dedupeRegistrosPorVisitante(response.data.map(normalizeRegistro)));
-      }
+      setRegistros(
+        dedupeRegistrosPorVisitante(
+          dados
+            .filter((registro) => !isFuncionarioRegistro(registro))
+            .map(normalizeRegistro)
+        )
+      );
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
+      setRegistros([]);
     } finally {
       setLoading(false);
     }
@@ -476,11 +528,13 @@ export default function HistoricoPage() {
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
-    "Em andamento": registros.filter((r) => r.status === "dentro").length,
+    "Em andamento": registros.filter((r) => ["dentro", "ativo"].includes(r.status)).length,
     Finalizadas: registros.filter((r) => r.status === "saida").length,
+    Finalizado: registros.filter((r) => r.status === "saida").length,
     Pendente: registros.filter((r) => r.status === "pendente").length,
     Aprovado: registros.filter((r) => r.status === "aprovado").length,
     Recusado: registros.filter((r) => r.status === "recusado").length,
+    Expirado: registros.filter((r) => r.status === "expirado").length,
   }), [registros]);
 
   const empresasDistintas = useMemo(() => new Set(
@@ -533,7 +587,7 @@ export default function HistoricoPage() {
           { header: "Setores permitidos", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Saída", weight: 1.1 },
-          { header: "Status", weight: 0.8 },
+          { header: "Status", weight: 0.9 },
         ],
         rows: registrosFiltrados.map((r) => [
           r.visitante,
@@ -583,7 +637,7 @@ export default function HistoricoPage() {
           value={resumoStatus.Finalizadas}
           icon={<LogOut size={18} className="text-red-600" />}
           accentVar="#dc2626"
-          sub="Com status saida"
+          sub="Com status finalizado"
         />
         <StatCard
           label="Empresas"
@@ -717,7 +771,7 @@ export default function HistoricoPage() {
               ) : (
                 registrosFiltrados.map((r) => (
                   <LinhaHistorico
-                    key={r.id}
+                    key={`${getRegistroIdentity(r)}-${r.status}-${r.id || r.dataEntrada || r.dataDaRequisicao}`}
                     registro={r}
                     onDetalhes={handleDetalhes}
                   />

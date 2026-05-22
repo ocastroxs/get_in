@@ -31,8 +31,7 @@ import { formatPhone } from "@/lib/utils";
 
 const STATUS_LABEL = {
   ativo: "Dentro",
-  saida: "Saída",
-  pendente: "Pendente",
+  saida: "Saida",
   alerta: "Alerta",
   recusado: "Recusado"
 };
@@ -40,7 +39,6 @@ const STATUS_LABEL = {
 const STATUS_STYLE = {
   ativo: "bg-green-100 text-green-700",
   saida: "bg-blue-100 text-blue-700",
-  pendente: "bg-amber-100 text-amber-700",
   alerta: "bg-red-100 text-red-600",
   recusado: "bg-red-100 text-red-600"
 };
@@ -48,7 +46,6 @@ const STATUS_STYLE = {
 const STATUS_DOT = {
   ativo: "bg-green-500",
   saida: "bg-blue-500",
-  pendente: "bg-amber-500",
   alerta: "bg-red-500",
   recusado: "bg-red-500"
 };
@@ -56,7 +53,7 @@ const STATUS_DOT = {
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
   { label: "Dentro", value: "ativo" },
-  { label: "Saída", value: "saida" }
+  { label: "Saida", value: "saida" }
 ];
 
 const EDIT_INPUT_CLASS =
@@ -236,6 +233,7 @@ function normalizeVisitante(visitante) {
   return {
     ...visitante,
     id: pickFirst(visitante?.id, visitante?.idLog, visitante?.idRegistro, visitante?.idRequisicao),
+    idUsuario: pickFirst(visitante?.idUsuario, usuario?.id, visitante?.id),
     nome: pickFirst(visitante?.nome, visitante?.visitante, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
     cpf: pickFirst(visitante?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
     telefone: pickFirst(
@@ -269,7 +267,7 @@ function normalizeVisitante(visitante) {
     statusOriginal: visitante?.status,
     podeCheckout: Boolean(
       visitante?.podeCheckout ||
-        (dataEntradaLog && !dataSaida && status === "ativo")
+        (!dataSaida && status === "ativo")
     )
   };
 }
@@ -431,7 +429,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
     setLoading(true);
     try {
       const payload = {
-        idUsuario: visitante?.id,
+        idUsuario: visitante?.idUsuario || visitante?.id,
         idLog: visitante?.idLog,
         dataSaida: new Date().toISOString()
       };
@@ -1066,14 +1064,20 @@ export default function PortariaPage() {
     try {
       setLoading(true);
       const visitantesResponse = await api.get("/portaria/vlocal");
+      const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
 
       if (visitantesResponse?.sucesso) {
-        const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
         setVisitantes(
           dedupeVisitantesPorIdentidade(
             visitantesPortaria
               .map(normalizeVisitante)
-              .filter((visitante) => isToday(visitante.dataDaRequisicao || visitante.dataEntrada))
+              .filter((visitante) => {
+                if (visitante.status === "saida") {
+                  return isToday(visitante.dataSaida);
+                }
+
+                return visitante.status === "ativo";
+              })
           )
         );
       } else {
@@ -1268,18 +1272,18 @@ export default function PortariaPage() {
             sub="No local agora"
           />
           <StatCard
+            label="Saidas"
+            value={countSaidas}
+            icon={<LogOut size={20} className="text-blue-600" />}
+            accentVar="#2563eb"
+            sub="Com saida registrada"
+          />
+          <StatCard
             label="Empresas Presentes"
             value={countEmpresas}
             icon={<Building2 size={20} className="text-amber-600" />}
             accentVar="#d97706"
             sub="Com visitantes dentro"
-          />
-          <StatCard
-            label="Saídas"
-            value={countSaidas}
-            icon={<LogOut size={20} className="text-blue-600" />}
-            accentVar="#2563eb"
-            sub="Com saída registrada"
           />
         </div>
 

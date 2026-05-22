@@ -26,12 +26,14 @@ const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 const STATUS_STYLE = {
   pendente: "bg-amber-100 text-amber-700",
   aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-600",
+  expirado: "bg-slate-100 text-slate-700",
 };
 
 function formatDateTime(value) {
@@ -415,7 +417,7 @@ export default function HistoricoSupervisorPage() {
               Status da Requisicao
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
+              {["todos", "pendente", "aprovado", "recusado", "expirado"].map((status) => (
                 <button
                   key={status}
                   type="button"

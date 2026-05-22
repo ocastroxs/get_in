@@ -1,20 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, Circle, ScanLine } from "lucide-react";
+import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, ScanLine } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
-
-const motivoOptions = [
-  { value: "Visita", label: "Visita" },
-  { value: "Entrega", label: "Entrega" },
-  { value: "Manutenção", label: "Manutenção" },
-  { value: "Reunião", label: "Reunião" },
-  { value: "Outro", label: "Outro" },
-];
+import { MOTIVO_OPTIONS, normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
@@ -510,7 +503,7 @@ export default function NovoCadastroPage() {
         idDepartamento,
         idSetor: setoresSelecionados.map((setor) => setor.id),
         status: "pendente",
-        motivo: form.motivo || "Visita",
+        motivo: normalizeMotivoVisita(form.motivo || "Visita"),
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         descricao,
         empresa: form.empresa,
@@ -719,7 +712,7 @@ export default function NovoCadastroPage() {
                         value={form.motivo}
                         onChange={(motivo) => setForm({ ...form, motivo })}
                         placeholder="Selecione..."
-                        options={motivoOptions}
+                        options={MOTIVO_OPTIONS}
                         Icon={Info}
                       />
                     </div>
@@ -902,23 +895,19 @@ export default function NovoCadastroPage() {
                       </div>
                     )}
 
-                    {/* Rodapé com QR Code Simulado */}
-                    <div className="mt-auto pt-3 border-t border-border/60">
-                      <div className="flex items-center justify-between">
-                        <div className="text-[8px] font-bold uppercase tracking-[0.15em] text-muted-foreground">
-                          CPF: {form.cpf || "—"}
+                    <div className="mt-auto space-y-2 border-t border-border/60 pt-4">
+                      {[
+                        { label: "CPF", value: form.cpf || "—" },
+                        { label: "Telefone", value: form.telefone || "—" },
+                        { label: "E-mail", value: form.email || "—" },
+                        { label: "Motivo", value: form.motivo || "—" },
+                        { label: "TAG", value: form.rfidTag || "Nao informada" },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center justify-between gap-3 text-[10px]">
+                          <span className="font-bold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</span>
+                          <span className="min-w-0 truncate text-right font-semibold text-foreground">{item.value}</span>
                         </div>
-                        {/* QR Code Simulado */}
-                        <div className="w-10 h-10 bg-background border border-border rounded-lg flex items-center justify-center shadow-xs">
-                          <div className="w-6 h-6 grid grid-cols-3 gap-0.5">
-                            {[...Array(9)].map((_, i) => (
-                              <div key={i} className={`rounded-sm ${
-                                [0, 2, 4, 6, 8].includes(i) ? "bg-foreground/55" : "bg-muted"
-                              }`}></div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
 

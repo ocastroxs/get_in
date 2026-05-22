@@ -28,6 +28,7 @@ const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
   misto: "Misto",
 };
 
@@ -35,6 +36,7 @@ const STATUS_STYLE = {
   pendente: "bg-amber-100 text-amber-700",
   aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-600",
+  expirado: "bg-slate-100 text-slate-700",
   misto: "bg-blue-100 text-blue-700",
 };
 
@@ -64,6 +66,16 @@ function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
 }
 
+function getEffectiveStatus(requisicao) {
+  const status = String(requisicao?.status || "pendente").toLowerCase();
+
+  if (status === "pendente" && !isToday(requisicao?.dataDaRequisicao)) {
+    return "expirado";
+  }
+
+  return status;
+}
+
 function getGroupKey(requisicao) {
   const usuario = requisicao.usuario || {};
   return [
@@ -83,6 +95,7 @@ function groupRequisicoes(requisicoes) {
     const current = groups.get(key);
     const nextSetor = {
       ...requisicao,
+      status: getEffectiveStatus(requisicao),
       setor: getSetorNome(requisicao),
     };
 
@@ -103,8 +116,8 @@ function groupRequisicoes(requisicoes) {
   });
 
   return Array.from(groups.values()).map((group) => {
-    const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => item.status || "pendente")));
-    const hasPendencia = group.setoresSolicitados.some((item) => (item.status || "pendente") === "pendente");
+    const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => getEffectiveStatus(item))));
+    const hasPendencia = group.setoresSolicitados.some((item) => getEffectiveStatus(item) === "pendente");
 
     return {
       ...group,
@@ -185,7 +198,12 @@ export default function AprovacoesSupervisorPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data.filter((requisicao) => isToday(requisicao.dataDaRequisicao)));
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            status: getEffectiveStatus(requisicao),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -212,24 +230,23 @@ export default function AprovacoesSupervisorPage() {
         setores.includes(termoBusca);
       const matchStatus =
         filtroStatus === "todos" ||
-        requisicao.setoresSolicitados.some((item) => item.status === filtroStatus);
+        requisicao.setoresSolicitados.some((item) => getEffectiveStatus(item) === filtroStatus);
 
       return matchBusca && matchStatus;
     });
   }, [requisicoesAgrupadas, busca, filtroStatus]);
 
-  const countPendentes = requisicoesAgrupadas.reduce(
-    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => (item.status || "pendente") === "pendente").length,
-    0
+  const requisicoesHoje = useMemo(
+    () => requisicoes.filter((requisicao) => isToday(requisicao.dataDaRequisicao)),
+    [requisicoes]
   );
-  const countAprovados = requisicoesAgrupadas.reduce(
-    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => item.status === "aprovado").length,
-    0
-  );
-  const countRecusados = requisicoesAgrupadas.reduce(
-    (total, requisicao) => total + requisicao.setoresSolicitados.filter((item) => item.status === "recusado").length,
-    0
-  );
+  const countAprovadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "aprovado").length;
+  const countPendentesHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "pendente").length;
+  const countRecusadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "recusado").length;
+  const countAprovados = requisicoes.filter((requisicao) => requisicao.status === "aprovado").length;
+  const countPendentes = requisicoes.filter((requisicao) => requisicao.status === "pendente").length;
+  const countRecusados = requisicoes.filter((requisicao) => requisicao.status === "recusado").length;
+  const countExpirados = requisicoes.filter((requisicao) => requisicao.status === "expirado").length;
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
@@ -253,7 +270,7 @@ export default function AprovacoesSupervisorPage() {
     try {
       await exportTableToPdf({
         title: "Aprovacoes do supervisor",
-        subtitle: "Solicitacoes de visitantes de hoje por setor",
+        subtitle: "Solicitacoes de visitantes por setor",
         fileName: `aprovacoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -274,7 +291,7 @@ export default function AprovacoesSupervisorPage() {
             usuario.nome || "-",
             formatCPF(usuario.cpf) || "-",
             r.empresa || "-",
-            r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[item.status] || item.status})`).join(", "),
+            r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[getEffectiveStatus(item)] || getEffectiveStatus(item)})`).join(", "),
             r.motivo || "-",
             formatDateTime(r.dataDaRequisicao),
             STATUS_LABEL[r.status] || r.status,
@@ -291,14 +308,21 @@ export default function AprovacoesSupervisorPage() {
     <>
       <Topbar
         title="Aprovações"
-        subtitle="Gerenciamento das solicitacoes de visitantes de hoje"
+        subtitle="Gerenciamento das solicitacoes de visitantes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard label="Pendentes de hoje" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
-          <StatCard label="Aprovados de hoje" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
-          <StatCard label="Recusados de hoje" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Aprovados de hoje" value={countAprovadosHoje} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Pendentes de hoje" value={countPendentesHoje} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+          <StatCard label="Recusados de hoje" value={countRecusadosHoje} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Total autorizado" accentVar="var(--chart-2)" />
+          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Somente hoje" accentVar="var(--warning)" />
+          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Total recusado" accentVar="var(--destructive)" />
+          <StatCard label="Expirados" value={countExpirados} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Pendentes antigos" accentVar="#64748b" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -343,7 +367,7 @@ export default function AprovacoesSupervisorPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
             <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
-            <p className="text-xs text-muted-foreground">Visitantes cadastrados hoje aparecem com status pendente, aprovado ou recusado.</p>
+            <p className="text-xs text-muted-foreground">Pendentes valem apenas para hoje; solicitacoes antigas ficam como expiradas.</p>
           </div>
 
           {loading ? (
@@ -399,7 +423,7 @@ export default function AprovacoesSupervisorPage() {
               Status do setor
             </label>
             <div className="grid grid-cols-1 gap-2">
-              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
+              {["todos", "aprovado", "pendente", "recusado", "expirado"].map((status) => (
                 <button
                   key={status}
                   type="button"

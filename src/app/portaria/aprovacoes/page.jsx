@@ -54,6 +54,10 @@ function normalizeStatus(value) {
   return status || "pendente";
 }
 
+function onlyDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
 function splitSetores(value) {
   return String(value || "")
     .split(",")
@@ -114,6 +118,7 @@ function normalizeRequisicao(registro) {
 
   return {
     id: pickFirst(registro?.id, registro?.idRequisicao),
+    key: getRequisicaoIdentity(registro),
     visitante: pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(descricao, "Visitante"), "-"),
     cpf: pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
     empresa: pickFirst(registro?.empresa, usuario?.empresas?.nome, usuario?.empresa, getDescricaoValue(descricao, "Empresa"), "-"),
@@ -127,6 +132,55 @@ function normalizeRequisicao(registro) {
     descricao,
     observacao,
   };
+}
+
+function getRequisicaoIdentity(registro) {
+  const usuario = registro?.usuario || {};
+  const idUsuario = pickFirst(registro?.idUsuario, usuario?.id);
+  const cpf = onlyDigits(pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(registro?.descricao, "CPF")));
+  const email = String(pickFirst(registro?.email, usuario?.email, getDescricaoValue(registro?.descricao, "Email"))).trim().toLowerCase();
+  const nome = String(pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(registro?.descricao, "Visitante"))).trim().toLowerCase();
+
+  if (idUsuario) return `usuario:${idUsuario}`;
+  if (cpf) return `cpf:${cpf}`;
+  if (email) return `email:${email}`;
+  if (nome) return `nome:${nome}`;
+
+  return `registro:${pickFirst(registro?.id, registro?.idRequisicao, registro?.dataDaRequisicao)}`;
+}
+
+function getRequisicaoTimestamp(requisicao) {
+  const timestamp = new Date(requisicao?.dataDaRequisicao).getTime();
+  if (!Number.isNaN(timestamp)) return timestamp;
+  return Number(requisicao?.id || 0);
+}
+
+function mergeRequisicoesPorVisitante(atual, nova) {
+  const setoresPermitidos = Array.from(
+    new Set([...(atual.setoresPermitidos || []), ...(nova.setoresPermitidos || [])].filter(Boolean))
+  );
+  const principal = getRequisicaoTimestamp(nova) >= getRequisicaoTimestamp(atual) ? nova : atual;
+
+  return {
+    ...principal,
+    id: pickFirst(principal.id, atual.id, nova.id),
+    setoresPermitidos,
+    setor: setoresPermitidos.length > 0 ? setoresPermitidos.join(", ") : pickFirst(principal.setor, atual.setor, nova.setor),
+    observacao: pickFirst(principal.observacao, atual.observacao, nova.observacao),
+  };
+}
+
+function dedupeRequisicoesPorVisitante(requisicoes) {
+  const porVisitante = new Map();
+
+  requisicoes.forEach((requisicao) => {
+    const atual = porVisitante.get(requisicao.key);
+    porVisitante.set(requisicao.key, atual ? mergeRequisicoesPorVisitante(atual, requisicao) : requisicao);
+  });
+
+  return Array.from(porVisitante.values()).sort(
+    (a, b) => getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a)
+  );
 }
 
 function DescricaoVisual({ requisicao }) {
@@ -173,9 +227,11 @@ export default function PortariaAprovacoesPage() {
       const data = response?.sucesso && Array.isArray(response.data) ? response.data : [];
 
       setRequisicoes(
-        data
-          .map(normalizeRequisicao)
-          .filter((requisicao) => ["aprovado", "recusado"].includes(requisicao.status) && isToday(requisicao.dataDaRequisicao))
+        dedupeRequisicoesPorVisitante(
+          data
+            .map(normalizeRequisicao)
+            .filter((requisicao) => ["aprovado", "recusado"].includes(requisicao.status) && isToday(requisicao.dataDaRequisicao))
+        )
       );
     } catch (error) {
       console.error("Erro ao carregar aprovacoes da portaria:", error);
@@ -340,7 +396,7 @@ export default function PortariaAprovacoesPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {requisicoesFiltradas.map((requisicao) => (
-                    <tr key={requisicao.id} className="transition-colors hover:bg-muted/40">
+                    <tr key={requisicao.key} className="transition-colors hover:bg-muted/40">
                       <td className="px-4 py-3">
                         <p className="text-sm font-bold text-foreground">{requisicao.visitante}</p>
                         <p className="text-xs text-muted-foreground">{formatCPF(requisicao.cpf) || "-"}</p>
