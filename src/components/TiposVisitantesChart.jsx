@@ -26,7 +26,7 @@ function PieTooltip({ active, payload }) {
 
 export default function TiposVisitantesChart({
   title = "Motivos",
-  subtitle = "Por periodo - hoje",
+  subtitle = "Por período - hoje",
   data = TIPOS_VISITANTE,
   weekData = data,
   monthData = data,
@@ -57,8 +57,8 @@ export default function TiposVisitantesChart({
   }, [view, monthEmptyMessage, weekEmptyMessage, emptyMessage]);
 
   const displaySubtitle = useMemo(() => {
-    if (view === "mes") return "Por periodo - mês";
-    return view === "semana" ? "Por periodo - semana" : "Por periodo - hoje";
+    if (view === "mes") return "Por período - mês";
+    return view === "semana" ? "Por período - semana" : "Por período - hoje";
   }, [view]);
 
   const chartSize = mobileLayout ? 112 : 156;
@@ -68,7 +68,7 @@ export default function TiposVisitantesChart({
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuicao</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuição</p>
             <h2 className={`${mobileLayout ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h2>
             <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
           </div>
@@ -134,11 +134,11 @@ export default function TiposVisitantesChart({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1">
+          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1 max-w-[280px]">
             {chartData.map((item, index) => (
               <div
                 key={index}
-                className={`grid items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2.5" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2.5 py-2"}`}
+                className={`flex w-fit max-w-full items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "gap-2 p-2.5" : "gap-3 px-2.5 py-2"}`}
                 style={{ animationDelay: `${500 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -148,7 +148,7 @@ export default function TiposVisitantesChart({
                   />
                   <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
                 </div>
-                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} justify-self-end shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
+                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} min-w-6 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
               </div>
             ))}
           </div>

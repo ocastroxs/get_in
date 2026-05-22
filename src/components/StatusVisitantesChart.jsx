@@ -53,9 +53,9 @@ export default function StatusVisitantesChart({
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semântica</p>
             <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-            <p className="text-sm text-muted-foreground">Situacao atual com leitura imediata de risco e permanencia.</p>
+            <p className="max-w-[280px] text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
           </div>
 
           <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
@@ -166,11 +166,11 @@ export default function StatusVisitantesChart({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-3">
+          <div className="flex flex-1 flex-col justify-center gap-3 max-w-[280px]">
             {chartData.map((item, index) => (
               <div
                 key={item.name}
-                className="flex items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
+                className="flex w-fit max-w-full items-center gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
                 style={{ animationDelay: `${600 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -180,7 +180,7 @@ export default function StatusVisitantesChart({
                   />
                   <span className="truncate text-sm text-muted-foreground">{item.name}</span>
                 </div>
-                <span className="shrink-0 text-sm font-semibold text-foreground">{item.value}</span>
+                <span className="min-w-6 shrink-0 text-right text-sm font-semibold text-foreground">{item.value}</span>
               </div>
             ))}
           </div>

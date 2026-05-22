@@ -20,6 +20,7 @@ export function LoginForm({ className, ...props }) {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState("");
+  const [shakeKey, setShakeKey] = useState(0);
 
   const validate = () => {
     const newErrors = {};
@@ -41,6 +42,7 @@ export function LoginForm({ className, ...props }) {
   const validationErrors = validate();
   if (Object.keys(validationErrors).length > 0) {
     setErrors(validationErrors);
+    setShakeKey((prev) => prev + 1);
     return;
   }
 
@@ -63,6 +65,7 @@ export function LoginForm({ className, ...props }) {
 
       if (getFlowRouteByTipo(tipo) === "/") {
         setGeneralError("Seu usuario nao possui perfil de acesso para este sistema.");
+        setShakeKey((prev) => prev + 1);
         return;
       }
 
@@ -71,9 +74,11 @@ export function LoginForm({ className, ...props }) {
     } else {
       // 5. Exibe erro caso a senha/email estejam errados
       setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");
+      setShakeKey((prev) => prev + 1);
     }
-  } catch (err) {
+  } catch {
     setGeneralError("Erro de conexão. O servidor está online?");
+    setShakeKey((prev) => prev + 1);
   } finally {
     setIsLoading(false);
   }
@@ -109,9 +114,10 @@ export function LoginForm({ className, ...props }) {
       <Field>
         <FieldLabel htmlFor="email">E-mail</FieldLabel>
         <div
+          key={`email-${shakeKey}`}
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.email && "animate-in shake"
+            (errors.email || generalError) && "animate-shake"
           )}
         >
           <Mail
@@ -128,6 +134,7 @@ export function LoginForm({ className, ...props }) {
             onChange={(e) => {
               setEmail(e.target.value);
               if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              if (generalError) setGeneralError("");
             }}
             disabled={isLoading}
             aria-invalid={!!errors.email}
@@ -157,9 +164,10 @@ export function LoginForm({ className, ...props }) {
       <Field>
         <FieldLabel htmlFor="password">Senha</FieldLabel>
         <div
+          key={`password-${shakeKey}`}
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.password && "animate-in shake"
+            (errors.password || generalError) && "animate-shake"
           )}
         >
           <Lock
@@ -177,6 +185,7 @@ export function LoginForm({ className, ...props }) {
             onChange={(e) => {
               setPassword(e.target.value);
               if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+              if (generalError) setGeneralError("");
             }}
             disabled={isLoading}
             aria-invalid={!!errors.password}

@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { BarChart3 } from "lucide-react";
 import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 
 export default function EntradasChart({
@@ -52,6 +53,8 @@ export default function EntradasChart({
     };
   }, [chartData, dataKey]);
 
+  const hasUsableData = chartData.length > 0 && chartMeta.total > 0;
+
   return (
     <section className="rounded-[24px] border border-border bg-card p-5 text-card-foreground shadow-md transition-all duration-300 hover:shadow-lg animate-in fade-in slide-in-from-bottom-4">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -89,84 +92,100 @@ export default function EntradasChart({
         </div>
       </div>
 
-      <div style={{ height }} className="w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 12, right: 12, bottom: 8, left: -10 }}>
-            <defs>
-              <linearGradient id="entradasGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.96" />
-                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.68" />
-              </linearGradient>
-              <linearGradient id="entradasPeakGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0.94" />
-                <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.70" />
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid vertical={false} stroke="rgba(15,58,125,0.08)" />
-            <XAxis
-              dataKey={nameKey}
-              tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
-              axisLine={false}
-              tickLine={false}
-              dy={8}
-            />
-            <YAxis
-              allowDecimals={false}
-              tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
-              axisLine={false}
-              tickLine={false}
-              width={30}
-            />
-            <Tooltip
-              cursor={{ fill: "rgba(15,58,125,0.035)" }}
-              contentStyle={{
-                borderRadius: "16px",
-                border: "1px solid var(--border)",
-                background: "rgba(255,255,255,0.96)",
-                boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
-              }}
-            />
-            <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={mobileLayout ? 32 : 42}>
-              {chartData.map((entry, index) => {
-                const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
-                return (
-                  <Cell
-                    key={`bar-${entry[nameKey]}-${index}`}
-                    fill={isPeak ? "url(#entradasPeakGradient)" : "url(#entradasGradient)"}
-                  />
-                );
-              })}
-            </Bar>
-            <Line
-              type="monotone"
-              dataKey={dataKey}
-              stroke={barColor}
-              strokeOpacity={0.32}
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 3, fill: "var(--card)", stroke: barColor, strokeWidth: 2 }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="mt-5 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automatico</p>
-          <p className="mt-1 text-sm text-foreground">
-            Pico as <span className="font-semibold">{chartMeta.peakItem?.[nameKey] ?? "--"}</span> com{" "}
-            <span className="font-semibold">{chartMeta.peakItem?.[dataKey] ?? 0} visitantes</span>.
-          </p>
+      {!hasUsableData ? (
+        <div style={{ height }} className="flex flex-col items-center justify-center gap-3 text-center animate-in fade-in duration-500">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/80 text-muted-foreground/60 shadow-inner">
+            <BarChart3 size={24} />
+          </div>
+          <div className="space-y-1 px-4">
+            <h3 className="text-sm font-semibold text-foreground">Sem dados de fluxo</h3>
+            <p className="text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
+              Não foram registradas entradas de visitantes para o período selecionado ({view === "hoje" ? "hoje" : view === "semana" ? "esta semana" : "este mês"}).
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Comparativo</p>
-          <p className="mt-1 text-sm text-foreground">
-            Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
-            com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
-          </p>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div style={{ height }} className="w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={chartData} margin={{ top: 12, right: 12, bottom: 8, left: -10 }}>
+                <defs>
+                  <linearGradient id="entradasGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.96" />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.68" />
+                  </linearGradient>
+                  <linearGradient id="entradasPeakGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0.94" />
+                    <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.70" />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid vertical={false} stroke="rgba(15,58,125,0.08)" />
+                <XAxis
+                  dataKey={nameKey}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  dy={8}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)", fontWeight: 500 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={30}
+                />
+                <Tooltip
+                  cursor={{ fill: "rgba(15,58,125,0.035)" }}
+                  contentStyle={{
+                    borderRadius: "16px",
+                    border: "1px solid var(--border)",
+                    background: "rgba(255,255,255,0.96)",
+                    boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
+                  }}
+                />
+                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={mobileLayout ? 32 : 42}>
+                  {chartData.map((entry, index) => {
+                    const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
+                    return (
+                      <Cell
+                        key={`bar-${entry[nameKey]}-${index}`}
+                        fill={isPeak ? "url(#entradasPeakGradient)" : "url(#entradasGradient)"}
+                      />
+                    );
+                  })}
+                </Bar>
+                <Line
+                  type="monotone"
+                  dataKey={dataKey}
+                  stroke={barColor}
+                  strokeOpacity={0.32}
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 3, fill: "var(--card)", stroke: barColor, strokeWidth: 2 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="mt-5 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automatico</p>
+              <p className="mt-1 text-sm text-foreground">
+                Pico as <span className="font-semibold">{chartMeta.peakItem?.[nameKey] ?? "--"}</span> com{" "}
+                <span className="font-semibold">{chartMeta.peakItem?.[dataKey] ?? 0} visitantes</span>.
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Comparativo</p>
+              <p className="mt-1 text-sm text-foreground">
+                Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
+                com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
+              </p>
+            </div>
+          </div>
+        </>
+      )}
     </section>
   );
 }
