@@ -97,7 +97,7 @@ export function LoginForm({ className, ...props }) {
 
       {/* Cabeçalho */}
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-bold font-heading tracking-tight">
+        <h1 className="text-3xl font-bold font-heading tracking-tight ">
           Bem-vindo de volta
         </h1>
         <p className="text-sm text-muted-foreground">
