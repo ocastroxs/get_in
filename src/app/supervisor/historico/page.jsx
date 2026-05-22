@@ -21,6 +21,7 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -54,6 +55,33 @@ function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
 }
 
+function getExpirationDate(requisicao) {
+  const validade = new Date(requisicao?.validade);
+
+  if (!Number.isNaN(validade.getTime())) {
+    return validade;
+  }
+
+  const dataDaRequisicao = new Date(requisicao?.dataDaRequisicao);
+
+  if (Number.isNaN(dataDaRequisicao.getTime())) {
+    return null;
+  }
+
+  return new Date(dataDaRequisicao.getTime() + 24 * 60 * 60 * 1000);
+}
+
+function getEffectiveStatus(requisicao) {
+  const status = String(requisicao?.status || "pendente").toLowerCase();
+  const expirationDate = getExpirationDate(requisicao);
+
+  if (status === "pendente" && expirationDate && expirationDate.getTime() <= Date.now()) {
+    return "expirado";
+  }
+
+  return status;
+}
+
 function getIdentity(requisicao) {
   const usuario = requisicao.usuario || {};
   return requisicao.idUsuario || usuario.id || usuario.cpf || usuario.email || usuario.nome || requisicao.id;
@@ -75,7 +103,7 @@ function groupByUsuarioEStatus(requisicoes) {
         status,
         usuario,
         empresa: requisicao.empresa || usuario.empresas?.nome || "-",
-        motivo: requisicao.motivo || "-",
+        motivo: normalizeMotivoVisita(requisicao.motivo),
         dataDaRequisicao: requisicao.dataDaRequisicao,
         setores: setor && setor !== "-" ? [setor] : [],
       });
@@ -89,7 +117,7 @@ function groupByUsuarioEStatus(requisicoes) {
     if (new Date(requisicao.dataDaRequisicao).getTime() > new Date(current.dataDaRequisicao).getTime()) {
       current.dataDaRequisicao = requisicao.dataDaRequisicao;
       current.empresa = requisicao.empresa || current.empresa;
-      current.motivo = requisicao.motivo || current.motivo;
+      current.motivo = normalizeMotivoVisita(requisicao.motivo || current.motivo);
     }
   });
 
@@ -208,7 +236,13 @@ export default function HistoricoSupervisorPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            status: getEffectiveStatus(requisicao),
+            motivo: normalizeMotivoVisita(requisicao.motivo),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -241,6 +275,7 @@ export default function HistoricoSupervisorPage() {
   const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
   const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
   const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
+  const countExpirados = requisicoes.filter((r) => r.status === "expirado").length;
 
   async function exportarPDF() {
     if (registrosFiltrados.length === 0) {
@@ -298,10 +333,11 @@ export default function HistoricoSupervisorPage() {
       />
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
           <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Expirados" value={countExpirados} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Mais de 24h pendente" accentVar="#64748b" />
         </div>
 
         <div className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">

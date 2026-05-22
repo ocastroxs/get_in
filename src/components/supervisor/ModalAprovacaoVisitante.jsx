@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCPF, formatPhone } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_STYLE = {
   pendente: "border-amber-200 bg-amber-50 text-amber-700",
@@ -85,7 +86,7 @@ function getSolicitacoes(requisicao) {
     id: item.id,
     setor: getSetorNome(item),
     status: item.status || "pendente",
-    motivo: item.motivo || requisicao?.motivo || "-",
+    motivo: normalizeMotivoVisita(item.motivo || requisicao?.motivo),
     dataDaRequisicao: item.dataDaRequisicao || requisicao?.dataDaRequisicao,
   }));
 }

@@ -103,14 +103,6 @@ function formatDateTime(value) {
   }).format(date);
 }
 
-function isToday(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-
-  const today = new Date();
-  return date.toDateString() === today.toDateString();
-}
-
 function getEmpresaNome(registro) {
   if (typeof registro?.empresas === "string") return registro.empresas;
 
@@ -161,8 +153,44 @@ function hasObservacaoRelevante(value) {
   return Boolean(normalized && !normalized.includes("nenhuma observacao") && normalized !== "nenhuma");
 }
 
-function getObservacoes(registro, descricao) {
+function looksLikeDescricaoCompleta(value) {
+  return /(^|\|)\s*(visitante|cpf|telefone|email|e-mail|empresa|tag rfid|setor|setores permitidos|observa[^:]*):/i.test(String(value || ""));
+}
+
+function getObservacaoFromDescricao(descricao) {
   return pickFirst(
+    getDescricaoValue(descricao, "Observacao da Portaria"),
+    getDescricaoValue(descricao, "Observacao"),
+    getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observação da Portaria"),
+    getDescricaoValue(descricao, "Observação"),
+    getDescricaoValue(descricao, "Observações"),
+    getDescricaoValue(descricao, "ObservaÃ§Ãµes")
+  );
+}
+
+function sanitizeObservacao(...values) {
+  for (const value of values) {
+    const observacaoExtraida = getObservacaoFromDescricao(value);
+
+    if (hasObservacaoRelevante(observacaoExtraida)) {
+      return observacaoExtraida;
+    }
+  }
+
+  for (const value of values) {
+    const observacao = String(value || "").trim();
+
+    if (!looksLikeDescricaoCompleta(observacao) && hasObservacaoRelevante(observacao)) {
+      return observacao;
+    }
+  }
+
+  return "Nenhuma observação cadastrada.";
+}
+
+function getObservacoes(registro, descricao) {
+  return sanitizeObservacao(
     registro?.observacoes,
     getDescricaoValue(descricao, "Observacao da Portaria"),
     getDescricaoValue(descricao, "Observacao"),
@@ -296,15 +324,15 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300">
+      <div className="w-full max-w-lg animate-in zoom-in-95 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl duration-300">
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-              <FileText size={17} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+              <FileText size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Observacoes</h2>
-              <p className="text-xs text-muted-foreground">{requisicao.visitante} - {requisicao.setor}</p>
+              <h2 className="text-lg font-bold text-foreground">Observação da portaria</h2>
+              <p className="text-xs text-muted-foreground">{requisicao.visitante}</p>
             </div>
           </div>
           <button
@@ -317,16 +345,15 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
           </button>
         </div>
 
-        <div className="p-4">
-          <div className="rounded-2xl border border-border bg-background p-4 shadow-xs">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Registro da portaria</p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {requisicao.observacoes || "Nenhuma observacao cadastrada."}
+        <div className="p-5">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-5 shadow-xs dark:border-blue-500/20 dark:bg-blue-950/30">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-950 dark:text-blue-100">
+              {requisicao.observacoes || "Nenhuma observação cadastrada."}
             </p>
           </div>
         </div>
 
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border bg-muted/10 p-4">
           <Button variant="outline" onClick={onClose} className="h-11 w-full rounded-xl" type="button">
             Fechar
           </Button>
@@ -365,7 +392,7 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
           type="button"
         >
           <Eye size={14} />
-          Observacoes
+          Observação
         </Button>
       </td>
     </tr>
@@ -394,7 +421,7 @@ export default function PendenciasPage() {
       const response = await api.get("/portaria/pendencias");
       const pendencias = getResponseArray(response, ["dados", "requisicoes"])
         .map(normalizeRequisicao)
-        .filter((requisicao) => requisicao.status === "pendente" && isToday(requisicao.dataDaRequisicao));
+        .filter((requisicao) => requisicao.status === "pendente");
 
       setRequisicoes(dedupeRequisicoesPorVisitante(pendencias));
     } catch (error) {
@@ -531,7 +558,7 @@ export default function PendenciasPage() {
           <div>
             <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">Requisicoes pendentes</h3>
             <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
-              A lista considera apenas visitantes cadastrados hoje e separa setor responsavel de setores permitidos.
+              A lista considera visitantes ainda dentro do prazo de 24h e separa setor responsavel de setores permitidos.
             </p>
           </div>
         </div>

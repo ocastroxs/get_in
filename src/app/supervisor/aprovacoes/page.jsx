@@ -22,6 +22,7 @@ import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisit
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   todos: "Todos",
@@ -62,14 +63,31 @@ function isToday(value) {
   return date.toDateString() === today.toDateString();
 }
 
+function getExpirationDate(requisicao) {
+  const validade = new Date(requisicao?.validade);
+
+  if (!Number.isNaN(validade.getTime())) {
+    return validade;
+  }
+
+  const dataDaRequisicao = new Date(requisicao?.dataDaRequisicao);
+
+  if (Number.isNaN(dataDaRequisicao.getTime())) {
+    return null;
+  }
+
+  return new Date(dataDaRequisicao.getTime() + 24 * 60 * 60 * 1000);
+}
+
 function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
 }
 
 function getEffectiveStatus(requisicao) {
   const status = String(requisicao?.status || "pendente").toLowerCase();
+  const expirationDate = getExpirationDate(requisicao);
 
-  if (status === "pendente" && !isToday(requisicao?.dataDaRequisicao)) {
+  if (status === "pendente" && expirationDate && expirationDate.getTime() <= Date.now()) {
     return "expirado";
   }
 
@@ -97,12 +115,14 @@ function groupRequisicoes(requisicoes) {
       ...requisicao,
       status: getEffectiveStatus(requisicao),
       setor: getSetorNome(requisicao),
+      motivo: normalizeMotivoVisita(requisicao.motivo),
     };
 
     if (!current) {
       groups.set(key, {
         ...requisicao,
         key,
+        motivo: normalizeMotivoVisita(requisicao.motivo),
         setoresSolicitados: [nextSetor],
       });
       return;
@@ -150,7 +170,7 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
           ))}
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || "-"}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{normalizeMotivoVisita(requisicao.motivo)}</td>
       <td className="whitespace-nowrap px-4 py-3 text-[11px] font-mono text-muted-foreground">
         {formatDateTime(requisicao.dataDaRequisicao)}
       </td>
@@ -202,6 +222,7 @@ export default function AprovacoesSupervisorPage() {
           response.data.map((requisicao) => ({
             ...requisicao,
             status: getEffectiveStatus(requisicao),
+            motivo: normalizeMotivoVisita(requisicao.motivo),
           }))
         );
       } else {
@@ -243,10 +264,9 @@ export default function AprovacoesSupervisorPage() {
   const countAprovadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "aprovado").length;
   const countPendentesHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "pendente").length;
   const countRecusadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "recusado").length;
-  const countAprovados = requisicoes.filter((requisicao) => requisicao.status === "aprovado").length;
-  const countPendentes = requisicoes.filter((requisicao) => requisicao.status === "pendente").length;
-  const countRecusados = requisicoes.filter((requisicao) => requisicao.status === "recusado").length;
-  const countExpirados = requisicoes.filter((requisicao) => requisicao.status === "expirado").length;
+  const countExpiradosHoje = requisicoes.filter((requisicao) => (
+    requisicao.status === "expirado" && isToday(getExpirationDate(requisicao) || requisicao.dataDaRequisicao)
+  )).length;
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
@@ -292,7 +312,7 @@ export default function AprovacoesSupervisorPage() {
             formatCPF(usuario.cpf) || "-",
             r.empresa || "-",
             r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[getEffectiveStatus(item)] || getEffectiveStatus(item)})`).join(", "),
-            r.motivo || "-",
+            normalizeMotivoVisita(r.motivo),
             formatDateTime(r.dataDaRequisicao),
             STATUS_LABEL[r.status] || r.status,
           ];
@@ -312,17 +332,11 @@ export default function AprovacoesSupervisorPage() {
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatCard label="Aprovados de hoje" value={countAprovadosHoje} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
           <StatCard label="Pendentes de hoje" value={countPendentesHoje} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
           <StatCard label="Recusados de hoje" value={countRecusadosHoje} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso nao autorizado" accentVar="var(--destructive)" />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Total autorizado" accentVar="var(--chart-2)" />
-          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Somente hoje" accentVar="var(--warning)" />
-          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Total recusado" accentVar="var(--destructive)" />
-          <StatCard label="Expirados" value={countExpirados} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Pendentes antigos" accentVar="#64748b" />
+          <StatCard label="Expirados de hoje" value={countExpiradosHoje} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Vencidos hoje" accentVar="#64748b" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -367,7 +381,7 @@ export default function AprovacoesSupervisorPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
             <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
-            <p className="text-xs text-muted-foreground">Pendentes valem apenas para hoje; solicitacoes antigas ficam como expiradas.</p>
+            <p className="text-xs text-muted-foreground">Pendentes ficam validas por ate 24h; depois aparecem como expiradas.</p>
           </div>
 
           {loading ? (

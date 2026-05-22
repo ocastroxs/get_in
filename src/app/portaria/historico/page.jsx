@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
+  AlertTriangle, Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,34 +12,23 @@ import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
 
-const STATUS_OPTIONS = ["Todos", "Finalizado", "Pendente", "Em andamento", "Aprovado", "Recusado", "Expirado"];
+const STATUS_OPTIONS = ["Todos", "Finalizado", "Em andamento", "Expirado"];
 
 const STATUS_FILTER_VALUE = {
-  Finalizado: "saida",
-  Pendente: "pendente",
-  "Em andamento": "dentro",
-  Aprovado: "aprovado",
-  Recusado: "recusado",
+  Finalizado: "finalizado",
+  "Em andamento": "em_andamento",
   Expirado: "expirado"
 };
 
 const STATUS_LABEL = {
-  saida: "Finalizado",
-  dentro: "Em andamento",
-  ativo: "Em andamento",
-  pendente: "Pendente",
-  aprovado: "Aprovado",
-  recusado: "Recusado",
+  finalizado: "Finalizado",
+  em_andamento: "Em andamento",
   expirado: "Expirado"
 };
 
 const STATUS_STYLE = {
-  saida: "bg-blue-100 text-blue-700",
-  dentro: "bg-green-100 text-green-700",
-  ativo: "bg-green-100 text-green-700",
-  pendente: "bg-amber-100 text-amber-700",
-  aprovado: "bg-green-100 text-green-700",
-  recusado: "bg-red-100 text-red-600",
+  finalizado: "bg-green-100 text-green-700",
+  em_andamento: "bg-amber-100 text-amber-700",
   expirado: "bg-slate-100 text-slate-700"
 };
 
@@ -123,12 +112,29 @@ function normalizeHistoricoStatus(value, dataSaida, dataEntrada) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-  if (["dentro", "ativo", "liberado"].includes(normalized)) return "dentro";
-  if (["saida", "saiu", "finalizado", "concluido"].includes(normalized)) return "saida";
-  if (["pendente", "aprovado", "recusado", "expirado"].includes(normalized)) return normalized;
-  if (dataSaida) return "saida";
-  if (dataEntrada) return "dentro";
-  return normalized || "pendente";
+  if (normalized === "expirado" || normalized === "expirada") return "expirado";
+  if (["pendente", "aguardando", "em andamento", "em_andamento"].includes(normalized)) return "em_andamento";
+  if (
+    [
+      "aprovado",
+      "aprovada",
+      "recusado",
+      "recusada",
+      "rejeitado",
+      "negado",
+      "saida",
+      "saiu",
+      "dentro",
+      "ativo",
+      "liberado",
+      "finalizado",
+      "concluido"
+    ].includes(normalized)
+  ) {
+    return "finalizado";
+  }
+  if (dataSaida || dataEntrada) return "finalizado";
+  return "em_andamento";
 }
 
 function pickBestCapitalization(current, next) {
@@ -261,7 +267,7 @@ function dedupeRegistrosPorVisitante(registros) {
   const registrosPorVisitante = new Map();
 
   registros.forEach((registro) => {
-    const key = `${getRegistroIdentity(registro)}|${registro.status || "pendente"}`;
+    const key = `${getRegistroIdentity(registro)}|${registro.status || "em_andamento"}`;
     const registroAtual = registrosPorVisitante.get(key);
 
     if (!registroAtual) {
@@ -433,8 +439,8 @@ function LinhaHistorico({ registro, onDetalhes }) {
       <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[registro.status] || STATUS_STYLE.pendente}`}>
-          {STATUS_LABEL[registro.status] || registro.status || "Pendente"}
+        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[registro.status] || STATUS_STYLE.em_andamento}`}>
+          {STATUS_LABEL[registro.status] || registro.status || "Em andamento"}
         </span>
       </td>
       <td className="px-4 py-3 text-right">
@@ -528,20 +534,10 @@ export default function HistoricoPage() {
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
-    "Em andamento": registros.filter((r) => ["dentro", "ativo"].includes(r.status)).length,
-    Finalizadas: registros.filter((r) => r.status === "saida").length,
-    Finalizado: registros.filter((r) => r.status === "saida").length,
-    Pendente: registros.filter((r) => r.status === "pendente").length,
-    Aprovado: registros.filter((r) => r.status === "aprovado").length,
-    Recusado: registros.filter((r) => r.status === "recusado").length,
+    "Em andamento": registros.filter((r) => r.status === "em_andamento").length,
+    Finalizado: registros.filter((r) => r.status === "finalizado").length,
     Expirado: registros.filter((r) => r.status === "expirado").length,
   }), [registros]);
-
-  const empresasDistintas = useMemo(() => new Set(
-    registros
-      .map((registro) => String(registro.empresa || "").trim().toLowerCase())
-      .filter(Boolean)
-  ).size, [registros]);
 
   function handleDetalhes(registro) {
     setRegistroSelecionado(registro);
@@ -628,23 +624,23 @@ export default function HistoricoPage() {
         <StatCard
           label="Em andamento"
           value={resumoStatus["Em andamento"]}
-          icon={<LogIn size={18} className="text-green-600" />}
-          accentVar="#16a34a"
-          sub="Sem saida registrada"
-        />
-        <StatCard
-          label="Finalizadas"
-          value={resumoStatus.Finalizadas}
-          icon={<LogOut size={18} className="text-red-600" />}
-          accentVar="#dc2626"
-          sub="Com status finalizado"
-        />
-        <StatCard
-          label="Empresas"
-          value={empresasDistintas}
-          icon={<Building2 size={18} className="text-amber-600" />}
+          icon={<LogIn size={18} className="text-amber-600" />}
           accentVar="#d97706"
-          sub="Distintas no periodo"
+          sub="Requisicoes pendentes"
+        />
+        <StatCard
+          label="Finalizado"
+          value={resumoStatus.Finalizado}
+          icon={<LogOut size={18} className="text-green-600" />}
+          accentVar="#16a34a"
+          sub="Aceitas ou recusadas"
+        />
+        <StatCard
+          label="Expirado"
+          value={resumoStatus.Expirado}
+          icon={<AlertTriangle size={18} className="text-slate-600" />}
+          accentVar="#64748b"
+          sub="Mais de 24h pendente"
         />
       </div>
 

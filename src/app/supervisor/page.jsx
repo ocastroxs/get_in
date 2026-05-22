@@ -25,6 +25,7 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -51,6 +52,21 @@ function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
 }
 
+function getRequisicaoTimestamp(requisicao) {
+  const timestamp = new Date(requisicao?.dataDaRequisicao || requisicao?.validade).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortRequisicoesDesc(a, b) {
+  const timestampDiff = getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a);
+
+  if (timestampDiff !== 0) {
+    return timestampDiff;
+  }
+
+  return Number(b?.id || 0) - Number(a?.id || 0);
+}
+
 export default function SupervisorDashboardPage() {
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,7 +87,12 @@ export default function SupervisorDashboardPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            motivo: normalizeMotivoVisita(requisicao.motivo),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -83,8 +104,13 @@ export default function SupervisorDashboardPage() {
     }
   }
 
+  const ultimasRequisicoes = useMemo(
+    () => [...requisicoes].sort(sortRequisicoesDesc).slice(0, 10),
+    [requisicoes]
+  );
+
   const requisicoesFiltradas = useMemo(() => {
-    return requisicoes.filter((requisicao) => {
+    return ultimasRequisicoes.filter((requisicao) => {
       const usuario = requisicao.usuario || {};
       const termoBusca = busca.toLowerCase();
       const matchBusca =
@@ -97,12 +123,12 @@ export default function SupervisorDashboardPage() {
 
       return matchBusca && matchStatus;
     });
-  }, [requisicoes, busca, filtroStatus]);
+  }, [ultimasRequisicoes, busca, filtroStatus]);
 
-  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
-  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
-  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
-  const countTotal = requisicoes.length;
+  const countPendentes = ultimasRequisicoes.filter((r) => r.status === "pendente").length;
+  const countAprovados = ultimasRequisicoes.filter((r) => r.status === "aprovado").length;
+  const countRecusados = ultimasRequisicoes.filter((r) => r.status === "recusado").length;
+  const countTotal = ultimasRequisicoes.length;
 
   const aplicarFiltros = () => setFiltroStatus(tempFiltroStatus);
 
@@ -143,7 +169,7 @@ export default function SupervisorDashboardPage() {
             formatCPF(usuario.cpf) || "-",
             requisicao.empresa || "-",
             getSetorNome(requisicao),
-            requisicao.motivo || "-",
+            normalizeMotivoVisita(requisicao.motivo),
             formatDateTime(requisicao.dataDaRequisicao),
             STATUS_LABEL[requisicao.status] || requisicao.status || "Pendente",
           ];
@@ -159,17 +185,17 @@ export default function SupervisorDashboardPage() {
     <>
       <Topbar
         title="Dashboard do Supervisor"
-        subtitle="Visao geral das solicitacoes de visitantes"
+        subtitle="Visao geral das ultimas 10 solicitacoes de visitantes"
         buttonText="Analisar pendentes"
         buttonHref="/supervisor/aprovacoes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Requisicoes" />
-          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub={`${countAprovados} setor(es)`} />
-          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Acao necessaria" : "Nenhuma"} />
-          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub={`${countRecusados} rejeitado(s)`} />
+          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Ultimas 10 requisicoes" />
+          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub="Nas ultimas 10" />
+          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Nas ultimas 10" : "Nenhuma nas ultimas 10"} />
+          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub="Nas ultimas 10" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -213,8 +239,8 @@ export default function SupervisorDashboardPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
             <div>
-              <h2 className="text-sm font-bold text-foreground">Listagem de Requisicoes</h2>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">Historico e pendencias recentes por setor</p>
+              <h2 className="text-sm font-bold text-foreground">Ultimas 10 Requisicoes</h2>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">KPIs, filtros e tabela consideram apenas as ultimas 10 solicitacoes</p>
             </div>
             <Clock size={20} className="text-primary opacity-60" />
           </div>
@@ -242,7 +268,7 @@ export default function SupervisorDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {requisicoesFiltradas.slice(0, 10).map((requisicao) => {
+                  {requisicoesFiltradas.map((requisicao) => {
                     const usuario = requisicao.usuario || {};
                     const status = requisicao.status || "pendente";
                     const statusColor = {
@@ -262,7 +288,7 @@ export default function SupervisorDashboardPage() {
                         </td>
                         <td className="px-4 py-3">
                           <p className="text-sm text-foreground">{requisicao.empresa || "-"}</p>
-                          <p className="mt-1 text-[11px] text-muted-foreground">{requisicao.motivo || "-"}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{normalizeMotivoVisita(requisicao.motivo)}</p>
                         </td>
                         <td className="px-4 py-3 text-xs font-semibold text-foreground">{getSetorNome(requisicao)}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-[10px] font-mono text-muted-foreground">
@@ -315,7 +341,7 @@ export default function SupervisorDashboardPage() {
             Status da Requisicao
           </label>
           <div className="grid grid-cols-1 gap-2">
-            {["Todos", "Pendente", "Aprovado", "Recusado"].map((status) => (
+            {["Todos", "Pendente", "Aprovado", "Recusado", "Expirado"].map((status) => (
               <button
                 key={status}
                 type="button"
