@@ -1,29 +1,53 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const ParticlesBackground = () => {
   const canvasRef = useRef(null);
+  
+  // Controle do fundo em CSS
+  const [isDarkState, setIsDarkState] = useState(true);
+  const particlesArrayRef = useRef([]);
 
+  // ─── EFEITO 1: MONITORAMENTO BLINDADO (FORÇA BRUTA) ────────────────────────
+  useEffect(() => {
+    // Essa função lê a classe real do DOM (impossível de falhar)
+    const syncTheme = () => {
+      const isDarkActive = document.documentElement.classList.contains('dark');
+      setIsDarkState(isDarkActive);
+    };
+
+    // Sincroniza logo que carrega
+    syncTheme();
+
+    // Sincroniza via evento da Sidebar
+    window.addEventListener('themeChanged', syncTheme);
+    
+    // BACKUP INFALÍVEL: Checa a cada 150ms se a classe mudou. 
+    // Assim, se o evento falhar, o fundo muda sozinho!
+    const intervalId = setInterval(syncTheme, 150);
+
+    return () => {
+      window.removeEventListener('themeChanged', syncTheme);
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // ─── EFEITO 2: LOOP DE ANIMAÇÃO DIRETO DO DOM ──────────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
 
-    // Configuração inicial
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Classe Partícula
     class Particle {
       constructor() {
         this.reset();
       }
-
       reset() {
         this.x = Math.random() * canvas.width;
         this.y = Math.random() * canvas.height;
@@ -32,40 +56,44 @@ const ParticlesBackground = () => {
         this.speedY = (Math.random() - 0.5) * 0.5;
         this.opacity = Math.random() * 0.5 + 0.1;
       }
-
       update() {
         this.x += this.speedX;
         this.y += this.speedY;
-
-        // Reposiciona se sair da tela
         if (this.x > canvas.width) this.x = 0;
         else if (this.x < 0) this.x = canvas.width;
         if (this.y > canvas.height) this.y = 0;
         else if (this.y < 0) this.y = canvas.height;
       }
-
-      draw() {
-        ctx.fillStyle = `rgba(77, 168, 234, ${this.opacity})`; // Cor #4DA8EA (azul claro do seu sistema)
+      draw(ctx, particleRgb) {
+        ctx.fillStyle = `rgba(${particleRgb}, ${this.opacity})`;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // Criar array de partículas
-    const particlesCount = Math.min(100, Math.floor((canvas.width * canvas.height) / 15000));
-    const particlesArray = Array.from({ length: particlesCount }, () => new Particle());
+    if (particlesArrayRef.current.length === 0) {
+      const particlesCount = Math.min(100, Math.floor((canvas.width * canvas.height) / 15000));
+      particlesArrayRef.current = Array.from({ length: particlesCount }, () => new Particle());
+    }
+    const particlesArray = particlesArrayRef.current;
 
-    // Loop de animação
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      // A MÁGICA ESTÁ AQUI: 
+      // Lemos o DOM diretamente a cada frame! Se a Sidebar tirou o dark, ele desenha claro na mesma hora.
+      const isDark = document.documentElement.classList.contains('dark');
+      
+      // Cores baseadas puramente na leitura do DOM acima
+      const lineRgb = isDark ? '255, 255, 255' : '0, 0, 0'; // Linha Branca no escuro, Preta no claro
+      const particleRgb = isDark ? '255, 255, 255' : '77, 168, 234'; // Bolinha Branca no escuro, Azul no claro
+      
       particlesArray.forEach(particle => {
         particle.update();
-        particle.draw();
+        particle.draw(ctx, particleRgb);
       });
 
-      // Desenhar linhas entre partículas próximas
       for (let i = 0; i < particlesArray.length; i++) {
         for (let j = i; j < particlesArray.length; j++) {
           const dx = particlesArray[i].x - particlesArray[j].x;
@@ -73,7 +101,7 @@ const ParticlesBackground = () => {
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance < 150) {
-            ctx.strokeStyle = `rgba(0, 0, 0, ${0.1 * (1 - distance / 150)})`;
+            ctx.strokeStyle = `rgba(${lineRgb}, ${0.1 * (1 - distance / 150)})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(particlesArray[i].x, particlesArray[i].y);
@@ -83,14 +111,14 @@ const ParticlesBackground = () => {
         }
       }
 
-      animationFrameId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     };
 
-    animate();
+    const animationId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
-      cancelAnimationFrame(animationFrameId);
+      cancelAnimationFrame(animationId);
     };
   }, []);
 
@@ -105,7 +133,10 @@ const ParticlesBackground = () => {
         height: '100%',
         zIndex: -1,
         pointerEvents: 'none',
-        background: 'linear-gradient(to bottom, #F8FAFC, #b2d2fd)' // Sutil gradiente de fundo
+        transition: 'background 0.5s ease-in-out',
+        // Troquei o #0A2540 por #020C17 (Marinho super escuro). 
+        // Se quiser preto total, use '#000000'
+        background: isDarkState ? '#020C17' : '#ffffff'
       }}
     />
   );

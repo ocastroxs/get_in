@@ -40,27 +40,74 @@ const TIPO_ICON = {
   adm: <Briefcase size={14} />,
 };
 
+// Função para garantir que o Excel trate o CPF como texto (com pontos e traço)
+const formatarCpfParaCSV = (cpf) => {
+  if (!cpf) return "—";
+  const cpfLimpo = String(cpf).replace(/\D/g, "");
+  // Formata o CPF. A presença dos pontos e traço impede o Excel de converter para número matemático
+  return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+};
+const formatarTelefone = (tel) => {
+  if (!tel) return "";
+  const t = String(tel).replace(/\D/g, "");
+  if (t.length === 11) {
+    return t.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+  }
+  return t; // Retorna o bruto se não tiver 11 dígitos
+};
+
+
 function toCSV(rows) {
-  const cols = ["Nome", "CPF", "Email", "Telefone", "Departamento", "Tipo"];
-  const lines = rows.map((r) =>
-    [r.nome, r.cpf, r.email, r.celular || r.telefone || "—", r.departamento || "—", TIPO_LABEL[r.tipo] || r.tipo].join(";")
-  );
+  const cols = ["Nome", "CPF", "Email", "Telefone", "Departamento", "Nível de Acesso"];
+  
+  const lines = rows.map((r) => {
+    const nome = r.usuario_nome || "Sem Nome";
+    const cpf = formatarCpfParaCSV(r.cpf);
+    const email = r.email || "—";
+    
+    // O TRUQUE PARA O TELEFONE:
+    // Envolver em =" " força o Excel a mostrar exatamente o que está dentro das aspas como texto
+    const telBruto = r.celular || r.telefone || "";
+    const telefone = telBruto ? `="${formatarTelefone(telBruto)}"` : "—";
+    
+    const departamento = r.departamento_nome || "Geral";
+    const tipo = TIPO_LABEL[r.cargo] || r.cargo || r.tipo || "—";
+
+    return [nome, cpf, email, telefone, departamento, tipo].join(";");
+  });
+  
   return [cols.join(";"), ...lines].join("\n");
 }
 
 function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
+  // O "\uFEFF" garante que os acentos fiquem certos no Excel
+  const blob = new Blob(["\uFEFF" + toCSV(data)], { type: "text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-  a.href = url; a.download = "funcionarios.csv"; a.click();
+  a.href = url; 
+  a.download = "funcionarios.csv"; 
+  a.click();
   URL.revokeObjectURL(url);
 }
+
 
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
 function LinhaFuncionario({ f }) {
   // Se f não existir por algum motivo bizarro, paramos aqui
   if (!f) return null;
+  const formatarCPF = (cpf) => {
+   if (!cpf) return "000.000.000-00";
+  
+  // Remove qualquer caractere que não seja número
+  const cpfLimpo = cpf.replace(/\D/g, "");
+
+  // Aplica a máscara usando Regex
+  return cpfLimpo
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  };
   
   // Se o nome não existir, usamos um placeholder para não quebrar o .charAt(0)
   const nomeExibicao = f.usuario_nome || "Usuário sem Nome";
@@ -78,7 +125,7 @@ function LinhaFuncionario({ f }) {
               {nomeExibicao}
             </div>
             <div className="text-[11px] text-muted-foreground font-mono">
-              {f.cpf || "000.000.000-00"}
+              {f.cpf ? formatarCPF(f.cpf) : "000.000.000-00"}
             </div>
           </div>
         </div>
@@ -341,7 +388,7 @@ export default function FuncionariosPage() {
                 </tr>
               ) : filtrados.length > 0 ? (
                 filtrados.map((f) => (
-                  <LinhaFuncionario key={f.id} f={f} />
+                  <LinhaFuncionario key={f.id || f.cpf || index} f={f} />
                 ))
               ) : (
                 <tr>
