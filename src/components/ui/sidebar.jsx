@@ -15,13 +15,23 @@ export default function UnifiedSoftSidebar() {
   const [isThreadsOpen2, setIsThreadsOpen2] = useState(true);
   // --- LÓGICA DE TEMA ADICIONADA ---
   const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const isDarkMode = document.documentElement.classList.contains('dark');
-    setIsDark(isDarkMode);
-    if (!isDarkMode) {
+useEffect(() => {
+    // 1. Checa se existe uma preferência salva no navegador
+    const savedTheme = localStorage.getItem('app_theme');
+    
+    if (savedTheme) {
+      const shouldBeDark = savedTheme === 'dark';
+      setIsDark(shouldBeDark);
+      if (shouldBeDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      // 2. Se não houver nada salvo, define 'dark' como o padrão inicial do projeto
       document.documentElement.classList.add('dark');
       setIsDark(true);
+      localStorage.setItem('app_theme', 'dark');
     }
   }, []);
 
@@ -29,10 +39,16 @@ export default function UnifiedSoftSidebar() {
     const html = document.documentElement;
     html.classList.toggle('dark');
     const isNowDark = html.classList.contains('dark');
+    
     setIsDark(isNowDark);
+    
+    // Salva a nova escolha do usuário para a próxima página lembrar
+    localStorage.setItem('app_theme', isNowDark ? 'dark' : 'light');
+    
+    // Dispara o evento para atualizar o fundo de partículas instantaneamente
     window.dispatchEvent(new CustomEvent('themeChanged', { detail: isNowDark }));
   };
-  // --------------------------------
+  // --------------- 
 
   return (
     <>
