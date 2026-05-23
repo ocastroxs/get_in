@@ -14,6 +14,7 @@ import {
   Shield,
   Smartphone,
   User,
+  LogOut, // Importado o ícone de Sair
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,8 @@ function loadNotificationPreferences() {
 }
 
 export default function ConfiguracoesPage() {
-  const { user, funcionario, updateAuthData } = useAuth();
+  // Puxando a função de logout direto do seu Contexto de Autenticação
+  const { user, funcionario, updateAuthData, logout } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
   const tipoAtual = getAuthTipo(funcionario, user);
@@ -186,7 +188,7 @@ export default function ConfiguracoesPage() {
 
       showToast({
         type: "success",
-        title: "Perfil atualizado",
+        title: "Perfil updated",
         description: "Suas informações foram salvas.",
       });
     } catch (error) {
@@ -266,7 +268,7 @@ export default function ConfiguracoesPage() {
 
     const funcionarioId = perfil.funcionarioId || funcionario?.id;
 
-      if (!funcionarioId) {
+    if (!funcionarioId) {
       showToast({
         type: "error",
         title: "Foto não enviada",
@@ -293,7 +295,7 @@ export default function ConfiguracoesPage() {
 
       showToast({
         type: "success",
-        title: "Foto atualizada",
+        title: "Foto updated",
         description: "Sua foto de perfil foi alterada.",
       });
     } catch (error) {
@@ -308,6 +310,15 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  // Função interna para disparar o logout global do app
+  const handleSairDoSistema = () => {
+    try {
+      logout();
+    } catch (error) {
+      console.error("Erro ao efetuar logout:", error);
+    }
+  };
+
   return (
     <>
       <Topbar
@@ -316,10 +327,25 @@ export default function ConfiguracoesPage() {
       />
 
       <div className="space-y-6 animate-in fade-in duration-700">
-        <div className="flex gap-2 overflow-x-auto border-b border-border">
-          <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
-          <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
-          <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
+        
+        {/* CONTAINER DAS ABAS MODIFICADO: Justify entre abas e o botão de Sair */}
+        <div className="flex items-center justify-between border-b border-border gap-4 overflow-x-auto">
+          <div className="flex gap-2">
+            <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
+            <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
+            <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
+          </div>
+
+          {/* NOVO: Botão de Sair posicionado à direita das abas de navegação */}
+          <Button 
+            type="button" 
+            variant="destructive" 
+            className="h-9 gap-2 rounded-xl text-xs md:text-sm font-semibold mb-2"
+            onClick={handleSairDoSistema}
+          >
+            <LogOut size={14} />
+            Sair do Sistema
+          </Button>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">

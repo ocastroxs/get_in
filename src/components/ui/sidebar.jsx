@@ -5,14 +5,14 @@ import { usePathname } from 'next/navigation';
 import { 
   Home, MessageSquare, Plus, CreditCard, 
   Inbox, Folder, Calendar, Compass, Minus, Users, 
-  UserSquare2, PanelLeftClose, PanelLeft, Sun, Moon
+  UserSquare2, PanelLeftClose, PanelLeft, Sun, Moon, Bolt
 } from 'lucide-react';
 
 export default function UnifiedSoftSidebar() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(true);
   const [isThreadsOpen, setIsThreadsOpen] = useState(true);
-
+  const [isThreadsOpen2, setIsThreadsOpen2] = useState(true);
   // --- LÓGICA DE TEMA ADICIONADA ---
   const [isDark, setIsDark] = useState(true);
 
@@ -101,7 +101,6 @@ export default function UnifiedSoftSidebar() {
             href="/dashboard/visitantes" 
             icon={<Users size={20} strokeWidth={1.5} />} 
             label="Visitantes" 
-            suffix={<Plus size={16} strokeWidth={1.5} className="text-gray-400" />}
           />
           
           <NavItem 
@@ -150,6 +149,45 @@ export default function UnifiedSoftSidebar() {
             </div>
           </div>
         </div>
+        <br></br>
+
+                {/* Seção Acordeão 2*/}
+        <div className="flex flex-col">
+          <div 
+            onClick={() => {
+              if (!isExpanded) setIsExpanded(true);
+              setIsThreadsOpen2(!isThreadsOpen2);
+            }}
+            className={`
+              flex items-center cursor-pointer transition-all duration-300
+              ${isExpanded 
+                ? 'justify-between px-4 py-3 bg-[#18181b] dark:bg-[#4DA8EA] text-white rounded-[20px] shadow-lg shadow-blue-500/10' 
+                : 'justify-center p-3 mx-auto bg-white dark:bg-white/5 text-black dark:text-white shadow-sm rounded-full w-12 h-12 border border-gray-100 dark:border-white/10'
+              }
+            `}
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="min-w-[20px]">
+                <Inbox size={20} strokeWidth={1.5} className={(!isExpanded && !isDark) ? "text-black" : "text-white"} />
+              </div>
+              {isExpanded && <span className="text-[14px] font-medium whitespace-nowrap">Acesso</span>}
+            </div>
+            {isExpanded && (
+              isThreadsOpen2 ? <Minus size={16} strokeWidth={1.5} /> : <Plus size={16} strokeWidth={1.5} />
+            )}
+          </div>
+
+          <div className={`grid transition-all duration-300 ease-in-out ${isExpanded && isThreadsOpen2 ? 'grid-rows-[1fr] opacity-100 mt-2' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+              <div className="ml-7 pl-4 border-l border-gray-300/80 dark:border-white/10 flex flex-col gap-1 py-1">
+                <SubItem href="/dashboard/circulacao" label="Circulação" active={pathname === '/dashboard/circulacao'} />
+                <SubItem href="/dashboard/permissao" label="Permissões" active={pathname === '/dashboard/permissao'} /> 
+                
+              </div>
+            </div>
+          </div>
+        </div>
+        
 
         {/* Navegação Inferior */}
         <div className="mt-4 flex flex-col gap-2">
@@ -160,10 +198,14 @@ export default function UnifiedSoftSidebar() {
             icon={<Compass size={20} strokeWidth={1.5} />} 
             label="Relatórios" 
           />
+
         </div>
 
+
+
+            
         <div className="mt-auto pt-8">
-          <NavItem isExpanded={isExpanded} href="/configuracoes" icon={<CreditCard size={20} strokeWidth={1.5} />} label="Assinatura" />
+          <NavItem isExpanded={isExpanded} href="/configuracoes" icon={<Bolt size={20} strokeWidth={1.5} />} label="Configurações" />
         </div>
       </aside>
 
