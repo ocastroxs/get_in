@@ -160,7 +160,7 @@ export function FloatingAboutBubble() {
       <div
         ref={bubbleRef}
         className={cn(
-          "fixed bottom-2 right-2 z-40 flex items-center justify-center", // Reduzido de bottom-6 right-6
+          "fixed bottom-2 right-2 z-100 flex items-center justify-center", // Reduzido de bottom-6 right-6
           isDragging 
             ? "cursor-grabbing" 
             : "cursor-grab transition-transform duration-300 ease-out" 
