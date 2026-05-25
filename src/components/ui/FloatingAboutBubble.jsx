@@ -26,11 +26,11 @@ const TEAM = [
     avatar: "https://github.com/FernandoSnchs.png",
   },
   {
-    nome: "Bia Costa",
-    cargo: "Frontend Developer",
-    github: "https://github.com/",
+    nome: "Castro",
+    cargo: "Líder",
+    github: "https://github.com/ocastroxs",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bia",
+    avatar: "https://github.com/ocastroxs.png",
   },
   {
     nome: "Carlos Lima",

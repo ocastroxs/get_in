@@ -103,6 +103,33 @@ function AnimatedTitle() {
    Canvas de partículas adaptado para o painel
    escuro (azul marinho) do lado esquerdo
 ───────────────────────────────────────────── */
+function createPanelParticle(canvas) {
+  return {
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 1.8 + 0.6,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    opacity: Math.random() * 0.45 + 0.08
+  }
+}
+
+function updatePanelParticle(particle, canvas) {
+  particle.x += particle.vx
+  particle.y += particle.vy
+  if (particle.x > canvas.width) particle.x = 0
+  else if (particle.x < 0) particle.x = canvas.width
+  if (particle.y > canvas.height) particle.y = 0
+  else if (particle.y < 0) particle.y = canvas.height
+}
+
+function drawPanelParticle(particle, ctx) {
+  ctx.fillStyle = `rgba(96, 165, 250, ${particle.opacity})`
+  ctx.beginPath()
+  ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 function PanelParticles() {
   const canvasRef = useRef(null)
 
@@ -119,38 +146,15 @@ function PanelParticles() {
     window.addEventListener("resize", resize)
     resize()
 
-    class Particle {
-      constructor() { this.reset() }
-      reset() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
-        this.size = Math.random() * 1.8 + 0.6
-        this.vx = (Math.random() - 0.5) * 0.4
-        this.vy = (Math.random() - 0.5) * 0.4
-        this.opacity = Math.random() * 0.45 + 0.08
-      }
-      update() {
-        this.x += this.vx
-        this.y += this.vy
-        if (this.x > canvas.width)  this.x = 0
-        else if (this.x < 0)        this.x = canvas.width
-        if (this.y > canvas.height) this.y = 0
-        else if (this.y < 0)        this.y = canvas.height
-      }
-      draw() {
-        ctx.fillStyle = `rgba(96, 165, 250, ${this.opacity})`
-        ctx.beginPath()
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
-
     const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 12000))
-    const particles = Array.from({ length: count }, () => new Particle())
+    const particles = Array.from({ length: count }, () => createPanelParticle(canvas))
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      particles.forEach(p => { p.update(); p.draw() })
+      particles.forEach(p => {
+        updatePanelParticle(p, canvas)
+        drawPanelParticle(p, ctx)
+      })
 
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {

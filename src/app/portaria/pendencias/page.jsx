@@ -157,15 +157,19 @@ function looksLikeDescricaoCompleta(value) {
   return /(^|\|)\s*(visitante|cpf|telefone|email|e-mail|empresa|tag rfid|setor|setores permitidos|observa[^:]*):/i.test(String(value || ""));
 }
 
+const OBSERVACAO_DESCRICAO_LABELS = [
+  "Observacao da Portaria",
+  "Observacao",
+  "Observacoes",
+  "Observação da Portaria",
+  "Observação",
+  "Observações",
+  "Observa\u00c3\u00a7\u00c3\u00b5es"
+];
+
 function getObservacaoFromDescricao(descricao) {
   return pickFirst(
-    getDescricaoValue(descricao, "Observacao da Portaria"),
-    getDescricaoValue(descricao, "Observacao"),
-    getDescricaoValue(descricao, "Observacoes"),
-    getDescricaoValue(descricao, "Observação da Portaria"),
-    getDescricaoValue(descricao, "Observação"),
-    getDescricaoValue(descricao, "Observações"),
-    getDescricaoValue(descricao, "ObservaÃ§Ãµes")
+    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label))
   );
 }
 
@@ -192,12 +196,7 @@ function sanitizeObservacao(...values) {
 function getObservacoes(registro, descricao) {
   return sanitizeObservacao(
     registro?.observacoes,
-    getDescricaoValue(descricao, "Observacao da Portaria"),
-    getDescricaoValue(descricao, "Observacao"),
-    getDescricaoValue(descricao, "Observacoes"),
-    getDescricaoValue(descricao, "Observação da Portaria"),
-    getDescricaoValue(descricao, "Observação"),
-    getDescricaoValue(descricao, "Observações"),
+    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label)),
     "Nenhuma observação cadastrada."
   );
 }

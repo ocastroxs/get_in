@@ -21,6 +21,7 @@ import {
   Users,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
+import SidebarUserProfile from '@/components/SidebarUserProfile';
 
 const MAIN_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -97,7 +98,7 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="mx-auto mb-6 rounded-lg p-1.5 text-gray-400 transition-colors hover:text-black dark:hover:text-white"
+            className="mx-auto mb-6 flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
             aria-label="Expandir menu lateral"
           >
             <PanelLeft size={20} strokeWidth={1.5} />
@@ -164,7 +165,12 @@ export default function Sidebar() {
           ))}
         </div>
 
-        <div className="mt-auto pt-8">
+        <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
+          <SidebarUserProfile
+            isExpanded={isExpanded}
+            fallbackName="Administrador"
+            fallbackEmail="admin@getin.com"
+          />
           <NavItem
             isExpanded={isExpanded}
             href="/configuracoes"
@@ -185,17 +191,17 @@ export default function Sidebar() {
 
 function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) {
   return (
-    <div className={`mb-8 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-4'}`}>
+    <div className={`mb-8 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
       <div className={isExpanded ? 'min-w-0 overflow-hidden' : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5'}>
         <BrandLogo variant="dark" compact={!isExpanded} className="dark:hidden" />
         <BrandLogo variant="light" compact={!isExpanded} className="hidden dark:flex" />
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={onToggleTheme}
-          className="rounded-xl border border-gray-200 bg-white/50 p-2 text-gray-600 transition-all active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white/50 text-gray-600 transition-all active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
           title={isDark ? 'Modo claro' : 'Modo escuro'}
           aria-label={isDark ? 'Alternar para o modo claro' : 'Alternar para o modo escuro'}
         >
@@ -206,7 +212,7 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) 
           <button
             type="button"
             onClick={onToggleExpanded}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:text-black dark:hover:text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
             aria-label="Recolher menu lateral"
           >
             <PanelLeftClose size={20} strokeWidth={1.5} />

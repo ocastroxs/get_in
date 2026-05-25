@@ -14,7 +14,7 @@ export default function BrandLogo({ variant = "light", compact = false, classNam
             isLight ? "text-white" : "text-[#0A2540]"
           )}
         >
-          G<span className="text-[#4DA8EA]">I</span>
+          G
         </p>
       ) : (
         <div className="leading-none">

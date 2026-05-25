@@ -1,6 +1,33 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 
+function createParticle(canvas) {
+  return {
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 2 + 1,
+    speedX: (Math.random() - 0.5) * 0.5,
+    speedY: (Math.random() - 0.5) * 0.5,
+    opacity: Math.random() * 0.5 + 0.1
+  };
+}
+
+function updateParticle(particle, canvas) {
+  particle.x += particle.speedX;
+  particle.y += particle.speedY;
+  if (particle.x > canvas.width) particle.x = 0;
+  else if (particle.x < 0) particle.x = canvas.width;
+  if (particle.y > canvas.height) particle.y = 0;
+  else if (particle.y < 0) particle.y = canvas.height;
+}
+
+function drawParticle(particle, ctx, particleRgb) {
+  ctx.fillStyle = `rgba(${particleRgb}, ${particle.opacity})`;
+  ctx.beginPath();
+  ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 const ParticlesBackground = () => {
   const canvasRef = useRef(null);
   
@@ -44,39 +71,12 @@ const ParticlesBackground = () => {
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    class Particle {
-      constructor() {
-        this.reset();
-      }
-      reset() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.size = Math.random() * 2 + 1;
-        this.speedX = (Math.random() - 0.5) * 0.5;
-        this.speedY = (Math.random() - 0.5) * 0.5;
-        this.opacity = Math.random() * 0.5 + 0.1;
-      }
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-        if (this.x > canvas.width) this.x = 0;
-        else if (this.x < 0) this.x = canvas.width;
-        if (this.y > canvas.height) this.y = 0;
-        else if (this.y < 0) this.y = canvas.height;
-      }
-      draw(ctx, particleRgb) {
-        ctx.fillStyle = `rgba(${particleRgb}, ${this.opacity})`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
     if (particlesArrayRef.current.length === 0) {
       const particlesCount = Math.min(100, Math.floor((canvas.width * canvas.height) / 15000));
-      particlesArrayRef.current = Array.from({ length: particlesCount }, () => new Particle());
+      particlesArrayRef.current = Array.from({ length: particlesCount }, () => createParticle(canvas));
     }
     const particlesArray = particlesArrayRef.current;
+    let animationId;
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -90,8 +90,8 @@ const ParticlesBackground = () => {
       const particleRgb = isDark ? '255, 255, 255' : '77, 168, 234'; // Bolinha Branca no escuro, Azul no claro
       
       particlesArray.forEach(particle => {
-        particle.update();
-        particle.draw(ctx, particleRgb);
+        updateParticle(particle, canvas);
+        drawParticle(particle, ctx, particleRgb);
       });
 
       for (let i = 0; i < particlesArray.length; i++) {
@@ -111,10 +111,10 @@ const ParticlesBackground = () => {
         }
       }
 
-      requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
 
-    const animationId = requestAnimationFrame(animate);
+    animationId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
