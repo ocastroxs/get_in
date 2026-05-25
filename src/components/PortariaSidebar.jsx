@@ -58,7 +58,7 @@ export default function PortariaSidebar() {
       <aside
         className={`
           fixed left-0 top-0 z-50 flex h-screen flex-col
-          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7] py-6
+          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7] pt-8 pb-6
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
           dark:border-white/10 dark:bg-[#020C17]
           ${isExpanded ? 'w-[300px] px-4' : 'w-[80px] px-2'}
@@ -129,13 +129,13 @@ export default function PortariaSidebar() {
 
 function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) {
   return (
-    <div className={`mb-8 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
+    <div className={`mb-7 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
       <div className={isExpanded ? 'min-w-0 overflow-hidden' : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5'}>
         <BrandLogo variant="dark" compact={!isExpanded} className="dark:hidden" />
         <BrandLogo variant="light" compact={!isExpanded} className="hidden dark:flex" />
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onToggleTheme}
