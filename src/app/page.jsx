@@ -9,7 +9,7 @@ import { publicService } from "@/services/api"
 import BrandLogo from "@/components/BrandLogo"
 
 /* ─────────────────────────────────────────────
-   Componente de Título Animado (da branch castro)
+   Componente de Título Animado
 ───────────────────────────────────────────── */
 const TITLES = [
   {
@@ -211,25 +211,21 @@ export default function LoginPage() {
   const { isAuthenticated, isLoading: authLoading, funcionario, user } = useAuth();
   const router = useRouter();
   
-  // Estados para estatísticas reais
   const [stats, setStats] = useState({
     visitasHoje: "0",
     usuariosTotal: "0",
     setoresTotal: "0"
   });
 
-  // Se já estiver autenticado, redireciona para o dashboard
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       const redirectTo = getFlowRouteByTipo(getAuthTipo(funcionario, user));
-
       if (redirectTo !== "/") {
         router.replace(redirectTo);
       }
     }
   }, [isAuthenticated, authLoading, funcionario, router, user]);
 
-  // Busca estatísticas reais do back-end
   useEffect(() => {
     const fetchStats = async () => {
       const response = await publicService.getStats();
@@ -243,13 +239,13 @@ export default function LoginPage() {
     };
 
     fetchStats();
-    // Opcional: Atualizar a cada 5 minutos
     const interval = setInterval(fetchStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
   if (authLoading) {
     return (
+      /* Forçando fundo estritamente branco e spinner azul fixo */
       <div className="flex min-h-screen items-center justify-center bg-white">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
@@ -264,10 +260,8 @@ export default function LoginPage() {
         className="relative hidden w-[58%] lg:flex flex-col overflow-hidden"
         style={{ background: "#0B2447" }}
       >
-        {/* Partículas animadas */}
         <PanelParticles />
 
-        {/* Grade sutil */}
         <div
           className="absolute inset-0 opacity-[0.06] pointer-events-none"
           style={{
@@ -277,24 +271,18 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Gradiente de vinheta nas bordas */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0B2447]/60 via-transparent to-[#0B2447]/80 pointer-events-none" />
 
         {/* Conteúdo */}
-        <div className="relative z-10 flex h-full flex-col p-10">
 
-          {/* Logo */}
+        <div className="relative z-10 flex h-full flex-col p-10">
           <div className="animate-in fade-in slide-in-from-top-4 duration-700">
             <BrandLogo variant="light" />
           </div>
 
-          {/* Texto central */}
           <div className="flex-1 flex flex-col gap-5 max-w-lg justify-center">
-
-            {/* Badge "Sistema Ativo" */}
             <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
               <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 w-fit group hover:bg-blue-500/15 transition-all duration-300">
-                {/* Ponto de pulso */}
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" />
@@ -306,29 +294,19 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Título Animado */}
             <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-200">
               <AnimatedTitle />
             </div>
 
-            {/* Descrição */}
-            <p
-              className="text-[15px] leading-relaxed text-white/50 max-w-sm animate-in fade-in slide-in-from-left-4 duration-700 delay-300"
-            >
+            <p className="text-[15px] leading-relaxed text-white/50 max-w-sm animate-in fade-in slide-in-from-left-4 duration-700 delay-300">
               Credenciamento digital, rastreabilidade em tempo real e auditoria
               completa de visitantes em todos os setores.
             </p>
 
-            {/* Divisor */}
             <div className="w-12 h-0.5 rounded-full bg-blue-500/40 animate-in fade-in duration-700 delay-400" />
           </div>
 
-          {/* Barra de estatísticas */}
-          <div
-            className="rounded-2xl bg-white/[0.05] border border-white/[0.09] p-5 backdrop-blur-sm
-                        transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07]
-                        animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500"
-          >
+          <div className="rounded-2xl bg-white/[0.05] border border-white/[0.09] p-5 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:bg-white/[0.07] animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
               <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
               <div className="pl-4">
@@ -342,9 +320,11 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ── PAINEL DIREITO (formulário) ── */}
-      <div className="flex flex-1 lg:w-[42%] items-center justify-center bg-white px-6 py-12 sm:px-10 lg:px-16">
-        <div className="w-full max-w-sm">
+      {/* ── PAINEL DIREITO (Cores Fixas Protegidas Contra Temas Globais) ── */}
+      {/* Alterado de bg-slate-50 para forçar a cor literal exata de fundo */}
+      <div className="flex flex-1 lg:w-[42%] items-center justify-center bg-[#f8fafc] px-6 py-12 sm:px-10 lg:px-16">
+        {/* Alterado as classes de borda e sombra para valores estritamente baseados em slate/hex-solid */}
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60 animate-in fade-in zoom-in-95 duration-500">
           <LoginForm />
         </div>
       </div>

@@ -7,7 +7,16 @@ export default function BrandLogo({ variant = "light", compact = false, classNam
 
   return (
     <div className={cn("flex items-center", className)}>
-      {!compact && (
+      {compact ? (
+        <p
+          className={cn(
+            "text-xl font-black tracking-tight",
+            isLight ? "text-white" : "text-[#0A2540]"
+          )}
+        >
+          G<span className="text-[#4DA8EA]">I</span>
+        </p>
+      ) : (
         <div className="leading-none">
           <p
             className={cn(

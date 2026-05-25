@@ -244,7 +244,7 @@ export default function ConfiguracoesPage() {
 
     const funcionarioId = perfil.funcionarioId || funcionario?.id;
 
-      if (!funcionarioId) {
+    if (!funcionarioId) {
       showToast({
         type: "error",
         title: "Foto não enviada",
@@ -295,6 +295,15 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  // Função interna para disparar o logout global do app
+  const handleSairDoSistema = () => {
+    try {
+      logout();
+    } catch (error) {
+      console.error("Erro ao efetuar logout:", error);
+    }
+  };
+
   return (
     <>
       <Topbar
@@ -303,11 +312,23 @@ export default function ConfiguracoesPage() {
       />
 
       <div className="space-y-6 animate-in fade-in duration-700">
-        <div className="flex gap-2 overflow-x-auto border-b border-border">
-          <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
-          <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
-          <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
-          <TabButton active={abaAtiva === "preferencias"} onClick={() => setAbaAtiva("preferencias")} icon={<SlidersHorizontal size={16} />} label="Preferências" />
+        <div className="flex items-center justify-between border-b border-border gap-4 overflow-x-auto">
+          <div className="flex gap-2">
+            <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
+            <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
+            <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
+            <TabButton active={abaAtiva === "preferencias"} onClick={() => setAbaAtiva("preferencias")} icon={<SlidersHorizontal size={16} />} label="Preferências" />
+          </div>
+
+          <Button
+            type="button"
+            variant="destructive"
+            className="h-9 gap-2 rounded-xl text-xs md:text-sm font-semibold mb-2"
+            onClick={handleSairDoSistema}
+          >
+            <LogOut size={14} />
+            Sair do Sistema
+          </Button>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm md:p-6">
@@ -374,17 +395,6 @@ export default function ConfiguracoesPage() {
                     loading={loading}
                     saveLabel="Salvar alterações"
                   />
-
-                  <section className="flex flex-col gap-3 rounded-2xl border border-red-100 bg-red-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-red-900">Sessao da conta</h3>
-                      <p className="text-xs text-red-700/80">Encerre o acesso deste navegador ao sistema.</p>
-                    </div>
-                    <Button type="button" variant="outline" onClick={logout} className="h-10 gap-2 rounded-xl border-red-200 bg-white text-red-700 hover:bg-red-50">
-                      <LogOut size={14} />
-                      Sair da conta
-                    </Button>
-                  </section>
                 </div>
               )}
 

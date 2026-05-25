@@ -5,6 +5,7 @@ import ConsoleWarningSuppressor from "@/components/ConsoleWarningSuppressor";
 import { AuthProvider } from "@/lib/AuthContext";
 import RouteChangeIndicator from "@/components/RouteChangeIndicator";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { FloatingAboutBubble } from "@/components/ui/FloatingAboutBubble";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -42,6 +43,7 @@ export default function RootLayout({ children }) {
           <ToastProvider>
             <RouteChangeIndicator />
             <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
+            <FloatingAboutBubble/>
           </ToastProvider>
         </AuthProvider>
       </body>

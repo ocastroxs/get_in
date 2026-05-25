@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import BrandLogo from "@/components/BrandLogo";
 
 export function LoginForm({ className, ...props }) {
   const { login: updateAuthContext } = useAuth();
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
   const [email, setEmail] = useState("");
@@ -36,79 +38,78 @@ export function LoginForm({ className, ...props }) {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  // 1. Validação básica (campos vazios)
-  const validationErrors = validate();
-  if (Object.keys(validationErrors).length > 0) {
-    setErrors(validationErrors);
-    return;
-  }
+    e.preventDefault();
+    
+    if (isLoading) return;
 
-  setIsLoading(true);
-  setGeneralError("");
-
-  try {
-    // 2. Chamada real para o serviço que criamos
-    // O back-end espera { email, senha }
-    const resultado = await authService.login(email, password);
-
-    // 3. Verifique se o back-end autorizou
-    if (resultado.sucesso && resultado.token) {
-      const funcionario =
-        resultado.data?.funcionario ||
-        resultado.funcionario ||
-        (resultado.data?.tipo ? resultado.data : null);
-      const usuario = resultado.data?.usuario || resultado.data?.user || resultado.data;
-      const tipo = getAuthTipo(funcionario, usuario);
-
-      if (getFlowRouteByTipo(tipo) === "/") {
-        setGeneralError("Seu usuário não possui perfil de acesso a este sistema.");
-        return;
-      }
-
-      // 4. Salva no Contexto Global (isso dispara o redirecionamento)
-      updateAuthContext(resultado, resultado.token, funcionario, { remember });
-    } else {
-      // 5. Exibe erro caso a senha/email estejam errados
-      setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
     }
-  } catch (err) {
-    setGeneralError("Erro de conexão. O servidor está online?");
-  } finally {
-    setIsLoading(false);
-  }
-};
 
+    setIsLoading(true);
+    setGeneralError("");
+
+    try {
+      const resultado = await authService.login(email, password);
+
+      if (resultado.sucesso && resultado.token) {
+        const funcionario =
+          resultado.data?.funcionario ||
+          resultado.funcionario ||
+          (resultado.data?.tipo ? resultado.data : null);
+        const usuario = resultado.data?.usuario || resultado.data?.user || resultado.data;
+        const tipo = getAuthTipo(funcionario, usuario);
+        const redirectTo = getFlowRouteByTipo(tipo);
+
+        if (redirectTo === "/") {
+          setGeneralError("Seu usuário não possui perfil de acesso a este sistema.");
+          setIsLoading(false);
+          return;
+        }
+
+        await updateAuthContext(resultado, resultado.token, funcionario, { remember });
+        router.push(redirectTo);
+        
+      } else {
+        setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setGeneralError("Erro de conexão. O servidor está online?");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <form
       onSubmit={handleSubmit}
       noValidate
       className={cn(
-        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700",
+        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 text-slate-900 bg-white",
         className
       )}
       {...props}
     >
-      {/* Logo visível apenas em dispositivos móveis (painel esquerdo oculto) */}
+      {/* Logo visível apenas em dispositivos móveis */}
       <div className="flex lg:hidden justify-center mb-2">
         <BrandLogo variant="dark" />
       </div>
 
       {/* Cabeçalho */}
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-bold font-heading tracking-tight ">
+        <h1 className="text-3xl font-bold font-heading tracking-tight text-slate-900">
           Bem-vindo de volta
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-500">
           Acesse o painel com suas credenciais de segurança.
         </p>
       </div>
 
       {/* Campo E-mail */}
-      <Field>
-        <FieldLabel htmlFor="email">E-mail</FieldLabel>
+      <Field className="block">
+        <span className="mb-2 block text-sm font-semibold text-slate-800">E-mail</span>
         <div
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
@@ -118,7 +119,7 @@ export function LoginForm({ className, ...props }) {
           <Mail
             className={cn(
               "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
-              errors.email ? "text-red-400" : "text-muted-foreground/50"
+              errors.email ? "text-red-400" : "text-slate-400"
             )}
           />
           <Input
@@ -134,11 +135,11 @@ export function LoginForm({ className, ...props }) {
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
             className={cn(
-              "h-11 pl-10 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
-              "focus-visible:ring-0 focus-visible:ring-offset-0",
+              "h-11 pl-10 border text-slate-900 bg-slate-50/50 text-sm transition-all duration-300 placeholder:text-slate-400",
+              "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-white",
               errors.email
                 ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-gray-200 focus-visible:border-blue-500"
+                : "border-slate-200 focus-visible:border-blue-500"
             )}
           />
         </div>
@@ -155,8 +156,8 @@ export function LoginForm({ className, ...props }) {
       </Field>
 
       {/* Campo Senha */}
-      <Field>
-        <FieldLabel htmlFor="password">Senha</FieldLabel>
+      <Field className="block">
+        <span className="mb-2 block text-sm font-semibold text-slate-800">Senha</span>
         <div
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
@@ -166,7 +167,7 @@ export function LoginForm({ className, ...props }) {
           <Lock
             className={cn(
               "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors duration-200",
-              errors.password ? "text-red-400" : "text-muted-foreground/50"
+              errors.password ? "text-red-400" : "text-slate-400"
             )}
           />
           <Input
@@ -183,11 +184,11 @@ export function LoginForm({ className, ...props }) {
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "password-error" : undefined}
             className={cn(
-              "h-11 pl-10 pr-11 border bg-gray-50/50 text-sm transition-all duration-300 placeholder:text-gray-400",
-              "focus-visible:ring-0 focus-visible:ring-offset-0",
+              "h-11 pl-10 pr-11 border text-slate-900 bg-slate-50/50 text-sm transition-all duration-300 placeholder:text-slate-400",
+              "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-white",
               errors.password
                 ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-gray-200 focus-visible:border-blue-500"
+                : "border-slate-200 focus-visible:border-blue-500"
             )}
           />
           <button
@@ -195,7 +196,7 @@ export function LoginForm({ className, ...props }) {
             onClick={() => setShowPassword((v) => !v)}
             disabled={isLoading}
             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded disabled:opacity-50"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded disabled:opacity-50"
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4" />
@@ -229,15 +230,17 @@ export function LoginForm({ className, ...props }) {
       {/* Manter conectado + Esqueci senha */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {/* Adicionada a classe literal de borda para blindar o Checkbox */}
           <Checkbox
             id="remember"
             checked={remember}
             onCheckedChange={setRemember}
             disabled={isLoading}
+            className="border-slate-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
           />
           <Label
             htmlFor="remember"
-            className="text-sm text-muted-foreground cursor-pointer select-none"
+            className="text-sm text-slate-500 cursor-pointer select-none"
           >
             Manter conectado
           </Label>
@@ -294,7 +297,7 @@ export function LoginForm({ className, ...props }) {
       </Button>
 
       {/* Rodapé de segurança */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
         <ShieldCheck className="h-5 w-5 text-green-500 shrink-0" />
         <p className="text-[11px] text-green-700 leading-relaxed font-medium">
           Conexão segura&nbsp;•&nbsp;Dados criptografados&nbsp;•&nbsp;Acesso auditado
