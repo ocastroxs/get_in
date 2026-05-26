@@ -374,15 +374,7 @@ export default function ConfiguracoesPage() {
                       <Input value={perfil.setor || "Nao informado"} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Cargo">
-                      <select
-                        value={perfil.cargo}
-                        disabled
-                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {CARGOS.map((cargo) => (
-                          <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
-                        ))}
-                      </select>
+                      <Input value={getCargoLabel(perfil.cargo)} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Data de admissão">
                       <Input type="date" value={perfil.dataAdmissao ? String(perfil.dataAdmissao).slice(0, 10) : ""} disabled className="h-11 rounded-xl opacity-70" />
@@ -541,7 +533,7 @@ function TabButton({ active, onClick, icon, label }) {
 
 function CheckboxItem({ label, checked, onChange }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40">
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
       <Checkbox checked={checked} onCheckedChange={onChange} className="h-5 w-5" />
       <span className="flex-1">{label}</span>
     </label>
@@ -550,7 +542,7 @@ function CheckboxItem({ label, checked, onChange }) {
 
 function NotificationGroup({ title, icon, children }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-border/70 bg-background/50 p-4">
+    <section className="space-y-3 rounded-2xl border border-border/70 bg-card/90 p-4 dark:bg-white/[0.03]">
       <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
         {icon}
         {title}

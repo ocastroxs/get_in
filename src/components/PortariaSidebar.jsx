@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SidebarUserProfile from '@/components/SidebarUserProfile';
+import { useAppTheme } from '@/lib/theme';
 
 const PORTARIA_ITEMS = [
   { href: '/portaria', icon: Home, label: 'Operação' },
@@ -27,29 +28,7 @@ const PORTARIA_ITEMS = [
 export default function PortariaSidebar() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('app_theme');
-    const shouldBeDark = savedTheme ? savedTheme === 'dark' : true;
-
-    document.documentElement.classList.toggle('dark', shouldBeDark);
-    queueMicrotask(() => setIsDark(shouldBeDark));
-
-    if (!savedTheme) {
-      localStorage.setItem('app_theme', 'dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const html = document.documentElement;
-    html.classList.toggle('dark');
-    const isNowDark = html.classList.contains('dark');
-
-    setIsDark(isNowDark);
-    localStorage.setItem('app_theme', isNowDark ? 'dark' : 'light');
-    window.dispatchEvent(new CustomEvent('themeChanged', { detail: isNowDark }));
-  };
+  const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) => pathname === href;
 

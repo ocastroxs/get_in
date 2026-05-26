@@ -90,7 +90,7 @@ export function LoginForm({ className, ...props }) {
       onSubmit={handleSubmit}
       noValidate
       className={cn(
-        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 text-slate-900 bg-white",
+        "flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 bg-white text-slate-900 dark:bg-white dark:text-slate-900",
         className
       )}
       {...props}
@@ -102,17 +102,17 @@ export function LoginForm({ className, ...props }) {
 
       {/* Cabeçalho */}
       <div className="flex flex-col gap-1.5">
-        <h1 className="text-3xl font-bold font-heading tracking-tight text-slate-900">
+        <h1 className="text-3xl font-bold font-heading tracking-tight text-slate-900 dark:text-slate-900">
           Bem-vindo de volta
         </h1>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-500">
           Acesse o painel com suas credenciais de segurança.
         </p>
       </div>
 
       {/* Campo E-mail */}
       <Field className="block">
-        <span className="mb-2 block text-sm font-semibold text-slate-800">E-mail</span>
+        <span className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-800">E-mail</span>
         <div
           key={`email-${shakeKey}`}
           className={cn(
@@ -140,11 +140,12 @@ export function LoginForm({ className, ...props }) {
             aria-invalid={!!errors.email}
             aria-describedby={errors.email ? "email-error" : undefined}
             className={cn(
-              "h-11 pl-10 border text-slate-900 bg-slate-50/50 text-sm transition-all duration-300 placeholder:text-slate-400",
+              "h-11 pl-10 border bg-slate-50/50 text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-400",
               "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-white",
+              "dark:border-slate-200 dark:bg-slate-50/50 dark:text-slate-900 dark:placeholder:text-slate-400 dark:focus-visible:bg-white",
               errors.email
-                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-slate-200 focus-visible:border-blue-500"
+                ? "border-red-400 bg-red-50/30 focus-visible:border-red-500 dark:border-red-400 dark:bg-red-50/30"
+                : "border-slate-200 focus-visible:border-blue-500 dark:focus-visible:border-blue-500"
             )}
           />
         </div>
@@ -152,7 +153,7 @@ export function LoginForm({ className, ...props }) {
           <p
             id="email-error"
             role="alert"
-            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
+            className="flex items-center gap-1.5 text-xs text-red-500 dark:text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
           >
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             {errors.email}
@@ -162,7 +163,7 @@ export function LoginForm({ className, ...props }) {
 
       {/* Campo Senha */}
       <Field className="block">
-        <span className="mb-2 block text-sm font-semibold text-slate-800">Senha</span>
+        <span className="mb-2 block text-sm font-semibold text-slate-800 dark:text-slate-800">Senha</span>
         <div
           key={`password-${shakeKey}`}
           className={cn(
@@ -191,11 +192,12 @@ export function LoginForm({ className, ...props }) {
             aria-invalid={!!errors.password}
             aria-describedby={errors.password ? "password-error" : undefined}
             className={cn(
-              "h-11 pl-10 pr-11 border text-slate-900 bg-slate-50/50 text-sm transition-all duration-300 placeholder:text-slate-400",
+              "h-11 pl-10 pr-11 border bg-slate-50/50 text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-400",
               "focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:bg-white",
+              "dark:border-slate-200 dark:bg-slate-50/50 dark:text-slate-900 dark:placeholder:text-slate-400 dark:focus-visible:bg-white",
               errors.password
-                ? "border-red-400 focus-visible:border-red-500 bg-red-50/30"
-                : "border-slate-200 focus-visible:border-blue-500"
+                ? "border-red-400 bg-red-50/30 focus-visible:border-red-500 dark:border-red-400 dark:bg-red-50/30"
+                : "border-slate-200 focus-visible:border-blue-500 dark:focus-visible:border-blue-500"
             )}
           />
           <button
@@ -216,7 +218,7 @@ export function LoginForm({ className, ...props }) {
           <p
             id="password-error"
             role="alert"
-            className="flex items-center gap-1.5 text-xs text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
+            className="flex items-center gap-1.5 text-xs text-red-500 dark:text-red-500 mt-1 animate-in fade-in slide-in-from-top-1 duration-300"
           >
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
             {errors.password}
@@ -226,7 +228,7 @@ export function LoginForm({ className, ...props }) {
 
       {/* Erro geral */}
       {generalError && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-in fade-in slide-in-from-top-2 duration-300" role="alert">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 dark:bg-red-50 dark:border-red-200 dark:text-red-700 animate-in fade-in slide-in-from-top-2 duration-300" role="alert">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {generalError}
@@ -243,11 +245,11 @@ export function LoginForm({ className, ...props }) {
             checked={remember}
             onCheckedChange={setRemember}
             disabled={isLoading}
-            className="border-slate-300 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
+            className="border-slate-300 bg-white dark:border-slate-300 dark:bg-white data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 dark:data-[state=checked]:bg-blue-500 dark:data-[state=checked]:border-blue-500"
           />
           <Label
             htmlFor="remember"
-            className="text-sm text-slate-500 cursor-pointer select-none"
+            className="text-sm text-slate-500 dark:text-slate-500 cursor-pointer select-none"
           >
             Manter conectado
           </Label>
@@ -304,9 +306,9 @@ export function LoginForm({ className, ...props }) {
       </Button>
 
       {/* Rodapé de segurança */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3 dark:border-green-100 dark:bg-green-50">
         <ShieldCheck className="h-5 w-5 text-green-500 shrink-0" />
-        <p className="text-[11px] text-green-700 leading-relaxed font-medium">
+        <p className="text-[11px] text-green-700 dark:text-green-700 leading-relaxed font-medium">
           Conexão segura&nbsp;•&nbsp;Dados criptografados&nbsp;•&nbsp;Acesso auditado
         </p>
       </div>

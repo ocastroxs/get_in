@@ -236,7 +236,12 @@ export default function AprovacoesSupervisorPage() {
     }
   }
 
-  const requisicoesAgrupadas = useMemo(() => groupRequisicoes(requisicoes), [requisicoes]);
+  const requisicoesHoje = useMemo(
+    () => requisicoes.filter((requisicao) => isToday(requisicao.dataDaRequisicao)),
+    [requisicoes]
+  );
+
+  const requisicoesAgrupadas = useMemo(() => groupRequisicoes(requisicoesHoje), [requisicoesHoje]);
 
   const requisicoesFiltradas = useMemo(() => {
     return requisicoesAgrupadas.filter((requisicao) => {
@@ -251,22 +256,18 @@ export default function AprovacoesSupervisorPage() {
         setores.includes(termoBusca);
       const matchStatus =
         filtroStatus === "todos" ||
-        requisicao.setoresSolicitados.some((item) => getEffectiveStatus(item) === filtroStatus);
+        (filtroStatus === "misto"
+          ? requisicao.status === "misto"
+          : requisicao.setoresSolicitados.some((item) => getEffectiveStatus(item) === filtroStatus));
 
       return matchBusca && matchStatus;
     });
   }, [requisicoesAgrupadas, busca, filtroStatus]);
 
-  const requisicoesHoje = useMemo(
-    () => requisicoes.filter((requisicao) => isToday(requisicao.dataDaRequisicao)),
-    [requisicoes]
-  );
   const countAprovadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "aprovado").length;
   const countPendentesHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "pendente").length;
   const countRecusadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "recusado").length;
-  const countExpiradosHoje = requisicoes.filter((requisicao) => (
-    requisicao.status === "expirado" && isToday(getExpirationDate(requisicao) || requisicao.dataDaRequisicao)
-  )).length;
+  const countExpiradosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "expirado").length;
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
@@ -293,6 +294,7 @@ export default function AprovacoesSupervisorPage() {
         subtitle: "Solicitações de visitantes por setor",
           fileName: `aprovações_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
+          "Data: hoje",
           busca ? `Busca: ${busca}` : null,
           filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
         ].filter(Boolean),
@@ -380,7 +382,7 @@ export default function AprovacoesSupervisorPage() {
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
-            <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
+            <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações de hoje</h3>
             <p className="text-xs text-muted-foreground">Pendentes ficam validas por ate 24h; depois aparecem como expiradas.</p>
           </div>
 
@@ -391,7 +393,7 @@ export default function AprovacoesSupervisorPage() {
           ) : requisicoesFiltradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-20 text-center">
               <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma requisição de hoje encontrada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -437,7 +439,7 @@ export default function AprovacoesSupervisorPage() {
               Status do setor
             </label>
             <div className="grid grid-cols-1 gap-2">
-              {["todos", "aprovado", "pendente", "recusado", "expirado"].map((status) => (
+              {["todos", "aprovado", "pendente", "recusado", "expirado", "misto"].map((status) => (
                 <button
                   key={status}
                   type="button"

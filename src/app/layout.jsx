@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/AuthContext";
 import RouteChangeIndicator from "@/components/RouteChangeIndicator";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { FloatingAboutBubble } from "@/components/ui/FloatingAboutBubble";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -36,9 +37,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-br" className="h-full antialiased">
+    <html lang="pt-br" className="h-full antialiased" suppressHydrationWarning>
       <body className={cn(poppins.variable, inter.variable, ibmPlexMono.variable, "min-h-full")}
       suppressHydrationWarning> 
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <AuthProvider>
           <ToastProvider>
             <RouteChangeIndicator />

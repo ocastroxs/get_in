@@ -26,14 +26,6 @@ export default function BrandLogo({ variant = "light", compact = false, classNam
           >
             GET<span className="text-[#4DA8EA]">IN</span>
           </p>
-          <p
-            className={cn(
-              "mt-1 text-[10px] font-bold uppercase tracking-[0.22em]",
-              isLight ? "text-white/45" : "text-slate-400"
-            )}
-          >
-            Access Control
-          </p>
         </div>
       )}
     </div>
