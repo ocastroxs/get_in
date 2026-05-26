@@ -1,4 +1,4 @@
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://get-in-ilp5.onrender.com').replace(/\/+$/, '');
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://api.getin.dev.br').replace(/\/+$/, '');
 
 const getHeaders = (tokenOverride = null) => {
   const headers = {

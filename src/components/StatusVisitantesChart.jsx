@@ -27,14 +27,16 @@ function StatusPieTooltip({ active, payload }) {
 export default function StatusVisitantesChart({ 
   mobileLayout = "default",
   data = STATUS_VISITANTES,
-  weekData = STATUS_VISITANTES
+  weekData = STATUS_VISITANTES,
+  monthData = STATUS_VISITANTES
 }) {
   const [view, setView] = useState("hoje");
 
   // Select data based on view
   const chartData = useMemo(() => {
+    if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, weekData, view]);
+  }, [data, monthData, weekData, view]);
 
   // "Ativos" is usually the first item (Dentro da fábrica)
   const ativos = useMemo(() => {
@@ -51,24 +53,24 @@ export default function StatusVisitantesChart({
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-600">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semantica</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semântica</p>
             <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-            <p className="text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
+            <p className="max-w-[280px] text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
-            {["hoje", "semana"].map((item) => (
+          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
+            {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
                   view === item
                     ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
                     : "hover:bg-white/80 hover:text-foreground",
                 ].join(" ")}
               >
-                {item}
+                {item === "mes" ? "mês" : item}
               </button>
             ))}
           </div>
@@ -92,6 +94,8 @@ export default function StatusVisitantesChart({
                   strokeWidth={3}
                   stroke="var(--card)"
                   paddingAngle={2}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
@@ -143,6 +147,8 @@ export default function StatusVisitantesChart({
                   strokeWidth={3}
                   stroke="var(--card)"
                   paddingAngle={2}
+                  animationDuration={1500}
+                  animationEasing="ease-out"
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
@@ -160,11 +166,11 @@ export default function StatusVisitantesChart({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-3">
+          <div className="flex flex-1 flex-col justify-center gap-3 max-w-[280px]">
             {chartData.map((item, index) => (
               <div
                 key={item.name}
-                className="flex items-center justify-between gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
+                className="flex w-fit max-w-full items-center gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
                 style={{ animationDelay: `${600 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -174,7 +180,7 @@ export default function StatusVisitantesChart({
                   />
                   <span className="truncate text-sm text-muted-foreground">{item.name}</span>
                 </div>
-                <span className="shrink-0 text-sm font-semibold text-foreground">{item.value}</span>
+                <span className="min-w-6 shrink-0 text-right text-sm font-semibold text-foreground">{item.value}</span>
               </div>
             ))}
           </div>

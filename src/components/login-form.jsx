@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
 import { Mail, Lock, Eye, EyeOff, LogIn, ShieldCheck, AlertCircle } from "lucide-react";
 import { authService } from "@/services/api";
 import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext";
@@ -23,6 +23,7 @@ export function LoginForm({ className, ...props }) {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [generalError, setGeneralError] = useState("");
+  const [shakeKey, setShakeKey] = useState(0);
 
   const validate = () => {
     const newErrors = {};
@@ -39,12 +40,13 @@ export function LoginForm({ className, ...props }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (isLoading) return;
 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+      setShakeKey((prev) => prev + 1);
       return;
     }
 
@@ -65,19 +67,20 @@ export function LoginForm({ className, ...props }) {
 
         if (redirectTo === "/") {
           setGeneralError("Seu usuário não possui perfil de acesso a este sistema.");
-          setIsLoading(false);
+          setShakeKey((prev) => prev + 1);
           return;
         }
 
         await updateAuthContext(resultado, resultado.token, funcionario, { remember });
         router.push(redirectTo);
-        
       } else {
         setGeneralError(resultado.mensagem || "E-mail ou senha incorretos.");
-        setIsLoading(false);
+        setShakeKey((prev) => prev + 1);
       }
-    } catch (err) {
+    } catch {
       setGeneralError("Erro de conexão. O servidor está online?");
+      setShakeKey((prev) => prev + 1);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -111,9 +114,10 @@ export function LoginForm({ className, ...props }) {
       <Field className="block">
         <span className="mb-2 block text-sm font-semibold text-slate-800">E-mail</span>
         <div
+          key={`email-${shakeKey}`}
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.email && "animate-in shake"
+            (errors.email || generalError) && "animate-shake"
           )}
         >
           <Mail
@@ -130,6 +134,7 @@ export function LoginForm({ className, ...props }) {
             onChange={(e) => {
               setEmail(e.target.value);
               if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+              if (generalError) setGeneralError("");
             }}
             disabled={isLoading}
             aria-invalid={!!errors.email}
@@ -159,9 +164,10 @@ export function LoginForm({ className, ...props }) {
       <Field className="block">
         <span className="mb-2 block text-sm font-semibold text-slate-800">Senha</span>
         <div
+          key={`password-${shakeKey}`}
           className={cn(
             "relative transition-transform duration-300 focus-within:-translate-y-0.5",
-            errors.password && "animate-in shake"
+            (errors.password || generalError) && "animate-shake"
           )}
         >
           <Lock
@@ -179,6 +185,7 @@ export function LoginForm({ className, ...props }) {
             onChange={(e) => {
               setPassword(e.target.value);
               if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+              if (generalError) setGeneralError("");
             }}
             disabled={isLoading}
             aria-invalid={!!errors.password}
