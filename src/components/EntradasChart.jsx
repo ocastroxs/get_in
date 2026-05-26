@@ -100,14 +100,6 @@ export default function EntradasChart({
         </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30 sm:w-auto">
-            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
-            <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
-              {chartMeta.peakItem?.[dataKey] ?? 0}
-              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
-            </p>
-          </div>
-
           <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
@@ -123,6 +115,14 @@ export default function EntradasChart({
                 {item === "mes" ? "mês" : item}
               </button>
             ))}
+          </div>
+
+          <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30 sm:w-auto">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
+            <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
+              {chartMeta.peakItem?.[dataKey] ?? 0}
+              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
+            </p>
           </div>
         </div>
       </div>
