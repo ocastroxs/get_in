@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Users, Search, X, Download, Plus,
   Check, Shield, User, Eye, Star,
@@ -93,7 +94,7 @@ function downloadCSV(data) {
 
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
-function LinhaFuncionario({ f }) {
+function LinhaFuncionario({ f, onEdit, onDelete }) {
   // Se f não existir por algum motivo bizarro, paramos aqui
   if (!f) return null;
   const formatarCPF = (cpf) => {
@@ -156,10 +157,10 @@ function LinhaFuncionario({ f }) {
       </td>
       <td className="py-3 px-4 text-right">
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
+          <button onClick={() => onEdit(f)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
             <Edit size={16} />
           </button>
-          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
+          <button onClick={() => onDelete(f)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
             <Trash2 size={16} />
           </button>
         </div>
@@ -171,6 +172,7 @@ function LinhaFuncionario({ f }) {
 // ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 export default function FuncionariosPage() {
+  const router = useRouter();
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -245,6 +247,43 @@ export default function FuncionariosPage() {
     setBusca("");
   };
 
+  const handleEditar = async (funcionario) => {
+    const nome = window.prompt("Nome do funcionario", funcionario.usuario_nome || "");
+    if (nome === null) return;
+    const email = window.prompt("E-mail", funcionario.email || "");
+    if (email === null) return;
+    const celular = window.prompt("Celular", funcionario.celular || "");
+    if (celular === null) return;
+    const tipo = window.prompt("Tipo (func, port, sup, ger, adm)", funcionario.cargo || funcionario.tipo || "func");
+    if (tipo === null) return;
+
+    const response = await api.put(`/func/${funcionario.id}`, {
+      nome,
+      email,
+      celular,
+      tipo,
+    });
+
+    if (response.sucesso) {
+      carregarFuncionarios();
+    } else {
+      alert(response.mensagem || "Erro ao atualizar funcionario.");
+    }
+  };
+
+  const handleExcluir = async (funcionario) => {
+    if (!window.confirm(`Excluir funcionario ${funcionario.usuario_nome || funcionario.nome || ""}?`)) {
+      return;
+    }
+
+    const response = await api.delete(`/func/${funcionario.id}`);
+    if (response.sucesso) {
+      setFuncionarios((prev) => prev.filter((item) => item.id !== funcionario.id));
+    } else {
+      alert(response.mensagem || "Erro ao excluir funcionario.");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-700">
       <Topbar
@@ -253,7 +292,7 @@ export default function FuncionariosPage() {
         secondaryButtonText="Exportar CSV"
         onSecondaryButtonClick={() => downloadCSV(filtrados)}
         buttonText="Novo Funcionário"
-        onButtonClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
+        onButtonClick={() => router.push('/dashboard/funcionarios/registrarFuncionario')}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -387,8 +426,13 @@ export default function FuncionariosPage() {
                   </td>
                 </tr>
               ) : filtrados.length > 0 ? (
-                filtrados.map((f) => (
-                  <LinhaFuncionario key={f.id || f.cpf || index} f={f} />
+                filtrados.map((f, index) => (
+                  <LinhaFuncionario
+                    key={f.id || f.cpf || index}
+                    f={f}
+                    onEdit={handleEditar}
+                    onDelete={handleExcluir}
+                  />
                 ))
               ) : (
                 <tr>

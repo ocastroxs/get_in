@@ -28,7 +28,10 @@ export default function SupervisorSidebar() {
   const [isExpanded, setIsExpanded] = useState(true);
   const { isDark, toggleTheme } = useAppTheme();
 
-  const isActive = (href) => pathname === href;
+  const isActive = (href) =>
+    href === '/supervisor'
+      ? pathname === href
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
@@ -57,6 +60,12 @@ export default function SupervisorSidebar() {
           >
             <PanelLeft size={20} strokeWidth={1.5} />
           </button>
+        )}
+
+        {isExpanded && (
+          <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
+            Fluxo Supervisor
+          </p>
         )}
 
         <nav className="flex flex-col gap-2">

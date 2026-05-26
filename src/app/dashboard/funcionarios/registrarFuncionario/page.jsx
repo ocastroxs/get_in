@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2, AlertCircle } from 'lucide-react';
 import Topbar from "@/components/Topbar";
+import { api } from "@/services/api";
 
 const CadastroFuncionario = () => {
   // ==========================================
@@ -79,11 +80,8 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch(`https://get-in-ilp5.onrender.com/dep`,{
-        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }
-        } );
-        const data = await response.json();
-        if (data.sucesso) setDepartamentos(data.data);
+        const data = await api.get('/setores');
+        if (data.sucesso) setDepartamentos(data.data || []);
       } catch (err) { return; }
     };
     fetchDepartamentos();
@@ -131,10 +129,7 @@ const CadastroFuncionario = () => {
       senha: formData.senha, imagem: null, dataDeNascimento: null
     };
     try {
-      const response = await fetch('https://get-in-ilp5.onrender.com/auth', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }, body: JSON.stringify(payloadBackend)
-      });
-      const data = await response.json();
+      const data = await api.post('/auth', payloadBackend);
       if (data.sucesso) setSucesso(true);
       else setErro(data.mensagem || 'Erro ao realizar o cadastro.');
     } catch (err) { setErro('Não foi possível conectar ao servidor.'); }

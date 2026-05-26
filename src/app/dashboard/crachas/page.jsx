@@ -70,6 +70,29 @@ const SETOR_DOT = {
 
 const STATUS_FILTER_OPTS = ["Todas", "disponivel", "emUso", "perdido", "alerta"];
 
+function formatarData(value) {
+  if (!value) return "-";
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return value;
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function normalizarTag(tag) {
+  return {
+    ...tag,
+    status: tag.status || "disponivel",
+    visitante: tag.usuario?.nome || tag.visitante || null,
+    setor: tag.usuario?.departamentos?.nome || tag.setor || null,
+    entrega: formatarData(tag.dataDeCriacao),
+    devolucao: tag.dataDeDevolucao ? formatarData(tag.dataDeDevolucao) : null,
+  };
+}
+
 function toCSV(rows) {
   const cols = ["ID", "Status", "Tag Código"];
   const lines = rows.map((r) =>
@@ -102,7 +125,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
     
     setLoading(true);
     try {
-      const response = await api.post('/cracha', { status: 'disponivel' });
+      const response = await api.post('/tags', { codigoTag: form.tagId.trim(), status: 'disponivel' });
       
       if (response.sucesso) {
         onSave();
@@ -138,7 +161,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
             Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status &quot;Disponível&quot;.
           </p>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador (Opcional)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Codigo da TAG *</label>
             <input
               type="text"
               value={form.tagId}
@@ -212,9 +235,9 @@ export default function CrachasPage() {
   const carregarCrachas = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/cracha');
+      const response = await api.get('/tags');
       if (response.sucesso) {
-        setCrachas(response.data || []);
+        setCrachas((response.data || []).map(normalizarTag));
       }
     } catch (error) {
       console.error("Erro ao carregar crachás:", error);
@@ -233,6 +256,7 @@ export default function CrachasPage() {
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
         String(c.id).includes(q) ||
+        (c.codigoTag && c.codigoTag.toLowerCase().includes(q)) ||
         (c.visitante && c.visitante.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });

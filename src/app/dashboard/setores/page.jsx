@@ -18,7 +18,7 @@ import { api } from "@/services/api";
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
 
 const ACESSO_OPTS   = ["Todos", "Liberado", "Restrito", "Bloqueado"];
-const STATUS_OPTS   = ["Todos", "Ativo", "Restrito", "Inativo"];
+const STATUS_OPTS   = ["Todos", "Ativo", "Inativo"];
 
 const ACESSO_LABEL  = { liberado: "Liberado", restrito: "Restrito", bloqueado: "Bloqueado" };
 const STATUS_LABEL  = { ativo: "Ativo",       restrito: "Restrito", inativo: "Inativo" };
@@ -50,7 +50,7 @@ const ACESSO_ICON_COLOR = {
 };
 
 const SETOR_VAZIO = {
-  nome: "", responsavel: "", acesso: "Liberado",
+  nome: "", responsavel: "", idGestor: "", acesso: "Liberado",
   status: "Ativo",
 };
 
@@ -81,17 +81,13 @@ function normalizarSetor(setor) {
   };
 }
 
-function payloadSetor(form, { incluirCamposDeTela = false } = {}) {
-  const payload = {
+function payloadSetor(form) {
+  return {
     nome: form.nome.trim(),
-    idGestor: form.idGestor || null,
+    idGestor: form.idGestor ? Number(form.idGestor) : null,
     acesso: normalizarAcesso(form.acesso, "Liberado"),
     status: normalizarStatus(form.status, "Ativo"),
   };
-  
-  if (!incluirCamposDeTela) { payload.idGestor = null; }
-
-  return payload;
 }
 
 function montarSetorLocal(form, data) {
@@ -174,13 +170,13 @@ function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
 
 // ─── MODAL CRIAR / EDITAR SETOR ──────────────────────────────────────────────
 
-function ModalSetor({ setor, onClose, onSave }) {
+function ModalSetor({ setor, gestores, onClose, onSave }) {
   const isEdicao = !!setor?.id;
   const [form, setForm] = useState(() => ({
     ...SETOR_VAZIO,
     ...(setor ?? {}),
     nome: setor?.nome || "",
-    idGestor: setor?.idGestor || null,
+    idGestor: setor?.idGestor || "",
     acesso: setor?.acesso || SETOR_VAZIO.acesso,
     status: setor?.status || SETOR_VAZIO.status,
   }));
@@ -196,7 +192,7 @@ function ModalSetor({ setor, onClose, onSave }) {
     }
     setSaving(true);
     try {
-      const payload = payloadSetor(form, { incluirCamposDeTela: isEdicao });
+      const payload = payloadSetor(form);
       
       if (isEdicao) {
         const response = await api.put(`/setores/${setor.id}`, payload);
@@ -257,14 +253,19 @@ function ModalSetor({ setor, onClose, onSave }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsável</label>
-            <input
-              type="text"
-              value={form.responsavel}
-              onChange={set("responsavel")}
-              placeholder="Ex: João Silva"
-              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
-            />
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsavel</label>
+            <select
+              value={form.idGestor}
+              onChange={set("idGestor")}
+              className="w-full h-9 px-3 rounded-lg border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition"
+            >
+              <option value="">Sem gestor</option>
+              {gestores.map((gestor) => (
+                <option key={gestor.id} value={gestor.id}>
+                  {gestor.gestor}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Acesso</label>
@@ -359,6 +360,7 @@ function LinhaSetor({ setor, onEditar, onExcluir }) {
 
 export default function SetoresPage() {
   const [setores, setSetores] = useState([]);
+  const [gestores, setGestores] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [statusFiltro, setStatusFiltro] = useState("Todos");
@@ -375,10 +377,16 @@ export default function SetoresPage() {
   const carregarSetores = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/setores');
+      const [response, gestoresResponse] = await Promise.all([
+        api.get('/setores'),
+        api.get('/views/gestores'),
+      ]);
       if (response.sucesso) {
         const data = (response.data || []).map(normalizarSetor);
         setSetores(data);
+      }
+      if (gestoresResponse.sucesso) {
+        setGestores(gestoresResponse.data || []);
       }
     } catch (e) {
       console.error(e);
@@ -401,7 +409,7 @@ export default function SetoresPage() {
   const stats = useMemo(() => ({
     total: setores.length,
     ativos: setores.filter(s => statusKey(s.status) === "ativo").length,
-    restritos: setores.filter(s => statusKey(s.status) === "restrito").length,
+    restritos: setores.filter(s => acessoKey(s.acesso) === "restrito").length,
     bloqueados: setores.filter(s => acessoKey(s.acesso) === "bloqueado").length,
   }), [setores]);
 
@@ -587,6 +595,7 @@ export default function SetoresPage() {
       {modalSetor.open && (
         <ModalSetor
           setor={modalSetor.data}
+          gestores={gestores}
           onClose={() => setModalSetor({ open: false, data: null })}
           onSave={handleSave}
         />

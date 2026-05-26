@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Users, ArrowRightLeft, LogOut, AlertTriangle,
-  Search, X, Plus, CreditCard, Check, Loader2,
+  Users, ArrowRightLeft, AlertTriangle,
+  Search, X, Plus, Check, Loader2,
   MoreHorizontal
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
@@ -34,7 +34,84 @@ const STATUS_DOT = {
   pendente: "bg-muted-foreground",
 };
 
-const SETORES = ["Adm", "Lab", "Prod", "Alm", "Recepcao", "Diretoria"];
+const LIMITE_ALERTA_HORAS = 8;
+
+function normalizarArrayResponse(response, keys = []) {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.dados)) return response.dados;
+
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) return response[key];
+    if (Array.isArray(response?.data?.[key])) return response.data[key];
+    if (Array.isArray(response?.dados?.[key])) return response.dados[key];
+  }
+
+  return [];
+}
+
+function parseData(value) {
+  if (!value) return null;
+  const data = new Date(String(value).replace(" ", "T"));
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function formatarDataHora(value) {
+  const data = parseData(value);
+  if (!data) return value || "-";
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getEntrada(item) {
+  return item?.dataEntrada || item?.entrada || item?.dataDeEntrada || item?.dataDaRequisicao;
+}
+
+function getSaida(item) {
+  return item?.dataSaida || item?.saida || item?.dataDeSaida;
+}
+
+function normalizarStatus(item, origem) {
+  if (origem === "pendencias") return "pendente";
+
+  const status = String(item?.status || item?.solicitacao || "").toLowerCase();
+  const saida = getSaida(item);
+  const entrada = parseData(getEntrada(item));
+
+  if (saida || status.includes("saida") || status.includes("finalizado") || status.includes("conclu")) {
+    return "finalizado";
+  }
+
+  if (status.includes("pendente")) {
+    return "pendente";
+  }
+
+  if (entrada) {
+    const horas = (Date.now() - entrada.getTime()) / (1000 * 60 * 60);
+    if (horas >= LIMITE_ALERTA_HORAS) return "semsaida";
+  }
+
+  return "ativo";
+}
+
+function normalizarVisitante(item, origem, index) {
+  const usuario = item?.usuario || {};
+
+  return {
+    id: `${origem}-${item?.id || item?.idUsuario || item?.idLog || index}`,
+    idOriginal: item?.id,
+    nome: item?.nome || item?.visitante || usuario?.nome || "Visitante",
+    empresa: item?.empresa || usuario?.empresas?.nome || "-",
+    cpf: item?.cpf || usuario?.cpf || "-",
+    setor: Array.isArray(item?.setores) ? item.setores.join(", ") : item?.setor || item?.setores?.nome || "-",
+    entrada: formatarDataHora(getEntrada(item)),
+    saida: getSaida(item) ? formatarDataHora(getSaida(item)) : "-",
+    status: normalizarStatus(item, origem),
+  };
+}
 
 function toCSV(rows) {
   const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saida", "Status"];
@@ -54,12 +131,14 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-function ModalNovoVisitante({ onClose, onSave }) {
+function ModalNovoVisitante({ setores, onClose, onSave }) {
   const [form, setForm] = useState({
     nome: "",
     empresa: "",
     cpf: "",
-    setor: "Adm",
+    email: "",
+    celular: "",
+    idSetor: "",
     motivo: "",
   });
   const [loading, setLoading] = useState(false);
@@ -73,21 +152,25 @@ function ModalNovoVisitante({ onClose, onSave }) {
       .replace(/(-\d{2})\d+?$/, "$1");
 
   async function handleSubmit() {
-    if (!form.nome || !form.empresa || !form.cpf) {
-      alert("Preencha os campos obrigatórios.");
+    if (!form.nome || !form.empresa || !form.cpf || !form.email || !form.idSetor) {
+      alert("Preencha os campos obrigatorios.");
       return;
     }
 
     setLoading(true);
     try {
       const payload = {
-        idUsuario: 1,
-        idDepartamento: 1,
+        nome: form.nome,
+        empresa: form.empresa,
+        cpf: form.cpf,
+        email: form.email,
+        celular: form.celular,
+        idSetor: Number(form.idSetor),
         motivo: form.motivo || "Visita",
         validade: new Date().toISOString(),
       };
 
-      const response = await api.post("/requisicao-visitante", payload);
+      const response = await api.post("/visitante", payload);
 
       if (response.sucesso) {
         onSave();
@@ -157,15 +240,38 @@ function ModalNovoVisitante({ onClose, onSave }) {
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Setor</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">E-mail *</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="visitante@empresa.com"
+              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Celular</label>
+            <input
+              type="text"
+              value={form.celular}
+              onChange={(e) => setForm({ ...form, celular: e.target.value })}
+              placeholder="(11) 99999-9999"
+              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Setor *</label>
             <select
-              value={form.setor}
-              onChange={(e) => setForm({ ...form, setor: e.target.value })}
+              value={form.idSetor}
+              onChange={(e) => setForm({ ...form, idSetor: e.target.value })}
               className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
-              {SETORES.map((setor) => (
-                <option key={setor} value={setor}>
-                  {setor}
+              <option value="">Selecione</option>
+              {setores.map((setor) => (
+                <option key={setor.id} value={setor.id}>
+                  {setor.nome}
                 </option>
               ))}
             </select>
@@ -231,6 +337,7 @@ function LinhaVisitante({ visitante }) {
 
 export default function VisitantesPage() {
   const [visitantes, setVisitantes] = useState([]);
+  const [setores, setSetores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalAberto, setModalAberto] = useState(false);
   const [statusFiltro, setStatusFiltro] = useState("Todos");
@@ -242,9 +349,29 @@ export default function VisitantesPage() {
   const carregarVisitantes = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/requisicao-visitante");
-      if (response.sucesso) {
-        setVisitantes(response.data || []);
+      const [localResponse, pendenciasResponse, historicoResponse, setoresResponse] = await Promise.all([
+        api.get("/portaria/vlocal"),
+        api.get("/portaria/pendencias"),
+        api.get("/portaria/historico"),
+        api.get("/setores"),
+      ]);
+
+      const visitantesLocal = normalizarArrayResponse(localResponse, ["visitantes", "dados"])
+        .map((item, index) => normalizarVisitante(item, "vlocal", index));
+      const pendencias = normalizarArrayResponse(pendenciasResponse, ["pendencias", "dados"])
+        .map((item, index) => normalizarVisitante(item, "pendencias", index));
+      const historico = normalizarArrayResponse(historicoResponse, ["historico", "dados"])
+        .map((item, index) => normalizarVisitante(item, "historico", index));
+
+      const visitantesPorId = new Map();
+      [...visitantesLocal, ...pendencias, ...historico].forEach((visitante) => {
+        visitantesPorId.set(visitante.id, visitante);
+      });
+
+      setVisitantes([...visitantesPorId.values()]);
+
+      if (setoresResponse.sucesso) {
+        setSetores(normalizarArrayResponse(setoresResponse, ["setores", "dados"]));
       }
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
@@ -297,6 +424,7 @@ export default function VisitantesPage() {
     <>
       {modalAberto && (
         <ModalNovoVisitante
+          setores={setores}
           onClose={() => setModalAberto(false)}
           onSave={carregarVisitantes}
         />

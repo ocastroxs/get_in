@@ -63,6 +63,27 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
+function formatarHora(value) {
+  if (!value) return "-";
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return value;
+  return data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function normalizarLog(log) {
+  const ativo = log.dataDeEntrada && !log.dataDeSaida;
+  return {
+    ...log,
+    id: log.log_id || log.id,
+    pessoa: log.usuario_nome || log.pessoa || "Usuario",
+    tipo: log.usuario_cpf ? "Visitante / Usuario" : "Usuario",
+    origem: log.local_dispositivo || "Acesso",
+    destino: log.departamento_usuario || log.destino || "Setor",
+    horario: formatarHora(log.dataDeEntrada),
+    status: ativo ? "Ativo" : "Concluído",
+  };
+}
+
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
 function LinhaCirculacao({ reg }) {
@@ -115,13 +136,13 @@ export default function CirculacaoPage() {
     setLoading(true);
     try {
       // Carregando logs de circulação
-      const responseLogs = await api.get('/logs');
+      const responseLogs = await api.get('/views/logs');
       if (responseLogs.sucesso) {
-        setCirculacao(responseLogs.data || []);
+        setCirculacao((responseLogs.data || []).map(normalizarLog));
       }
       
       // Carregando setores para ocupação
-      const responseSetores = await api.get('/dep');
+      const responseSetores = await api.get('/setores');
       if (responseSetores.sucesso) {
         setSetores(responseSetores.data || []);
       }
