@@ -61,10 +61,10 @@ export default function TiposVisitantesChart({
     return view === "semana" ? "Por período - semana" : "Por período - hoje";
   }, [view]);
 
-  const chartSize = mobileLayout ? 112 : 156;
+  const chartSize = mobileLayout ? 112 : 148;
 
   return (
-    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "gap-4 p-5 min-h-[280px]"}`}>
+    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "h-full min-h-[300px] gap-4 p-5"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
@@ -99,56 +99,70 @@ export default function TiposVisitantesChart({
           </div>
         </div>
       ) : (
-        <div className={`mt-1 flex ${mobileLayout ? "flex-col gap-4" : "flex-1 items-center gap-6"}`}>
-          <div className="relative shrink-0 self-center cursor-pointer transition-transform duration-500 hover:scale-105">
-            <ResponsiveContainer width={chartSize} height={chartSize}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={mobileLayout ? 38 : 50}
-                  outerRadius={mobileLayout ? 52 : 70}
-                  dataKey={dataKey}
-                  startAngle={90}
-                  endAngle={-270}
-                  strokeWidth={3}
-                  stroke="var(--card)"
-                  paddingAngle={2}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={<PieTooltip />}
-                  wrapperStyle={{ outline: "none", zIndex: 20 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
+        <div
+          className={`mt-1 grid min-w-0 ${
+            mobileLayout
+              ? "grid-cols-1 gap-4"
+              : "flex-1 grid-cols-[minmax(150px,190px)_minmax(0,1fr)] items-stretch gap-4"
+          }`}
+        >
+          <div className="flex items-center justify-center rounded-2xl border border-border/70 bg-muted/20 p-3">
+            <div className="relative shrink-0 cursor-pointer transition-transform duration-500 hover:scale-105">
+              <ResponsiveContainer width={chartSize} height={chartSize}>
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={mobileLayout ? 38 : 48}
+                    outerRadius={mobileLayout ? 52 : 66}
+                    dataKey={dataKey}
+                    startAngle={90}
+                    endAngle={-270}
+                    strokeWidth={3}
+                    stroke="var(--card)"
+                    paddingAngle={2}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    content={<PieTooltip />}
+                    wrapperStyle={{ outline: "none", zIndex: 20 }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1 max-w-[280px]">
+          <div
+            className={`dashboard-scroll grid min-w-0 content-center gap-2 overflow-x-hidden overflow-y-auto pr-1 ${
+              mobileLayout
+                ? "max-h-[220px] grid-cols-1"
+                : "h-full max-h-[168px] grid-cols-[repeat(auto-fit,minmax(160px,1fr))]"
+            }`}
+          >
             {chartData.map((item, index) => (
               <div
                 key={index}
-                className={`flex w-fit max-w-full items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "gap-2 p-2.5" : "gap-3 px-2.5 py-2"}`}
+                className={`flex min-w-0 items-center justify-between rounded-xl border border-border/70 bg-muted/35 hover:bg-muted/55 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "gap-2 p-2.5" : "gap-2 px-3 py-2.5"}`}
                 style={{ animationDelay: `${500 + index * 50}ms` }}
               >
-                <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex min-w-0 items-center gap-2">
                   <span
-                    className="h-3 w-3 shrink-0 rounded-full shadow-sm"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm"
                     style={{ backgroundColor: item[colorKey] }}
                   />
-                  <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
+                  <span className={`min-w-0 truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[13px] leading-tight"}`}>{item[nameKey]}</span>
                 </div>
-                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} min-w-6 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
+                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} ml-2 min-w-6 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
               </div>
             ))}
           </div>

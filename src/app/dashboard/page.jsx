@@ -716,7 +716,7 @@ export default function DashboardPage() {
           <PicoMovimentoChart data={picoSetores} />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <section className="grid items-stretch gap-6 xl:grid-cols-2">
           <TiposVisitanteChart
             data={motivosHoje}
             weekData={motivosSemana}
