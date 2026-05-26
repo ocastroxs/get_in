@@ -37,13 +37,15 @@ export default function TiposVisitantesChart({
   nameKey = "name",
   colorKey = "color",
   mobileLayout = false,
+  showPeriodToggle = true,
 }) {
   const [view, setView] = useState("hoje");
 
   const chartData = useMemo(() => {
+    if (!showPeriodToggle) return data;
     if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, weekData, monthData, view]);
+  }, [data, weekData, monthData, showPeriodToggle, view]);
 
   const total = useMemo(() => {
     return chartData.reduce((sum, item) => sum + item[dataKey], 0);
@@ -52,14 +54,16 @@ export default function TiposVisitantesChart({
   const isEmpty = total === 0;
   
   const emptyText = useMemo(() => {
+    if (!showPeriodToggle) return emptyMessage;
     if (view === "mes") return monthEmptyMessage;
     return view === "semana" ? weekEmptyMessage : emptyMessage;
-  }, [view, monthEmptyMessage, weekEmptyMessage, emptyMessage]);
+  }, [view, monthEmptyMessage, showPeriodToggle, weekEmptyMessage, emptyMessage]);
 
   const displaySubtitle = useMemo(() => {
+    if (!showPeriodToggle) return subtitle;
     if (view === "mes") return "Por período - mês";
     return view === "semana" ? "Por período - semana" : "Por período - hoje";
-  }, [view]);
+  }, [showPeriodToggle, subtitle, view]);
 
   const chartSize = mobileLayout ? 112 : 156;
 
@@ -73,6 +77,7 @@ export default function TiposVisitantesChart({
             <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
           </div>
 
+          {showPeriodToggle ? (
           <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
@@ -89,6 +94,7 @@ export default function TiposVisitantesChart({
               </button>
             ))}
           </div>
+          ) : null}
         </div>
       </div>
 

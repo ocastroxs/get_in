@@ -8,7 +8,6 @@ import {
   Search,
   X,
   Edit2,
-  History,
   Printer,
   CheckCircle2,
   TrendingUp,
@@ -16,7 +15,9 @@ import {
   Briefcase,
   Loader2,
   Filter,
-  Check
+  Check,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
@@ -46,6 +47,15 @@ const STATUS_DOT = {
 };
 
 const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
+const EMPRESA_VAZIA = {
+  nome: "",
+  categoria: "",
+  cnpj: "",
+  responsavel: "",
+  celular: "",
+  contato: "",
+  status: "Ativa",
+};
 
 function toCSV(rows) {
   const cols = ["Empresa", "CNPJ", "Responsável", "Contato", "Visitantes", "Última Visita", "Status"];
@@ -63,9 +73,159 @@ function downloadCSV(data) {
   URL.revokeObjectURL(url);
 }
 
+function formatarUltimaVisita(value) {
+  if (!value) return null;
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return value;
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function ModalEmpresa({ empresa, onClose, onSave }) {
+  const isEdicao = Boolean(empresa?.id);
+  const [form, setForm] = useState({ ...EMPRESA_VAZIA, ...(empresa || {}) });
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const set = (campo) => (event) => setForm((prev) => ({ ...prev, [campo]: event.target.value }));
+
+  async function handleSubmit() {
+    if (!form.nome.trim()) {
+      setErro("Nome da empresa e obrigatorio.");
+      return;
+    }
+
+    setLoading(true);
+    setErro("");
+
+    try {
+      const payload = {
+        nome: form.nome,
+        categoria: form.categoria,
+        cnpj: form.cnpj,
+        responsavel: form.responsavel,
+        celular: form.celular,
+        contato: form.contato,
+        status: form.status,
+      };
+      const response = isEdicao
+        ? await api.put(`/empresas/${empresa.id}`, payload)
+        : await api.post("/empresas", payload);
+
+      if (response.sucesso) {
+        onSave(response.data, isEdicao);
+        onClose();
+      } else {
+        setErro(response.mensagem || "Erro ao salvar empresa.");
+      }
+    } catch (error) {
+      console.error(error);
+      setErro("Erro de conexao com o servidor.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              {isEdicao ? <Edit2 size={15} className="text-primary" /> : <Plus size={15} className="text-primary" />}
+            </div>
+            <h2 className="font-semibold text-foreground">{isEdicao ? "Editar Empresa" : "Cadastrar Empresa"}</h2>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+          {erro && (
+            <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              {erro}
+            </div>
+          )}
+          <CampoEmpresa label="Nome *" value={form.nome} onChange={set("nome")} className="md:col-span-2" />
+          <CampoEmpresa label="Categoria" value={form.categoria || ""} onChange={set("categoria")} />
+          <CampoEmpresa label="CNPJ" value={form.cnpj || ""} onChange={set("cnpj")} />
+          <CampoEmpresa label="Responsavel" value={form.responsavel || ""} onChange={set("responsavel")} />
+          <CampoEmpresa label="Celular" value={form.celular || ""} onChange={set("celular")} />
+          <CampoEmpresa label="Contato" value={form.contato || ""} onChange={set("contato")} />
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
+            <select
+              value={form.status || "Ativa"}
+              onChange={set("status")}
+              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              {["Ativa", "Inativa", "Suspensa"].map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-6 py-4">
+          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+            Salvar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CampoEmpresa({ label, value, onChange, className = "" }) {
+  return (
+    <div className={className}>
+      <label className="mb-1 block text-xs font-medium text-muted-foreground">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={onChange}
+        className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+      />
+    </div>
+  );
+}
+
+function ModalConfirmarExclusao({ empresa, onClose, onConfirm }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card shadow-xl">
+        <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
+            <AlertTriangle size={16} className="text-destructive" />
+          </div>
+          <h2 className="font-semibold text-foreground">Excluir Empresa</h2>
+        </div>
+        <p className="px-6 py-5 text-sm text-muted-foreground">
+          Confirma a exclusao de <strong className="text-foreground">{empresa?.nome}</strong>?
+        </p>
+        <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-6 py-4">
+          <Button variant="outline" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button size="sm" className="gap-1.5 bg-destructive/10 text-destructive hover:bg-destructive/20" onClick={onConfirm}>
+            <Trash2 size={13} />
+            Excluir
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
-function LinhaEmpresa({ emp, maxVisitantes, index }) {
+function LinhaEmpresa({ emp, maxVisitantes, index, onEdit, onDelete }) {
   if (!emp) return null;
 
   const color = emp.color || COLORS[index % COLORS.length];
@@ -107,8 +267,7 @@ function LinhaEmpresa({ emp, maxVisitantes, index }) {
         </div>
       </td>
       <td className="px-4 py-3">
-        <p className="text-[11px] font-medium leading-none">{emp.ultimaVisita ? emp.ultimaVisita.split(" ")[0] : "—"}</p>
-        <p className="text-[10px] text-muted-foreground mt-1">{emp.ultimaVisita ? emp.ultimaVisita.split(" ")[1] : ""}</p>
+        <p className="text-[11px] font-medium leading-none">{formatarUltimaVisita(emp.ultimaVisita) || "—"}</p>
       </td>
       <td className="px-4 py-3">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_STYLE[emp.status] ?? "bg-gray-100 text-gray-700"}`}>
@@ -118,11 +277,11 @@ function LinhaEmpresa({ emp, maxVisitantes, index }) {
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1">
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl border-border/70 bg-white/75 px-3 text-[10px] hover:border-primary/20 hover:bg-white">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 rounded-xl border-border/70 bg-white/75 px-3 text-[10px] hover:border-primary/20 hover:bg-white" onClick={() => onEdit(emp)}>
             <Edit2 size={10} /> Editar
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl">
-            <History size={12} className="text-muted-foreground" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl" onClick={() => onDelete(emp)}>
+            <Trash2 size={12} className="text-muted-foreground" />
           </Button>
         </div>
       </td>
@@ -137,6 +296,8 @@ export default function EmpresasPage() {
   const [loading, setLoading] = useState(true);
   const [filtroStatus, setFiltroStatus] = useState("Todas");
   const [busca, setBusca] = useState("");
+  const [modalEmpresa, setModalEmpresa] = useState({ open: false, data: null });
+  const [modalExcluir, setModalExcluir] = useState({ open: false, data: null });
   
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todas");
@@ -195,7 +356,48 @@ export default function EmpresasPage() {
     setBusca("");
   };
 
+  const handleSaveEmpresa = (empresa, isEdicao) => {
+    if (!empresa?.id) {
+      carregarEmpresas();
+      return;
+    }
+
+    setEmpresas((prev) => (
+      isEdicao
+        ? prev.map((item) => (item.id === empresa.id ? empresa : item))
+        : [empresa, ...prev]
+    ));
+  };
+
+  const handleExcluirEmpresa = async () => {
+    const id = modalExcluir.data?.id;
+    if (!id) return;
+
+    const response = await api.delete(`/empresas/${id}`);
+    if (response.sucesso) {
+      setEmpresas((prev) => prev.filter((empresa) => empresa.id !== id));
+      setModalExcluir({ open: false, data: null });
+    } else {
+      alert(response.mensagem || "Erro ao excluir empresa.");
+    }
+  };
+
   return (
+    <>
+    {modalEmpresa.open && (
+      <ModalEmpresa
+        empresa={modalEmpresa.data}
+        onClose={() => setModalEmpresa({ open: false, data: null })}
+        onSave={handleSaveEmpresa}
+      />
+    )}
+    {modalExcluir.open && (
+      <ModalConfirmarExclusao
+        empresa={modalExcluir.data}
+        onClose={() => setModalExcluir({ open: false, data: null })}
+        onConfirm={handleExcluirEmpresa}
+      />
+    )}
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Empresas Terceirizadas"
@@ -203,7 +405,7 @@ export default function EmpresasPage() {
         secondaryButtonText="Exportar CSV"
         onSecondaryButtonClick={() => downloadCSV(empresasFiltradas)}
         buttonText="Cadastrar Empresa"
-        onButtonClick={() => {}}
+        onButtonClick={() => setModalEmpresa({ open: true, data: null })}
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -357,7 +559,14 @@ export default function EmpresasPage() {
                 </tr>
               ) : (
                 empresasFiltradas.map((emp, i) => (
-                  <LinhaEmpresa key={emp.id || i} emp={emp} maxVisitantes={maxVisitantes} index={i} />
+                  <LinhaEmpresa
+                    key={emp.id || i}
+                    emp={emp}
+                    maxVisitantes={maxVisitantes}
+                    index={i}
+                    onEdit={(data) => setModalEmpresa({ open: true, data })}
+                    onDelete={(data) => setModalExcluir({ open: true, data })}
+                  />
                 ))
               )}
             </tbody>
@@ -404,5 +613,6 @@ export default function EmpresasPage() {
         </div>
       </ModalFiltro>
     </div>
+    </>
   );
 }

@@ -55,17 +55,25 @@ export default function EntradasChart({
   dataKey = "value",
   nameKey = "hora",
   barColor = "var(--primary)",
-  activeBarColor = "var(--secondary)",
   mobileLayout = false,
+  showPeriodToggle = true,
+  emptyMessage,
 }) {
   const [view, setView] = useState("hoje");
   const chartData = useMemo(() => {
+    if (!showPeriodToggle) return data;
     if (view === "mes") return monthData;
     if (view === "semana") return normalizarSemanaBrasileira(weekData);
     return data;
-  }, [data, monthData, view, weekData]);
+  }, [data, monthData, showPeriodToggle, view, weekData]);
   const xTickInterval =
-    view === "hoje" ? (mobileLayout ? 3 : 1) : view === "mes" ? (mobileLayout ? 6 : 3) : 0;
+    !showPeriodToggle
+      ? (mobileLayout ? 3 : 1)
+      : view === "hoje"
+        ? (mobileLayout ? 3 : 1)
+        : view === "mes"
+          ? (mobileLayout ? 6 : 3)
+          : 0;
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
@@ -108,6 +116,7 @@ export default function EntradasChart({
             </p>
           </div>
 
+          {showPeriodToggle ? (
           <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
@@ -124,6 +133,7 @@ export default function EntradasChart({
               </button>
             ))}
           </div>
+          ) : null}
         </div>
       </div>
 
@@ -135,7 +145,7 @@ export default function EntradasChart({
           <div className="space-y-1 px-4">
             <h3 className="text-sm font-semibold text-foreground">Sem dados de fluxo</h3>
             <p className="text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
-              Não foram registradas entradas de visitantes para o período selecionado ({view === "hoje" ? "hoje" : view === "semana" ? "esta semana" : "este mês"}).
+              {emptyMessage || `Nao foram registradas entradas de visitantes para o periodo selecionado (${view === "hoje" ? "hoje" : view === "semana" ? "esta semana" : "este mes"}).`}
             </p>
           </div>
         </div>
@@ -213,11 +223,19 @@ export default function EntradasChart({
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Comparativo</p>
-              <p className="mt-1 text-sm text-foreground">
-                Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
-                com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {showPeriodToggle ? "Comparativo" : "Historico"}
               </p>
+              {showPeriodToggle ? (
+                <p className="mt-1 text-sm text-foreground">
+                  Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
+                  com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-foreground">
+                  Total de <span className="font-semibold">{chartMeta.total} registros</span> no historico carregado.
+                </p>
+              )}
             </div>
           </div>
         </>

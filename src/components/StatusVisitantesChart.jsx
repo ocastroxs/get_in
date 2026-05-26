@@ -28,15 +28,19 @@ export default function StatusVisitantesChart({
   mobileLayout = "default",
   data = STATUS_VISITANTES,
   weekData = STATUS_VISITANTES,
-  monthData = STATUS_VISITANTES
+  monthData = STATUS_VISITANTES,
+  title = "Status dos Visitantes",
+  subtitle = "Situacao atual com leitura imediata de risco e permanencia.",
+  showPeriodToggle = true
 }) {
   const [view, setView] = useState("hoje");
 
   // Select data based on view
   const chartData = useMemo(() => {
+    if (!showPeriodToggle) return data;
     if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, monthData, weekData, view]);
+  }, [data, monthData, showPeriodToggle, weekData, view]);
 
   // "Ativos" is usually the first item (Dentro da fábrica)
   const ativos = useMemo(() => {
@@ -54,10 +58,11 @@ export default function StatusVisitantesChart({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Semântica</p>
-            <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>Status dos Visitantes</h3>
-            <p className="max-w-[280px] text-sm text-muted-foreground">Situação atual com leitura imediata de risco e permanência.</p>
+            <h3 className={`${compactMobile ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h3>
+            <p className="max-w-[280px] text-sm text-muted-foreground">{subtitle}</p>
           </div>
 
+          {showPeriodToggle ? (
           <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
@@ -74,6 +79,7 @@ export default function StatusVisitantesChart({
               </button>
             ))}
           </div>
+          ) : null}
         </div>
       </div>
 

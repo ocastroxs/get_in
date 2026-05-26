@@ -36,7 +36,7 @@ function formatarDuracao(ms) {
 }
 
 function nomeVisitante(log) {
-  return log.visitante || log.nome || log.nomeVisitante || log.pessoa || "Visitante";
+  return log.visitante || log.usuario_nome || log.nome || log.nomeVisitante || log.pessoa || "Visitante";
 }
 
 function empresaVisitante(log) {
@@ -44,7 +44,7 @@ function empresaVisitante(log) {
 }
 
 function setorVisitado(log) {
-  return log.setor || log.departamento || log.nomeDepartamento || log.destino || "-";
+  return log.setor || log.departamento_usuario || log.departamento || log.nomeDepartamento || log.destino || log.local_dispositivo || "-";
 }
 
 function tipoVisitante(log) {
@@ -66,7 +66,7 @@ function normalizarHistorico(logs) {
     const permanenciaPct = duracaoMs ? Math.min(100, Math.round((duracaoMs / (4 * 60 * 60 * 1000)) * 100)) : 0;
 
     return {
-      id: log.id || index,
+      id: log.log_id || log.id || index,
       visitante: nomeVisitante(log),
       empresa: empresaVisitante(log),
       tipo: tipoVisitante(log),
@@ -187,7 +187,7 @@ export default function RelatoriosPage() {
   const carregarRelatorios = async () => {
     setLoading(true);
     try {
-      const responseLogs = await api.get("/logs");
+      const responseLogs = await api.get("/views/logs");
       const responseEmpresas = await api.get("/empresas");
       const logs = responseLogs.sucesso ? responseLogs.data || [] : [];
 
