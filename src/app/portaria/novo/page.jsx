@@ -9,6 +9,8 @@ import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { MOTIVO_OPTIONS, normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
+const EMPRESA_NENHUMA = "Nenhuma";
+
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -214,13 +216,16 @@ export default function NovoCadastroPage() {
 
   const setoresDisponiveis = setorOptions;
 
-  const empresaOptions = empresas
-    .map((empresa) => {
-      const label = getEmpresaNome(empresa);
+  const empresaOptions = [
+    { value: EMPRESA_NENHUMA, label: EMPRESA_NENHUMA },
+    ...empresas
+      .map((empresa) => {
+        const label = getEmpresaNome(empresa);
 
-      return label ? { value: label, label } : null;
-    })
-    .filter(Boolean);
+        return label && label !== EMPRESA_NENHUMA ? { value: label, label } : null;
+      })
+      .filter(Boolean)
+  ];
 
   useEffect(() => {
     async function fetchEmpresas() {
@@ -498,6 +503,7 @@ export default function NovoCadastroPage() {
         `Observacoes: ${observacao || "Nenhuma"}`
       ].join(" | ");
 
+      const empresaPayload = form.empresa === EMPRESA_NENHUMA ? null : form.empresa;
       const payload = {
         idUsuario: visitanteUsuario.id,
         idDepartamento,
@@ -506,7 +512,7 @@ export default function NovoCadastroPage() {
         motivo: normalizeMotivoVisita(form.motivo || "Visita"),
         validade: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         descricao,
-        empresa: form.empresa,
+        empresa: empresaPayload,
         setorResponsavel: form.setor,
         telefone: form.telefone,
         email: form.email.trim().toLowerCase(),

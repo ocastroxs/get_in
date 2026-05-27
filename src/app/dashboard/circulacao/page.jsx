@@ -449,12 +449,6 @@ export default function CirculacaoPage() {
               ))}
             </div>
           </div>
-          
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> O monitoramento de circulação ajuda a garantir que os visitantes estejam nos locais autorizados dentro do cronograma previsto.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </div>

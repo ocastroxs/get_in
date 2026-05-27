@@ -2,10 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import {
-  Layers, CheckSquare, Activity, Lock,
+  Layers, CheckSquare, TrendingDown, TrendingUp,
   Filter, Search, X,
   Plus, Pencil, Trash2,
-  ShieldAlert, ShieldCheck, ShieldOff,
   AlertTriangle, Check, Loader2,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
@@ -17,17 +16,11 @@ import { api } from "@/services/api";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
 
-const ACESSO_OPTS   = ["Todos", "Liberado", "Restrito", "Bloqueado"];
 const STATUS_OPTS   = ["Todos", "Ativo", "Inativo"];
 
 const ACESSO_LABEL  = { liberado: "Liberado", restrito: "Restrito", bloqueado: "Bloqueado" };
 const STATUS_LABEL  = { ativo: "Ativo",       restrito: "Restrito", inativo: "Inativo" };
 
-const ACESSO_STYLE  = {
-  liberado:  "bg-emerald-100 text-emerald-700 border-emerald-200",
-  restrito:  "bg-red-100     text-red-600     border-red-200",
-  bloqueado: "bg-gray-200    text-gray-600    border-gray-300",
-};
 const STATUS_STYLE  = {
   ativo:     "bg-green-100  text-green-700",
   restrito:  "bg-orange-100 text-orange-600",
@@ -38,17 +31,6 @@ const STATUS_DOT    = {
   restrito:  "bg-orange-400",
   inativo:   "bg-gray-400",
 };
-const ACESSO_ICON   = {
-  liberado:  ShieldCheck,
-  restrito:  ShieldAlert,
-  bloqueado: ShieldOff,
-};
-const ACESSO_ICON_COLOR = {
-  liberado:  "text-emerald-500",
-  restrito:  "text-red-400",
-  bloqueado: "text-gray-400",
-};
-
 const SETOR_VAZIO = {
   nome: "", responsavel: "", idGestor: "", acesso: "Liberado",
   status: "Ativo",
@@ -114,10 +96,49 @@ function mensagemErroSetor(response, acao) {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 
+function formatarData(value) {
+  if (!value) return null;
+  const data = new Date(value);
+  if (Number.isNaN(data.getTime())) return value;
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getSetorRequisicao(requisicao) {
+  return {
+    id: Number(requisicao?.idSetor || requisicao?.setores?.id),
+    nome: requisicao?.setores?.nome || requisicao?.setor || "",
+  };
+}
+
+function enriquecerSetoresComVisitas(setores, requisicoes) {
+  return setores.map((setor) => {
+    const relacionadas = requisicoes.filter((requisicao) => {
+      const setorReq = getSetorRequisicao(requisicao);
+      return setorReq.id === Number(setor.id) || setorReq.nome === setor.nome;
+    });
+    const ultima = relacionadas
+      .map((requisicao) => new Date(requisicao.dataDaRequisicao || requisicao.validade || 0))
+      .filter((data) => !Number.isNaN(data.getTime()))
+      .sort((a, b) => b - a)[0];
+
+    return {
+      ...setor,
+      visitantes: relacionadas.length,
+      ultimaVisita: ultima ? ultima.toISOString() : null,
+    };
+  });
+}
+
 function toCSV(rows) {
-  const cols = ["ID", "Nome", "Responsável", "Acesso", "Status"];
+  const cols = ["Nome", "Responsavel", "Visitantes", "Ultima Visita", "Status"];
   const lines = rows.map((r) =>
-    [r.id, r.nome, r.responsavel || "—", ACESSO_LABEL[acessoKey(r.acesso)] || "—", STATUS_LABEL[statusKey(r.status)] || "—"].join(";")
+    [r.nome, r.responsavel || "-", r.visitantes || 0, formatarData(r.ultimaVisita) || "-", STATUS_LABEL[statusKey(r.status)] || "-"].join(";")
   );
   return [cols.join(";"), ...lines].join("\n");
 }
@@ -309,29 +330,20 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
 
 function LinhaSetor({ setor, onEditar, onExcluir }) {
   if (!setor) return null;
-  
-  const AcessoIcon = ACESSO_ICON[setor.acesso] ?? ShieldCheck;
+
   return (
     <tr className="group border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold text-[10px]">
-            {setor.id}
+            {(setor.nome || "?").slice(0, 2).toUpperCase()}
           </div>
           <div className="font-bold text-sm text-foreground">{setor.nome}</div>
         </div>
       </td>
-      <td className="py-3 px-4 text-xs font-medium text-muted-foreground">{setor.responsavel || "—"}</td>
-      <td className="py-3 px-4">
-        {setor.acesso ? (
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${ACESSO_STYLE[acessoKey(setor.acesso)]}`}>
-            <AcessoIcon size={12} className={ACESSO_ICON_COLOR[acessoKey(setor.acesso)]} />
-            {ACESSO_LABEL[acessoKey(setor.acesso)]}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </td>
+      <td className="py-3 px-4 text-sm font-bold text-foreground">{setor.visitantes || 0}</td>
+      <td className="py-3 px-4 text-xs font-medium text-muted-foreground">{formatarData(setor.ultimaVisita) || "-"}</td>
+      <td className="py-3 px-4 text-xs font-medium text-muted-foreground">{setor.responsavel || "-"}</td>
       <td className="py-3 px-4">
         {setor.status ? (
           <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold ${STATUS_STYLE[statusKey(setor.status)]}`}>
@@ -339,7 +351,7 @@ function LinhaSetor({ setor, onEditar, onExcluir }) {
             {STATUS_LABEL[statusKey(setor.status)]}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">—</span>
+          <span className="text-xs text-muted-foreground">-</span>
         )}
       </td>
       <td className="py-3 px-4 text-right">
@@ -356,7 +368,7 @@ function LinhaSetor({ setor, onEditar, onExcluir }) {
   );
 }
 
-// ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
+// PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 export default function SetoresPage() {
   const [setores, setSetores] = useState([]);
@@ -364,7 +376,6 @@ export default function SetoresPage() {
   const [loading, setLoading] = useState(true);
   
   const [statusFiltro, setStatusFiltro] = useState("Todos");
-  const [acessoFiltro, setAcessoFiltro] = useState("Todos");
   const [busca, setBusca] = useState("");
   
   const [modalSetor, setModalSetor]     = useState({ open: false, data: null });
@@ -372,17 +383,20 @@ export default function SetoresPage() {
   
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempStatusFiltro, setTempStatusFiltro] = useState("Todos");
-  const [tempAcessoFiltro, setTempAcessoFiltro] = useState("Todos");
 
   const carregarSetores = async () => {
     setLoading(true);
     try {
-      const [response, gestoresResponse] = await Promise.all([
+      const [response, gestoresResponse, requisicoesResponse] = await Promise.all([
         api.get('/setores'),
         api.get('/views/gestores'),
+        api.get('/requisicao-visitante'),
       ]);
       if (response.sucesso) {
-        const data = (response.data || []).map(normalizarSetor);
+        const requisicoes = requisicoesResponse.sucesso && Array.isArray(requisicoesResponse.data)
+          ? requisicoesResponse.data
+          : [];
+        const data = enriquecerSetoresComVisitas((response.data || []).map(normalizarSetor), requisicoes);
         setSetores(data);
       }
       if (gestoresResponse.sucesso) {
@@ -400,17 +414,16 @@ export default function SetoresPage() {
   const filtrados = useMemo(() => {
     return setores.filter(s => {
       const matchStatus = statusFiltro === "Todos" || s.status === statusFiltro;
-      const matchAcesso = acessoFiltro === "Todos" || s.acesso === acessoFiltro;
       const matchBusca  = !busca.trim() || s.nome.toLowerCase().includes(busca.toLowerCase());
-      return matchStatus && matchAcesso && matchBusca;
+      return matchStatus && matchBusca;
     });
-  }, [setores, statusFiltro, acessoFiltro, busca]);
+  }, [setores, statusFiltro, busca]);
 
   const stats = useMemo(() => ({
     total: setores.length,
     ativos: setores.filter(s => statusKey(s.status) === "ativo").length,
-    restritos: setores.filter(s => acessoKey(s.acesso) === "restrito").length,
-    bloqueados: setores.filter(s => acessoKey(s.acesso) === "bloqueado").length,
+    maisVisitado: setores.reduce((a, b) => (b.visitantes || 0) > (a.visitantes || 0) ? b : a, setores[0]) || {},
+    menosVisitado: setores.reduce((a, b) => (b.visitantes || 0) < (a.visitantes || 0) ? b : a, setores[0]) || {},
   }), [setores]);
 
   const handleSave = (data, isEdicao) => {
@@ -442,14 +455,11 @@ export default function SetoresPage() {
 
   const aplicarFiltros = () => {
     setStatusFiltro(tempStatusFiltro);
-    setAcessoFiltro(tempAcessoFiltro);
   };
 
   const limparFiltros = () => {
     setTempStatusFiltro("Todos");
-    setTempAcessoFiltro("Todos");
     setStatusFiltro("Todos");
-    setAcessoFiltro("Todos");
     setBusca("");
   };
 
@@ -457,7 +467,7 @@ export default function SetoresPage() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Gestão de Setores"
-        subtitle="Controle de setores e níveis de acesso integrados ao backend."
+        subtitle="Controle de setores integrado ao backend."
         secondaryButtonText="Exportar CSV"
         onSecondaryButtonClick={() => downloadCSV(filtrados)}
         buttonText="Novo Setor"
@@ -467,8 +477,8 @@ export default function SetoresPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total" value={stats.total} valueClassName="text-primary" icon={<Layers size={17} className="text-primary" />} sub="setores" accentVar="var(--primary)" />
         <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="#16a34a" />
-        <StatCard label="Acesso Restrito" value={stats.restritos} valueClassName="text-orange-600" icon={<Activity size={17} className="text-orange-600" />} sub="segurança média" accentVar="#ea580c" />
-        <StatCard label="Bloqueados" value={stats.bloqueados} valueClassName="text-red-600" icon={<Lock size={17} className="text-red-600" />} sub="acesso especial" accentVar="var(--destructive)" />
+        <StatCard label="Mais Visitado" value={stats.maisVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingUp size={17} className="text-foreground" />} sub={`${stats.maisVisitado?.visitantes || 0} visitas`} accentVar="var(--chart-4)" />
+        <StatCard label="Menos Visitado" value={stats.menosVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingDown size={17} className="text-muted-foreground" />} sub={`${stats.menosVisitado?.visitantes || 0} visitas`} accentVar="var(--border)" />
       </div>
 
       {/* Barra de Filtros Padronizada */}
@@ -502,9 +512,9 @@ export default function SetoresPage() {
             >
               <Filter size={16} />
               <span className="hidden sm:inline">Filtros</span>
-              {(statusFiltro !== "Todos" || acessoFiltro !== "Todos") && (
+              {statusFiltro !== "Todos" && (
                 <span className="ml-1 w-5 h-5 rounded-full bg-primary text-[10px] flex items-center justify-center text-primary-foreground">
-                  {(statusFiltro !== "Todos" ? 1 : 0) + (acessoFiltro !== "Todos" ? 1 : 0)}
+                  1
                 </span>
               )}
             </Button>
@@ -515,7 +525,7 @@ export default function SetoresPage() {
           </div>
         </div>
 
-        {(statusFiltro !== "Todos" || acessoFiltro !== "Todos" || busca) && (
+        {(statusFiltro !== "Todos" || busca) && (
           <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
             {busca && (
@@ -526,11 +536,6 @@ export default function SetoresPage() {
             {statusFiltro !== "Todos" && (
               <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
                 Status: {STATUS_LABEL[statusKey(statusFiltro)] || statusFiltro}
-              </span>
-            )}
-            {acessoFiltro !== "Todos" && (
-              <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                Acesso: {ACESSO_LABEL[acessoFiltro]}
               </span>
             )}
             <Button
@@ -547,16 +552,17 @@ export default function SetoresPage() {
       <div className="bg-card border border-border rounded-[24px] overflow-hidden shadow-md">
         <div className="p-4 border-b border-border bg-muted/20">
           <h3 className="font-bold text-sm">Lista de Setores</h3>
-          <p className="text-xs text-muted-foreground">Cadastro e níveis de acesso configurados no backend</p>
+          <p className="text-xs text-muted-foreground">Cadastro de setores configurados no backend</p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
-                <th className="px-4 py-3">Setor / ID</th>
-                <th className="px-4 py-3">Responsável</th>
-                <th className="px-4 py-3">Acesso</th>
+                <th className="px-4 py-3">Setor</th>
+                <th className="px-4 py-3">Visitantes</th>
+                <th className="px-4 py-3">Ultima Visita</th>
+                <th className="px-4 py-3">Responsavel</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
@@ -564,7 +570,7 @@ export default function SetoresPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={6} className="py-20 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <Loader2 className="animate-spin" size={24} />
                       <span className="text-sm">Carregando setores...</span>
@@ -573,7 +579,7 @@ export default function SetoresPage() {
                 </tr>
               ) : filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="py-20 text-center text-sm text-muted-foreground">
                     Nenhum setor encontrado com os filtros aplicados.
                   </td>
                 </tr>
@@ -626,45 +632,19 @@ export default function SetoresPage() {
                   key={status}
                   type="button"
                   onClick={() => setTempStatusFiltro(status)}
-                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                  className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
                     tempStatusFiltro === status
                       ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
                       : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
                   {STATUS_LABEL[statusKey(status)] || status}
+                  {tempStatusFiltro === status && <Check size={14} />}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
-              Nível de Acesso
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {ACESSO_OPTS.map((acesso) => (
-                <button
-                  key={acesso}
-                  type="button"
-                  onClick={() => setTempAcessoFiltro(acesso)}
-                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
-                    tempAcessoFiltro === acesso
-                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
-                      : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
-                  }`}
-                >
-                  {ACESSO_LABEL[acessoKey(acesso)] || acesso}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Info:</strong> Os filtros de status e acesso podem ser combinados para localizar setores com configurações específicas de segurança.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </div>

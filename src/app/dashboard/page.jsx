@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import AlertaBanner from "@/components/AlertaBanner";
+import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
@@ -9,7 +8,7 @@ import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
 import { api } from "@/services/api";
-import { ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
+import { ArrowRightLeft, Clock3, LogOut, Users } from "lucide-react";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 const LIMITE_ALERTA_HORAS = 8;
@@ -18,7 +17,7 @@ const STATS_VAZIAS = {
   visitantes: { value: 0 },
   entradas: { value: 0 },
   saidas: { value: 0, aindaDentro: 0 },
-  ativos: { value: 0, alertas: 0 },
+  ativos: { value: 0, expirados: 0 },
 };
 
 function formatarDataEntrada(data) {
@@ -120,7 +119,7 @@ function isDentro(item) {
   return status === "dentro" || status === "ativo" || (!!getEntradaVisitante(item) && !getSaidaVisitante(item));
 }
 
-function isAlertaPermanencia(item, agora = new Date()) {
+function isPermanenciaExpirada(item, agora = new Date()) {
   if (!isDentro(item)) return false;
 
   const entrada = getEntradaVisitante(item);
@@ -198,7 +197,6 @@ function processarStatusGeral(requisicoes, visitantesLocal = [], logs = []) {
   const counts = {
     dentro: visitantesLocal.filter(isDentro).length,
     pendente: 0,
-    alerta: visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante)).length,
     finalizado: logs.filter((log) => getSaidaVisitante(log)).length,
   };
 
@@ -210,8 +208,7 @@ function processarStatusGeral(requisicoes, visitantesLocal = [], logs = []) {
   return [
     { name: "Dentro da fabrica", value: counts.dentro, color: "var(--chart-2)" },
     { name: "Aguard. aprovacao", value: counts.pendente, color: "var(--chart-3)" },
-    { name: "Alerta permanencia", value: counts.alerta, color: "var(--chart-5)" },
-    { name: "Check-out realizado", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
+    { name: "Saida registrada", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
   ];
 }
 
@@ -219,7 +216,7 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
   const entradas = logs.filter((item) => getEntradaVisitante(item));
   const saidas = logs.filter((item) => getSaidaVisitante(item));
   const ativosAgora = visitantesLocal.filter(isDentro);
-  const alertas = ativosAgora.filter((item) => isAlertaPermanencia(item)).length;
+  const expirados = ativosAgora.filter((item) => isPermanenciaExpirada(item)).length;
 
   return {
     visitantes: {
@@ -234,14 +231,12 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
     },
     ativos: {
       value: ativosAgora.length,
-      alertas,
+      expirados,
     },
   };
 }
 
 export default function DashboardPage() {
-  const [visitantesEmAlerta, setVisitantesEmAlerta] = useState([]);
-  const [mostrarBanner, setMostrarBanner] = useState(true);
   const [motivosGeral, setMotivosGeral] = useState([]);
   const [picoSetores, setPicoSetores] = useState([]);
   const [statusGeral, setStatusGeral] = useState([]);
@@ -263,10 +258,6 @@ export default function DashboardPage() {
           const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
           const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
 
-          const alertas = visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante));
-
-          setVisitantesEmAlerta(alertas);
-          setMostrarBanner(alertas.length > 0);
           setMotivosGeral(agruparMotivosGeral(requisicoes));
           setPicoSetores(agruparPicoPorSetor(requisicoes));
           setEntradasGeral(entradasGerais(logs));
@@ -275,8 +266,6 @@ export default function DashboardPage() {
         }
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
-        setVisitantesEmAlerta([]);
-        setMostrarBanner(false);
         setMotivosGeral([]);
         setPicoSetores([]);
         setStatusGeral([]);
@@ -289,11 +278,6 @@ export default function DashboardPage() {
 
     carregarDados();
   }, []);
-
-  const mostrarAlertaBanner = useMemo(
-    () => mostrarBanner && visitantesEmAlerta.length > 0,
-    [mostrarBanner, visitantesEmAlerta.length]
-  );
 
   const stats = statsDashboard;
   const saidasPct = stats.entradas.value > 0 ? Math.round((stats.saidas.value / stats.entradas.value) * 100) : 0;
@@ -312,35 +296,10 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 pb-6 animate-in fade-in duration-700">
       <div className="flex flex-col gap-6 lg:hidden">
-        <header className="rounded-[24px] border border-white/10 bg-[#0A2540] px-4 py-4 pl-14 text-white shadow-lg shadow-slate-950/10">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-xl font-semibold tracking-[-0.03em] text-white">Dashboard Geral</h1>
-              <p className="mt-1 text-sm text-slate-300">Visao acumulada de visitantes, entradas, saidas e alertas.</p>
-            </div>
-
-            <div className="ml-3 flex items-center gap-2">
-              <button
-                type="button"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white/90 transition hover:bg-white/15"
-                aria-label="Notificacoes"
-              >
-                <Bell size={16} />
-              </button>
-              <button
-                type="button"
-                className="hidden h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white/90 transition hover:bg-white/15 min-[380px]:flex"
-                aria-label="Exportar"
-              >
-                <Download size={16} />
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {mostrarAlertaBanner ? (
-          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
+        <Topbar
+          title="Dashboard Geral"
+          subtitle="Visao acumulada de visitantes, entradas e saidas."
+        />
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatCard
@@ -370,7 +329,7 @@ export default function DashboardPage() {
             value={stats.saidas.value}
             valueClassName="text-red-600"
             icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
-            sub="Check-outs concluidos"
+            sub="Saidas registradas"
             insight={`${stats.saidas.aindaDentro} ainda dentro`}
             accentVar="#dc2626"
           />
@@ -381,7 +340,7 @@ export default function DashboardPage() {
             valueClassName="text-blue-900"
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
             sub="Permanencia ativa"
-            insight={`${stats.ativos.alertas} alerta(s)`}
+            insight={`${stats.ativos.expirados} expirado(s)`}
             accentVar="#1e3a8a"
           />
         </section>
@@ -407,19 +366,15 @@ export default function DashboardPage() {
           mobileLayout="list"
           data={statusGeral}
           showPeriodToggle={false}
-          subtitle="Visao geral de permanencia, pendencias e check-outs."
+          subtitle="Visao geral de permanencia, pendencias e saidas."
         />
       </div>
 
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
         <Topbar
           title="Dashboard Geral"
-          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentacoes e alertas ativos."
+          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentacoes e saidas."
         />
-
-        {mostrarAlertaBanner ? (
-          <AlertaBanner alertas={visitantesEmAlerta} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-12">
           <div className="xl:col-span-5">
@@ -450,7 +405,7 @@ export default function DashboardPage() {
               value={stats.saidas.value}
               valueClassName="text-red-600"
               icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
-              sub="Check-outs concluidos"
+              sub="Saidas registradas"
               insight={`${saidasPct}% das entradas com saida registrada`}
               accentVar="#dc2626"
             />
@@ -460,7 +415,7 @@ export default function DashboardPage() {
               valueClassName="text-blue-900"
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
               sub="Pessoas em permanencia ativa"
-              insight={`${stats.ativos.alertas} alerta(s) exigem revisao`}
+              insight={`${stats.ativos.expirados} expirado(s)`}
               accentVar="#1e3a8a"
             />
           </div>
@@ -489,7 +444,7 @@ export default function DashboardPage() {
             <StatusVisitantesChart
               data={statusGeral}
               showPeriodToggle={false}
-              subtitle="Visao geral de permanencia, pendencias e check-outs."
+              subtitle="Visao geral de permanencia, pendencias e saidas."
             />
           </div>
         </section>

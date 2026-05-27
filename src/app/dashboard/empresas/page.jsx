@@ -3,12 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Building2,
-  Download,
   Plus,
   Search,
   X,
   Edit2,
-  Printer,
   CheckCircle2,
   TrendingUp,
   TrendingDown,
@@ -242,7 +240,9 @@ function LinhaEmpresa({ emp, maxVisitantes, index, onEdit, onDelete }) {
           </div>
           <div>
             <p className="text-xs font-bold leading-none">{emp.nome || "—"}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{emp.categoria || "—"}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {[emp.categoria, emp.cnpj ? `CNPJ ${emp.cnpj}` : null].filter(Boolean).join(" / ") || "Sem dados complementares"}
+            </p>
           </div>
         </div>
       </td>
@@ -436,7 +436,7 @@ export default function EmpresasPage() {
         <StatCard
           label="Menos Visitada"
           value={stats.menosVisitada?.nome || "—"}
-          valueClassName="text-muted-foreground font-bold text-sm"
+          valueClassName="text-foreground font-bold text-sm"
           icon={<TrendingDown size={17} className="text-muted-foreground" />}
           sub={`${stats.menosVisitada?.visitantes || 0} visitas`}
           accentVar="var(--border)"
@@ -516,14 +516,6 @@ export default function EmpresasPage() {
           <div>
             <h3 className="font-bold text-sm">Registro de Empresas</h3>
             <p className="text-[10px] text-muted-foreground">{empresasFiltradas.length} empresas encontradas</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-xl border-border/70 bg-white/75 hover:border-primary/20 hover:bg-white" onClick={() => downloadCSV(empresasFiltradas)}>
-              <Download size={14} />
-            </Button>
-            <Button variant="outline" size="icon" className="h-8 w-8 rounded-xl border-border/70 bg-white/75 hover:border-primary/20 hover:bg-white">
-              <Printer size={14} />
-            </Button>
           </div>
         </div>
 
@@ -605,11 +597,6 @@ export default function EmpresasPage() {
             </div>
           </div>
           
-          <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
-            <p className="text-[10px] text-cyan-600 leading-relaxed">
-              <strong>Dica:</strong> Empresas inativas ou suspensas não podem ter visitantes autorizados na portaria.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </div>
