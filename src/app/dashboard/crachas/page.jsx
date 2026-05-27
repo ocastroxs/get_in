@@ -70,6 +70,34 @@ const SETOR_DOT = {
 
 const STATUS_FILTER_OPTS = ["Todas", "disponivel", "emUso", "perdido", "alerta"];
 
+function formatDate(value) {
+  if (!value) return null;
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function normalizeCracha(tag) {
+  const status = tag?.validade && new Date(tag.validade) < new Date() && tag.status === "emUso"
+    ? "alerta"
+    : tag?.status || "disponivel";
+
+  return {
+    ...tag,
+    status,
+    statusOriginal: tag?.status || "disponivel",
+    visitante: tag?.usuario?.nome || null,
+    setor: tag?.usuario?.departamentos?.nome || null,
+    entrega: formatDate(tag?.dataDeCriacao),
+    devolucao: formatDate(tag?.dataDeDevolucao),
+  };
+}
+
 function toCSV(rows) {
   const cols = ["ID", "Status", "Tag Código"];
   const lines = rows.map((r) =>
@@ -102,7 +130,10 @@ function ModalCadastrarTag({ onClose, onSave }) {
     
     setLoading(true);
     try {
-      const response = await api.post('/cracha', { status: 'disponivel' });
+      const response = await api.post('/tags', {
+        codigoTag: form.tagId.trim(),
+        status: 'disponivel',
+      });
       
       if (response.sucesso) {
         onSave();
@@ -138,7 +169,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
             Adicione um novo crachá ao inventário do sistema. Ele será iniciado com status &quot;Disponível&quot;.
           </p>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador (Opcional)</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Identificador da TAG</label>
             <input
               type="text"
               value={form.tagId}
@@ -163,7 +194,7 @@ function ModalCadastrarTag({ onClose, onSave }) {
 
 // ─── Linha da Tabela ──────────────────────────────────────────────────────────
 
-function LinhaCracha({ c }) {
+function LinhaCracha({ c, onStatusChange, onDelete }) {
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
@@ -188,10 +219,33 @@ function LinhaCracha({ c }) {
           {STATUS_LABEL[c.status] || c.status}
         </span>
       </td>
-      <td className="py-3 px-4 text-right">
-        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
-          <MoreHorizontal size={14} />
-        </button>
+      <td className="py-3 px-4">
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            title="Marcar como disponivel"
+            onClick={() => onStatusChange(c.id, "disponivel")}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            title="Marcar como perdido"
+            onClick={() => onStatusChange(c.id, "perdido")}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <AlertTriangle size={14} />
+          </button>
+          <button
+            type="button"
+            title="Excluir TAG"
+            onClick={() => onDelete(c.id)}
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -212,9 +266,9 @@ export default function CrachasPage() {
   const carregarCrachas = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/cracha');
+      const response = await api.get('/tags');
       if (response.sucesso) {
-        setCrachas(response.data || []);
+        setCrachas((response.data || []).map(normalizeCracha));
       }
     } catch (error) {
       console.error("Erro ao carregar crachás:", error);
@@ -233,6 +287,7 @@ export default function CrachasPage() {
       const q = busca.trim().toLowerCase();
       const matchBusca = !q ||
         String(c.id).includes(q) ||
+        (c.codigoTag && c.codigoTag.toLowerCase().includes(q)) ||
         (c.visitante && c.visitante.toLowerCase().includes(q));
       return matchStatus && matchBusca;
     });
@@ -254,6 +309,36 @@ export default function CrachasPage() {
     setTempStatusFiltro("Todas");
     setStatusFiltro("Todas");
     setBusca("");
+  };
+
+  const atualizarStatus = async (id, status) => {
+    try {
+      const response = await api.put(`/tags/${id}`, { status });
+      if (!response.sucesso) {
+        alert(response.mensagem || "Erro ao atualizar cracha.");
+        return;
+      }
+      await carregarCrachas();
+    } catch (error) {
+      console.error("Erro ao atualizar cracha:", error);
+      alert("Erro de conexao com o servidor.");
+    }
+  };
+
+  const excluirCracha = async (id) => {
+    if (!confirm("Deseja excluir esta TAG do inventario?")) return;
+
+    try {
+      const response = await api.delete(`/tags/${id}`);
+      if (!response.sucesso) {
+        alert(response.mensagem || "Erro ao excluir cracha.");
+        return;
+      }
+      await carregarCrachas();
+    } catch (error) {
+      console.error("Erro ao excluir cracha:", error);
+      alert("Erro de conexao com o servidor.");
+    }
   };
 
   return (
@@ -431,7 +516,14 @@ export default function CrachasPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((c) => <LinhaCracha key={c.id} c={c} />)
+                  filtrados.map((c) => (
+                    <LinhaCracha
+                      key={c.id}
+                      c={c}
+                      onStatusChange={atualizarStatus}
+                      onDelete={excluirCracha}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
