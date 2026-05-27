@@ -12,7 +12,6 @@ import {
   MapPinned,
   PanelLeft,
   PanelLeftClose,
-  Settings,
   ShieldCheck,
   Sun,
   Moon,
@@ -100,13 +99,6 @@ export default function Sidebar() {
             isExpanded={isExpanded}
             fallbackName="Administrador"
             fallbackEmail="admin@getin.com"
-          />
-          <NavItem
-            isExpanded={isExpanded}
-            href="/configuracoes"
-            icon={<Settings size={20} strokeWidth={1.5} />}
-            label="Configuracoes"
-            active={isActive('/configuracoes')}
           />
         </div>
       </aside>

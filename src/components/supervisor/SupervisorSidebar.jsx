@@ -10,7 +10,6 @@ import {
   Moon,
   PanelLeft,
   PanelLeftClose,
-  Settings,
   Sun,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
@@ -88,13 +87,6 @@ export default function SupervisorSidebar() {
             isExpanded={isExpanded}
             fallbackName="Supervisor"
             fallbackEmail="supervisor@getin.com"
-          />
-          <NavItem
-            isExpanded={isExpanded}
-            href="/configuracoes"
-            icon={<Settings size={20} strokeWidth={1.5} />}
-            label="Configurações"
-            active={isActive('/configuracoes')}
           />
         </div>
       </aside>

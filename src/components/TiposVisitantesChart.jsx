@@ -51,7 +51,7 @@ export default function TiposVisitantesChart({
     return chartData.reduce((sum, item) => sum + item[dataKey], 0);
   }, [chartData, dataKey]);
 
-  const isEmpty = total === 0;
+  const isEmpty = chartData.length === 0;
   
   const emptyText = useMemo(() => {
     if (!showPeriodToggle) return emptyMessage;
