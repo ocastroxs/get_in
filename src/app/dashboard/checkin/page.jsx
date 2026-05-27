@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Download,
@@ -26,6 +26,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -132,8 +133,8 @@ export default function CheckinPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todas");
 
-  const carregarRegistros = async () => {
-    setLoading(true);
+  const carregarRegistros = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/logs');
       if (response.sucesso) {
@@ -146,9 +147,7 @@ export default function CheckinPage() {
     }
   };
 
-  useEffect(() => {
-    carregarRegistros();
-  }, []);
+  useAutoRefresh(carregarRegistros);
 
   const registrosFiltrados = useMemo(() => {
     return registros.filter((reg) => {

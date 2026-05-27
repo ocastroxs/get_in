@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   AlertTriangle, Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
@@ -9,6 +9,7 @@ import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
 
@@ -471,13 +472,11 @@ export default function HistoricoPage() {
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
   const [tempFiltroData, setTempFiltroData] = useState("");
 
-  useEffect(() => {
-    fetchHistorico();
-  }, []);
+  useAutoRefresh(fetchHistorico);
 
-  async function fetchHistorico() {
+  async function fetchHistorico({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [historicoResponse, requisicoesResponse] = await Promise.all([
         api.get("/portaria/historico"),
         api.get("/requisicao-visitante")

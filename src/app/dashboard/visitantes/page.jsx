@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Users, ArrowRightLeft, LogOut, AlertTriangle,
   Search, X, Plus, CreditCard, Check, Loader2,
@@ -11,6 +11,7 @@ import Topbar from "@/components/Topbar";
 import AlertaBanner from "@/components/AlertaBanner";
 import { Button } from "@/components/ui/button";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -239,8 +240,8 @@ export default function VisitantesPage() {
   const [busca, setBusca] = useState("");
   const [mostrarBanner, setMostrarBanner] = useState(true);
 
-  const carregarVisitantes = async () => {
-    setLoading(true);
+  const carregarVisitantes = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get("/requisicao-visitante");
       if (response.sucesso) {
@@ -253,9 +254,7 @@ export default function VisitantesPage() {
     }
   };
 
-  useEffect(() => {
-    carregarVisitantes();
-  }, []);
+  useAutoRefresh(carregarVisitantes);
 
   const alertas = useMemo(
     () => visitantes.filter((visitante) => visitante.status === "semsaida"),

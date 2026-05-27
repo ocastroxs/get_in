@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -21,6 +21,7 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/services/api";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
 
@@ -216,13 +217,11 @@ export default function PortariaAprovacoesPage() {
   const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
   const [tempFiltroData, setTempFiltroData] = useState("");
 
-  useEffect(() => {
-    fetchRequisicoes();
-  }, []);
+  useAutoRefresh(fetchRequisicoes);
 
-  async function fetchRequisicoes() {
+  async function fetchRequisicoes({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/requisicao-visitante");
       const data = response?.sucesso && Array.isArray(response.data) ? response.data : [];
 

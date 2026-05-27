@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import StatCard from "@/components/StatCard";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF, formatPhone } from "@/lib/utils";
@@ -411,15 +412,11 @@ export default function PendenciasPage() {
   const [filtroSetor, setFiltroSetor] = useState("Todos");
   const [tempFiltroSetor, setTempFiltroSetor] = useState("Todos");
 
-  useEffect(() => {
-    fetchRequisicoes();
-    const interval = setInterval(fetchRequisicoes, 30 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  useAutoRefresh(fetchRequisicoes);
 
-  async function fetchRequisicoes() {
+  async function fetchRequisicoes({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/portaria/pendencias");
       const pendencias = getResponseArray(response, ["dados", "requisicoes"])
         .map(normalizeRequisicao)

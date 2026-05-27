@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Users, Search, X, Download, Plus,
   Check, Shield, User, Eye, Star,
@@ -12,6 +12,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -179,8 +180,8 @@ export default function FuncionariosPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroTipo, setTempFiltroTipo] = useState("Todos");
 
- const carregarFuncionarios = async () => {
-  setLoading(true);
+ const carregarFuncionarios = async ({ silent = false } = {}) => {
+  if (!silent) setLoading(true);
   try {
     const response = await api.get('/func/view');
     
@@ -202,9 +203,7 @@ export default function FuncionariosPage() {
   }
 };
 
-  useEffect(() => {
-    carregarFuncionarios();
-  }, []);
+  useAutoRefresh(carregarFuncionarios);
 
   const filtrados = useMemo(() => {
   return funcionarios.filter((f) => {

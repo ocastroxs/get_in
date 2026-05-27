@@ -6,6 +6,7 @@ import { LoginForm } from "@/components/login-form"
 import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext"
 import { Building2, ChevronRight, ShieldCheck, Users } from "lucide-react"
 import { publicService } from "@/services/api"
+import { useAutoRefresh } from "@/hooks/useAutoRefresh"
 import BrandLogo from "@/components/BrandLogo"
 
 /* ─────────────────────────────────────────────
@@ -230,22 +231,18 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, authLoading, funcionario, router, user]);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      const response = await publicService.getStats();
-      if (response.sucesso && response.data) {
-        setStats({
-          visitasHoje: response.data.visitasHoje.toString(),
-          usuariosTotal: response.data.usuariosTotal.toString(),
-          setoresTotal: response.data.setoresTotal.toString()
-        });
-      }
-    };
+  const fetchStats = async () => {
+    const response = await publicService.getStats();
+    if (response.sucesso && response.data) {
+      setStats({
+        visitasHoje: response.data.visitasHoje.toString(),
+        usuariosTotal: response.data.usuariosTotal.toString(),
+        setoresTotal: response.data.setoresTotal.toString()
+      });
+    }
+  };
 
-    fetchStats();
-    const interval = setInterval(fetchStats, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  useAutoRefresh(fetchStats);
 
   if (authLoading) {
     return (

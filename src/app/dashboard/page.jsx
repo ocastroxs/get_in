@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import AlertaBanner from "@/components/AlertaBanner";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
@@ -8,6 +8,7 @@ import EntradasChart from "@/components/EntradasChart";
 import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { ArrowRightLeft, Bell, Clock3, Download, LogOut, Users } from "lucide-react";
 
@@ -463,64 +464,55 @@ export default function DashboardPage() {
   const [statsDashboard, setStatsDashboard] = useState(STATS_VAZIAS);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  useEffect(() => {
-    async function carregarDados() {
-      try {
-        // Carregando dados consolidados do back-end
-        const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
-          api.get("/requisicao-visitante"),
-          api.get("/portaria/vlocal"),
-          api.get("/logs"),
-        ]);
+  async function carregarDados() {
+    try {
+      const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
+        api.get("/requisicao-visitante"),
+        api.get("/portaria/vlocal"),
+        api.get("/logs"),
+      ]);
 
-        if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
-          // Normalizando respostas do back-end
-          const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
-          const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
-          const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
-          
-          // Filter alerts
-          const alertas = visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante));
-          setVisitantesEmAlerta(alertas);
-          setMostrarBanner(alertas.length > 0);
-          
-          // Process motivos
-          setMotivosHoje(agruparMotivosHoje(requisicoes));
-          setMotivosSemana(agruparMotivosSemana(requisicoes));
-          setMotivosMes(agruparMotivosMes(requisicoes));
-          setPicoSetores(agruparPicoPorSetor(requisicoes));
-          setEntradasHoje(entradasPorHoraHoje(logs));
-          setEntradasSemana(entradasPorSemana(logs));
-          setEntradasMes(entradasPorMes(logs));
-          setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
-          
-          // Process status
-          setStatusHoje(processarStatusHoje(requisicoes, visitantesLocal, logs));
-          setStatusSemana(processarStatusSemana(requisicoes, visitantesLocal, logs));
-          setStatusMes(processarStatusPeriodo(requisicoes, visitantesLocal, "mes", logs));
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-        setVisitantesEmAlerta([]);
-        setMostrarBanner(false);
-        setMotivosHoje([]);
-        setMotivosSemana([]);
-        setMotivosMes([]);
-        setPicoSetores([]);
-        setStatusHoje([]);
-        setStatusSemana([]);
-        setStatusMes([]);
-        setEntradasHoje([]);
-        setEntradasSemana([]);
-        setEntradasMes([]);
-        setStatsDashboard(STATS_VAZIAS);
-      } finally {
-        setIsDataLoading(false);
+      if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
+        const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
+        const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
+        const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
+        const alertas = visitantesLocal.filter((visitante) => isAlertaPermanencia(visitante));
+
+        setVisitantesEmAlerta(alertas);
+        setMostrarBanner(alertas.length > 0);
+        setMotivosHoje(agruparMotivosHoje(requisicoes));
+        setMotivosSemana(agruparMotivosSemana(requisicoes));
+        setMotivosMes(agruparMotivosMes(requisicoes));
+        setPicoSetores(agruparPicoPorSetor(requisicoes));
+        setEntradasHoje(entradasPorHoraHoje(logs));
+        setEntradasSemana(entradasPorSemana(logs));
+        setEntradasMes(entradasPorMes(logs));
+        setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
+        setStatusHoje(processarStatusHoje(requisicoes, visitantesLocal, logs));
+        setStatusSemana(processarStatusSemana(requisicoes, visitantesLocal, logs));
+        setStatusMes(processarStatusPeriodo(requisicoes, visitantesLocal, "mes", logs));
       }
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setVisitantesEmAlerta([]);
+      setMostrarBanner(false);
+      setMotivosHoje([]);
+      setMotivosSemana([]);
+      setMotivosMes([]);
+      setPicoSetores([]);
+      setStatusHoje([]);
+      setStatusSemana([]);
+      setStatusMes([]);
+      setEntradasHoje([]);
+      setEntradasSemana([]);
+      setEntradasMes([]);
+      setStatsDashboard(STATS_VAZIAS);
+    } finally {
+      setIsDataLoading(false);
     }
+  }
 
-    carregarDados();
-  }, []);
+  useAutoRefresh(carregarDados);
 
   const mostrarAlertaBanner = useMemo(
     () => mostrarBanner && visitantesEmAlerta.length > 0,

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { dashboardService } from "@/services/dashboardService";
 
 /**
@@ -19,41 +20,41 @@ export function useDashboardData() {
     error: null,
   });
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-      try {
+  async function fetchDashboardData({ silent = false } = {}) {
+    try {
+      if (!silent) {
         setData((prev) => ({ ...prev, loading: true, error: null }));
-
-        const resultado = await dashboardService.carregarDados();
-
-        if (resultado.sucesso) {
-          setData({
-            stats: resultado.stats,
-            alertas: resultado.alertas,
-            entradasHoje: resultado.entradasHoje,
-            entradasSemana: resultado.entradasSemana,
-            entradasMes: resultado.entradasMes,
-            requisicoes: resultado.requisicoes,
-            visitantesLocal: resultado.visitantesLocal,
-            logs: resultado.logs,
-            loading: false,
-            error: null,
-          });
-        } else {
-          throw new Error(resultado.erro || "Erro ao carregar dados");
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-        setData((prev) => ({
-          ...prev,
-          loading: false,
-          error: error.message || "Erro ao carregar dados",
-        }));
       }
-    }
 
-    fetchDashboardData();
-  }, []);
+      const resultado = await dashboardService.carregarDados();
+
+      if (resultado.sucesso) {
+        setData({
+          stats: resultado.stats,
+          alertas: resultado.alertas,
+          entradasHoje: resultado.entradasHoje,
+          entradasSemana: resultado.entradasSemana,
+          entradasMes: resultado.entradasMes,
+          requisicoes: resultado.requisicoes,
+          visitantesLocal: resultado.visitantesLocal,
+          logs: resultado.logs,
+          loading: false,
+          error: null,
+        });
+      } else {
+        throw new Error(resultado.erro || "Erro ao carregar dados");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setData((prev) => ({
+        ...prev,
+        loading: false,
+        error: error.message || "Erro ao carregar dados",
+      }));
+    }
+  }
+
+  useAutoRefresh(fetchDashboardData);
 
   return data;
 }

@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
@@ -1054,15 +1055,14 @@ export default function PortariaPage() {
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
 
   useEffect(() => {
-    fetchVisitantes();
     fetchOpcoesEdicao();
-    const interval = setInterval(fetchVisitantes, 30 * 1000);
-    return () => clearInterval(interval);
   }, []);
 
-  async function fetchVisitantes() {
+  useAutoRefresh(fetchVisitantes);
+
+  async function fetchVisitantes({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const visitantesResponse = await api.get("/portaria/vlocal");
       const visitantesPortaria = getResponseArray(visitantesResponse, ["dados", "visitantes"]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
 import TiposVisitantesChart from "@/components/TiposVisitantesChart";
@@ -11,6 +11,7 @@ import FiltrosRelatorio from "@/components/FiltrosRelatorio";
 import Topbar from "@/components/Topbar";
 import { Users, ArrowRightLeft, Clock, AlertTriangle, Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -184,8 +185,8 @@ export default function RelatoriosPage() {
   const [entradasSemana, setEntradasSemana] = useState([]);
   const [tipos, setTipos] = useState([]);
 
-  const carregarRelatorios = async () => {
-    setLoading(true);
+  const carregarRelatorios = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const responseLogs = await api.get("/logs");
       const responseEmpresas = await api.get("/empresas");
@@ -229,9 +230,7 @@ export default function RelatoriosPage() {
     }
   };
 
-  useEffect(() => {
-    carregarRelatorios();
-  }, []);
+  useAutoRefresh(carregarRelatorios);
 
   const handleExportarPDF = () => {
     window.print();

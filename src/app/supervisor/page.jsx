@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -22,6 +22,7 @@ import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -75,15 +76,11 @@ export default function SupervisorDashboardPage() {
   const [filtroStatus, setFiltroStatus] = useState("Todos");
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
 
-  useEffect(() => {
-    fetchRequisicoes();
-    const interval = setInterval(fetchRequisicoes, 30 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  useAutoRefresh(fetchRequisicoes);
 
-  async function fetchRequisicoes() {
+  async function fetchRequisicoes({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import {
   Layers, CheckSquare, Activity, Lock,
   Filter, Search, X,
@@ -13,6 +13,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
@@ -372,8 +373,8 @@ export default function SetoresPage() {
   const [tempStatusFiltro, setTempStatusFiltro] = useState("Todos");
   const [tempAcessoFiltro, setTempAcessoFiltro] = useState("Todos");
 
-  const carregarSetores = async () => {
-    setLoading(true);
+  const carregarSetores = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/setores');
       if (response.sucesso) {
@@ -387,7 +388,7 @@ export default function SetoresPage() {
     }
   };
 
-  useEffect(() => { carregarSetores(); }, []);
+  useAutoRefresh(carregarSetores);
 
   const filtrados = useMemo(() => {
     return setores.filter(s => {
