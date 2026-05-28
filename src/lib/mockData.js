@@ -13,6 +13,7 @@ export const MENU_ITEMS = {
       { id: "crachas", label: "Crachás", icon: "CreditCard", href: "/crachas" },
     ],
     operacao: [
+      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/dashboard/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
       { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
@@ -28,6 +29,7 @@ export const MENU_ITEMS = {
       { id: "setores", label: "Setores", icon: "Building2", href: "/dashboard/setores" },
     ],
     operacao: [
+      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/dashboard/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
       { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
@@ -35,7 +37,7 @@ export const MENU_ITEMS = {
   visitante: {
     principal: [
       { id: "minha-visita", label: "Minha Visita", icon: "User", href: "/minha-visita" },
-      { id: "relatorios", label: "Relatorios", icon: "FileBarChart", href: "/dashboard/relatorios" },
+      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/dashboard/checkin" },
     ],
   },
 };

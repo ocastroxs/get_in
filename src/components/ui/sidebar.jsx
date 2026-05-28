@@ -1,19 +1,22 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Building,
-  Building2,
   FileText,
+  Folder,
   Home,
-  IdCard,
-  MapPinned,
+  Inbox,
+  Lock,
+  Minus,
+  Moon,
   PanelLeft,
   PanelLeftClose,
-  ShieldCheck,
+  Plus,
+  Settings,
   Sun,
-  Moon,
   UserSquare2,
   Users,
 } from 'lucide-react';
@@ -22,14 +25,24 @@ import SidebarUserProfile from '@/components/SidebarUserProfile';
 import { useSidebarPreference } from '@/hooks/useSidebarPreference';
 import { useAppTheme } from '@/lib/theme';
 
-const ADMIN_ITEMS = [
+const MAIN_ITEMS = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/dashboard/visitantes', icon: Users, label: 'Visitantes' },
   { href: '/dashboard/funcionarios', icon: UserSquare2, label: 'Funcionarios' },
-  { href: '/dashboard/crachas', icon: IdCard, label: 'Crachas' },
-  { href: '/dashboard/setores', icon: Building2, label: 'Setores' },
-  { href: '/dashboard/circulacao', icon: MapPinned, label: 'Circulacao' },
-  { href: '/dashboard/permissao', icon: ShieldCheck, label: 'Permissoes' },
+];
+
+const CONTROL_ITEMS = [
+  { href: '/dashboard/crachas', label: 'Crachas' },
+  { href: '/dashboard/checkin', label: 'Check-In / Out' },
+  { href: '/dashboard/setores', label: 'Setores' },
+];
+
+const ACCESS_ITEMS = [
+  { href: '/dashboard/circulacao', label: 'Circulacao' },
+  { href: '/dashboard/permissao', label: 'Permissoes' },
+];
+
+const SECONDARY_ITEMS = [
   { href: '/dashboard/empresas', icon: Building, label: 'Empresas' },
   { href: '/dashboard/relatorios', icon: FileText, label: 'Relatorios' },
 ];
@@ -37,6 +50,8 @@ const ADMIN_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useSidebarPreference();
+  const [isControlOpen, setIsControlOpen] = useState(true);
+  const [isAccessOpen, setIsAccessOpen] = useState(true);
   const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) =>
@@ -81,7 +96,7 @@ export default function Sidebar() {
           )}
 
           <nav className="flex flex-col gap-2">
-            {ADMIN_ITEMS.map(({ href, icon: Icon, label }) => (
+            {MAIN_ITEMS.map(({ href, icon: Icon, label }) => (
               <NavItem
                 key={href}
                 isExpanded={isExpanded}
@@ -95,11 +110,63 @@ export default function Sidebar() {
 
           <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
 
+          <CollapsibleSection
+            isExpanded={isExpanded}
+            title="Controle"
+            icon={<Inbox size={20} strokeWidth={1.5} />}
+            open={isControlOpen}
+            onToggle={() => {
+              if (!isExpanded) setIsExpanded(true);
+              setIsControlOpen((current) => !current);
+            }}
+          >
+            {CONTROL_ITEMS.map((item) => (
+              <SubItem key={item.href} href={item.href} label={item.label} active={isActive(item.href)} />
+            ))}
+          </CollapsibleSection>
+
+          <div className="mt-3">
+            <CollapsibleSection
+              isExpanded={isExpanded}
+              title="Acesso"
+              icon={<Lock size={20} strokeWidth={1.5} />}
+              open={isAccessOpen}
+              onToggle={() => {
+                if (!isExpanded) setIsExpanded(true);
+                setIsAccessOpen((current) => !current);
+              }}
+            >
+              {ACCESS_ITEMS.map((item) => (
+                <SubItem key={item.href} href={item.href} label={item.label} active={isActive(item.href)} />
+              ))}
+            </CollapsibleSection>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {SECONDARY_ITEMS.map(({ href, icon: Icon, label }) => (
+              <NavItem
+                key={href}
+                isExpanded={isExpanded}
+                href={href}
+                icon={<Icon size={20} strokeWidth={1.5} />}
+                label={label}
+                active={isActive(href)}
+              />
+            ))}
+          </div>
+
           <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
             <SidebarUserProfile
               isExpanded={isExpanded}
               fallbackName="Administrador"
               fallbackEmail="admin@getin.com"
+            />
+            <NavItem
+              isExpanded={isExpanded}
+              href="/configuracoes"
+              icon={<Settings size={20} strokeWidth={1.5} />}
+              label="Configuracoes"
+              active={isActive('/configuracoes')}
             />
           </div>
         </div>
@@ -147,6 +214,41 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) 
   );
 }
 
+function CollapsibleSection({ isExpanded, title, icon, open, onToggle, children }) {
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        title={!isExpanded ? title : undefined}
+        className={`
+          flex cursor-pointer items-center transition-all duration-300
+          ${
+            isExpanded
+              ? 'justify-between rounded-[20px] bg-[#18181b] px-4 py-3 text-white shadow-lg shadow-blue-500/10 dark:bg-[#4DA8EA]'
+              : 'mx-auto h-12 w-12 justify-center rounded-full border border-gray-100 bg-white p-3 text-black shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-white'
+          }
+        `}
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-3 overflow-hidden">
+          <span className="flex min-w-[20px] items-center justify-center">{icon}</span>
+          {isExpanded && <span className="whitespace-nowrap text-[14px] font-medium">{title}</span>}
+        </div>
+        {isExpanded && (open ? <Minus size={16} strokeWidth={1.5} /> : <Plus size={16} strokeWidth={1.5} />)}
+      </button>
+
+      <div className={`grid transition-all duration-300 ease-in-out ${isExpanded && open ? 'mt-2 grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden">
+          <div className="ml-7 flex flex-col gap-1 border-l border-gray-300/80 py-1 pl-4 dark:border-white/10">
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NavItem({ isExpanded, href, icon, label, active }) {
   return (
     <Link
@@ -166,6 +268,25 @@ function NavItem({ isExpanded, href, icon, label, active }) {
         <span className="relative flex flex-shrink-0 items-center justify-center">{icon}</span>
         {isExpanded && <span className="whitespace-nowrap text-[14px] font-medium">{label}</span>}
       </div>
+    </Link>
+  );
+}
+
+function SubItem({ href, label, active }) {
+  return (
+    <Link
+      href={href}
+      className={`
+        flex items-center gap-3 rounded-[18px] px-4 py-2.5 text-[13.5px] font-medium transition-all
+        ${
+          active
+            ? 'bg-white text-black shadow-sm dark:bg-[#4DA8EA] dark:text-white'
+            : 'text-gray-500 hover:bg-black/5 hover:text-black dark:hover:bg-white/5 dark:hover:text-white'
+        }
+      `}
+    >
+      <Folder size={18} strokeWidth={1.5} className={active ? 'text-black dark:text-white' : 'text-gray-400'} />
+      <span className="whitespace-nowrap">{label}</span>
     </Link>
   );
 }

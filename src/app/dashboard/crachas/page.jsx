@@ -1,7 +1,7 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRightLeft,
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -255,8 +256,8 @@ export default function CrachasPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempStatusFiltro, setTempStatusFiltro] = useState("Todas");
 
-  const carregarCrachas = async () => {
-    setLoading(true);
+  const carregarCrachas = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get("/tags");
       if (response.sucesso) {
@@ -269,9 +270,7 @@ export default function CrachasPage() {
     }
   };
 
-  useEffect(() => {
-    carregarCrachas();
-  }, []);
+  useAutoRefresh(carregarCrachas);
 
   const filtrados = useMemo(() => {
     return crachas.filter((cracha) => {

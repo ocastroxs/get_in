@@ -1,7 +1,7 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Users, ArrowRightLeft, Clock3,
   Search, X, Check, Loader2, Filter,
@@ -12,6 +12,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -207,8 +208,8 @@ export default function VisitantesPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [busca, setBusca] = useState("");
 
-  const carregarVisitantes = async () => {
-    setLoading(true);
+  const carregarVisitantes = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const [localResponse, pendenciasResponse, historicoResponse] = await Promise.all([
         api.get("/portaria/vlocal"),
@@ -236,9 +237,7 @@ export default function VisitantesPage() {
     }
   };
 
-  useEffect(() => {
-    carregarVisitantes();
-  }, []);
+  useAutoRefresh(carregarVisitantes);
 
   const filtrados = useMemo(() => {
     return visitantes.filter((visitante) => {

@@ -1,13 +1,14 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import EntradasChart from "@/components/EntradasChart";
 import PicoMovimentoChart from "@/components/PicoMovimentoChart";
 import TiposVisitanteChart from "@/components/TiposVisitantesChart";
 import StatusVisitantesChart from "@/components/StatusVisitantesChart";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { ArrowRightLeft, Clock3, LogOut, Users } from "lucide-react";
 
@@ -272,40 +273,40 @@ export default function DashboardPage() {
   const [statsDashboard, setStatsDashboard] = useState(STATS_VAZIAS);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  useEffect(() => {
-    async function carregarDados() {
-      try {
-        const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
-          api.get("/requisicao-visitante"),
-          api.get("/portaria/vlocal"),
-          api.get("/logs"),
-        ]);
+  async function carregarDados({ silent = false } = {}) {
+    if (!silent) setIsDataLoading(true);
 
-        if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
-          const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
-          const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
-          const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
+    try {
+      const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
+        api.get("/requisicao-visitante"),
+        api.get("/portaria/vlocal"),
+        api.get("/logs"),
+      ]);
 
-          setMotivosGeral(agruparMotivosGeral(requisicoes));
-          setPicoSetores(agruparPicoPorSetor(requisicoes));
-          setEntradasGeral(entradasGerais(logs));
-          setStatusGeral(processarStatusGeral(requisicoes, logs));
-          setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-        setMotivosGeral([]);
-        setPicoSetores([]);
-        setStatusGeral([]);
-        setEntradasGeral([]);
-        setStatsDashboard(STATS_VAZIAS);
-      } finally {
-        setIsDataLoading(false);
+      if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
+        const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
+        const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
+        const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
+
+        setMotivosGeral(agruparMotivosGeral(requisicoes));
+        setPicoSetores(agruparPicoPorSetor(requisicoes));
+        setEntradasGeral(entradasGerais(logs));
+        setStatusGeral(processarStatusGeral(requisicoes, logs));
+        setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
       }
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      setMotivosGeral([]);
+      setPicoSetores([]);
+      setStatusGeral([]);
+      setEntradasGeral([]);
+      setStatsDashboard(STATS_VAZIAS);
+    } finally {
+      setIsDataLoading(false);
     }
+  }
 
-    carregarDados();
-  }, []);
+  useAutoRefresh(carregarDados);
 
   const stats = statsDashboard;
   const saidasPct = stats.entradas.value > 0 ? Math.round((stats.saidas.value / stats.entradas.value) * 100) : 0;

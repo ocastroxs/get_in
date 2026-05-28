@@ -1,7 +1,7 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Building2,
   Plus,
@@ -23,6 +23,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -303,8 +304,8 @@ export default function EmpresasPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todas");
 
-  const carregarEmpresas = async () => {
-    setLoading(true);
+  const carregarEmpresas = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/empresas');
       if (response.sucesso) {
@@ -317,9 +318,7 @@ export default function EmpresasPage() {
     }
   };
 
-  useEffect(() => {
-    carregarEmpresas();
-  }, []);
+  useAutoRefresh(carregarEmpresas);
 
   const empresasFiltradas = useMemo(() => {
     return empresas.filter((emp) => {

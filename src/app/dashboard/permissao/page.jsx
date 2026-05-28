@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { 
   Shield, 
   Eye, 
@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import Topbar from "@/components/Topbar";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from '@/services/api';
 
 // ─── Dados de Permissões (estrutura padrão) ──────────────────────────────────
@@ -83,8 +84,8 @@ export default function PermissoesPage() {
   const [filtroCategoria, setFiltroCategoria] = useState("Todas");
   const [tempFiltroCategoria, setTempFiltroCategoria] = useState("Todas");
 
-  const carregarPermissoes = async () => {
-    setLoading(true);
+  const carregarPermissoes = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const response = await api.get('/permissoes');
       if (response.sucesso && response.data) {
@@ -98,9 +99,7 @@ export default function PermissoesPage() {
     }
   };
 
-  useEffect(() => {
-    carregarPermissoes();
-  }, []);
+  useAutoRefresh(carregarPermissoes);
 
   const handleSalvar = async () => {
     setLoading(true);
