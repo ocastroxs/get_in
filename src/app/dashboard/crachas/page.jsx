@@ -3,14 +3,16 @@
 import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   ArrowRightLeft,
   Check,
   CreditCard,
   Download,
   Filter,
   Loader2,
-  MoreHorizontal,
   Search,
+  Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,40 +25,64 @@ import { api } from "@/services/api";
 const STATUS_LABEL = {
   disponivel: "Disponivel",
   emUso: "Em uso",
+  perdido: "Perdido",
+  alerta: "Alerta",
+  ativo: "Ativo",
+  emprestado: "Emprestado",
+  devolvido: "Devolvido",
 };
 
 const STATUS_STYLE = {
   disponivel: "bg-gray-100 text-gray-700",
   emUso: "bg-green-100 text-green-700",
+  perdido: "bg-red-100 text-red-600",
+  alerta: "bg-red-100 text-red-600",
+  ativo: "bg-green-100 text-green-700",
+  emprestado: "bg-amber-100 text-amber-700",
+  devolvido: "bg-blue-100 text-blue-700",
 };
 
 const STATUS_DOT = {
   disponivel: "bg-gray-500",
   emUso: "bg-green-500",
+  perdido: "bg-red-500",
+  alerta: "bg-red-500",
+  ativo: "bg-green-500",
+  emprestado: "bg-amber-500",
+  devolvido: "bg-blue-500",
 };
 
-const STATUS_FILTER_OPTS = ["Todas", "disponivel", "emUso"];
+const STATUS_FILTER_OPTS = ["Todas", "disponivel", "emUso", "perdido", "alerta"];
 
 function formatarData(value) {
   if (!value) return "-";
+
   const data = new Date(value);
   if (Number.isNaN(data.getTime())) return value;
+
   return data.toLocaleString(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
 function normalizarCracha(cracha) {
+  const statusOriginal = cracha?.status || "disponivel";
+  const validade = cracha?.validade ? new Date(cracha.validade) : null;
+  const expirado = validade && !Number.isNaN(validade.getTime()) && validade < new Date();
+  const status = expirado && statusOriginal === "emUso" ? "alerta" : statusOriginal;
+
   return {
     ...cracha,
-    status: cracha.status || "disponivel",
-    visitante: cracha.usuario?.nome || cracha.visitante || null,
-    setor: cracha.usuario?.departamentos?.nome || cracha.setor || null,
-    entrega: formatarData(cracha.dataDeCriacao),
-    devolucao: cracha.dataDeDevolucao ? formatarData(cracha.dataDeDevolucao) : null,
+    status,
+    statusOriginal,
+    visitante: cracha?.usuario?.nome || cracha?.visitante || null,
+    setor: cracha?.usuario?.departamentos?.nome || cracha?.setor || null,
+    entrega: formatarData(cracha?.dataDeCriacao),
+    devolucao: cracha?.dataDeDevolucao ? formatarData(cracha.dataDeDevolucao) : null,
   };
 }
 
@@ -96,7 +122,7 @@ function ModalCadastrarCracha({ onClose, onSave }) {
 
     setLoading(true);
     try {
-      const response = await api.post("/cracha", {
+      const response = await api.post("/tags", {
         codigoTag: codigoTag.trim(),
         status: "disponivel",
       });
@@ -160,7 +186,7 @@ function ModalCadastrarCracha({ onClose, onSave }) {
   );
 }
 
-function LinhaCracha({ cracha }) {
+function LinhaCracha({ cracha, onStatusChange, onDelete }) {
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="px-4 py-3">
@@ -170,7 +196,16 @@ function LinhaCracha({ cracha }) {
       <td className="px-4 py-3 text-sm font-medium text-foreground whitespace-nowrap">
         {cracha.visitante || <span className="text-xs italic text-muted-foreground">Nenhum vinculado</span>}
       </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">{cracha.setor || "-"}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">
+        {cracha.setor ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+            {cracha.setor}
+          </span>
+        ) : (
+          "-"
+        )}
+      </td>
       <td className="px-4 py-3 text-sm text-foreground whitespace-nowrap">{cracha.entrega || "-"}</td>
       <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{cracha.devolucao || "-"}</td>
       <td className="px-4 py-3">
@@ -179,10 +214,33 @@ function LinhaCracha({ cracha }) {
           {STATUS_LABEL[cracha.status] || cracha.status}
         </span>
       </td>
-      <td className="px-4 py-3 text-right">
-        <button className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
-          <MoreHorizontal size={14} />
-        </button>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            title="Marcar como disponivel"
+            onClick={() => onStatusChange(cracha.id, "disponivel")}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            type="button"
+            title="Marcar como perdido"
+            onClick={() => onStatusChange(cracha.id, "perdido")}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <AlertTriangle size={14} />
+          </button>
+          <button
+            type="button"
+            title="Excluir TAG"
+            onClick={() => onDelete(cracha.id)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -200,7 +258,7 @@ export default function CrachasPage() {
   const carregarCrachas = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/cracha");
+      const response = await api.get("/tags");
       if (response.sucesso) {
         setCrachas((response.data || []).map(normalizarCracha));
       }
@@ -233,6 +291,8 @@ export default function CrachasPage() {
     total: crachas.length,
     emUso: crachas.filter((cracha) => cracha.status === "emUso").length,
     disponiveis: crachas.filter((cracha) => cracha.status === "disponivel").length,
+    perdidos: crachas.filter((cracha) => cracha.status === "perdido").length,
+    alertas: crachas.filter((cracha) => cracha.status === "alerta").length,
   }), [crachas]);
 
   const aplicarFiltros = () => {
@@ -243,6 +303,36 @@ export default function CrachasPage() {
     setTempStatusFiltro("Todas");
     setStatusFiltro("Todas");
     setBusca("");
+  };
+
+  const atualizarStatus = async (id, status) => {
+    try {
+      const response = await api.put(`/tags/${id}`, { status });
+      if (!response.sucesso) {
+        alert(response.mensagem || "Erro ao atualizar cracha.");
+        return;
+      }
+      await carregarCrachas();
+    } catch (error) {
+      console.error("Erro ao atualizar cracha:", error);
+      alert("Erro de conexao com o servidor.");
+    }
+  };
+
+  const excluirCracha = async (id) => {
+    if (!confirm("Deseja excluir esta TAG do inventario?")) return;
+
+    try {
+      const response = await api.delete(`/tags/${id}`);
+      if (!response.sucesso) {
+        alert(response.mensagem || "Erro ao excluir cracha.");
+        return;
+      }
+      await carregarCrachas();
+    } catch (error) {
+      console.error("Erro ao excluir cracha:", error);
+      alert("Erro de conexao com o servidor.");
+    }
   };
 
   return (
@@ -262,7 +352,7 @@ export default function CrachasPage() {
           onButtonClick={() => setModalAberto(true)}
         />
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <StatCard
             label="Total"
             value={stats.total}
@@ -286,6 +376,22 @@ export default function CrachasPage() {
             icon={<Check size={17} className="text-foreground" />}
             sub="em estoque"
             accentVar="var(--chart-4)"
+          />
+          <StatCard
+            label="Perdidos"
+            value={stats.perdidos}
+            valueClassName="text-amber-600"
+            icon={<Undo2 size={17} className="text-amber-600" />}
+            sub="precisam reposicao"
+            accentVar="var(--chart-3)"
+          />
+          <StatCard
+            label="Alertas"
+            value={stats.alertas}
+            valueClassName="text-destructive"
+            icon={<AlertTriangle size={17} className="text-destructive" />}
+            sub="tempo excedido"
+            accentVar="var(--destructive)"
           />
         </div>
 
@@ -403,7 +509,14 @@ export default function CrachasPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((cracha) => <LinhaCracha key={cracha.id} cracha={cracha} />)
+                  filtrados.map((cracha) => (
+                    <LinhaCracha
+                      key={cracha.id}
+                      cracha={cracha}
+                      onStatusChange={atualizarStatus}
+                      onDelete={excluirCracha}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
@@ -422,7 +535,7 @@ export default function CrachasPage() {
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Status do Cracha
             </label>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {STATUS_FILTER_OPTS.map((status) => (
                 <button
                   key={status}
@@ -439,6 +552,12 @@ export default function CrachasPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
+            <p className="text-[10px] leading-relaxed text-primary/80">
+              Crachas com status alerta ou perdido devem ser revisados imediatamente.
+            </p>
           </div>
         </div>
       </ModalFiltro>
