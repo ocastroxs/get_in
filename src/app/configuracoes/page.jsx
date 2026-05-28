@@ -1,20 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Camera,
+  Check,
   Eye,
   EyeOff,
+  Languages,
   Loader2,
   Lock,
+  LogOut,
   Mail,
+  Monitor,
+  Moon,
+  PanelLeft,
+  PanelLeftClose,
   RotateCcw,
   Save,
   Shield,
+  SlidersHorizontal,
   Smartphone,
+  Sun,
   User,
-  LogOut, // Importado o ícone de Sair
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +30,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { getAuthTipo, useAuth } from "@/lib/AuthContext";
+import { LANGUAGE_OPTIONS } from "@/lib/i18n-core";
+import { maskPhone } from "@/lib/utils";
+import { DEFAULT_PREFERENCES } from "@/lib/preferences-config";
+import {
+  applyPreferences,
+  getStoredPreferences,
+  normalizePreferences,
+  savePreferencesToStorage,
+} from "@/lib/preferences";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -43,16 +60,28 @@ const DEFAULT_NOTIFICACOES = {
   toastSistema: true,
 };
 
+const TEMA_OPTIONS = [
+  { value: "dark", label: "Escuro", icon: Moon },
+  { value: "light", label: "Claro", icon: Sun },
+  { value: "system", label: "Sistema", icon: Monitor },
+];
+
+const DENSIDADE_OPTIONS = [
+  { value: "confortavel", label: "Confortável" },
+  { value: "compacta", label: "Compacta" },
+];
+
+const MENU_LATERAL_OPTIONS = [
+  { value: "expandido", label: "Expandido", icon: PanelLeft },
+  { value: "recolhido", label: "Recolhido", icon: PanelLeftClose },
+];
+
 function pickFirst(...values) {
   return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
 }
 
 function getCargoLabel(tipo) {
   return CARGOS.find((cargo) => cargo.value === tipo)?.label || "Funcionario";
-}
-
-function getSetorNome(setor) {
-  return String(setor?.nome || setor?.setor || setor?.departamento?.nome || "").trim();
 }
 
 function mapProfileResponse(response, fallbackUser, fallbackFuncionario) {
@@ -65,7 +94,7 @@ function mapProfileResponse(response, fallbackUser, fallbackFuncionario) {
   return {
     nome: pickFirst(perfil.nome, usuario.nome, "Usuario"),
     email: pickFirst(perfil.email, usuario.email),
-    telefone: pickFirst(perfil.telefone, perfil.celular, usuario.celular),
+    telefone: maskPhone(pickFirst(perfil.telefone, perfil.celular, usuario.celular)),
     setor: pickFirst(perfil.setor, funcionario.setor?.nome, funcionario.setores?.nome),
     idSetor: pickFirst(funcionario.idSetor, funcionario.setor?.id, funcionario.setores?.id),
     cargo: tipo || "func",
@@ -89,19 +118,15 @@ function loadNotificationPreferences() {
 }
 
 export default function ConfiguracoesPage() {
-  // Puxando a função de logout direto do seu Contexto de Autenticação
-  const { user, funcionario, updateAuthData, logout } = useAuth();
+  const { user, funcionario, logout, updateAuthData } = useAuth();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
-  const tipoAtual = getAuthTipo(funcionario, user);
-  const podeAlterarCargo = tipoAtual === "adm";
 
   const [abaAtiva, setAbaAtiva] = useState("perfil");
   const [loading, setLoading] = useState(false);
   const [loadingPerfil, setLoadingPerfil] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [setores, setSetores] = useState([]);
 
   const [perfil, setPerfil] = useState(() => mapProfileResponse(null, user, funcionario));
   const [perfilOriginal, setPerfilOriginal] = useState(perfil);
@@ -112,25 +137,17 @@ export default function ConfiguracoesPage() {
   });
   const [notificacoes, setNotificacoes] = useState(DEFAULT_NOTIFICACOES);
   const [notificacoesOriginal, setNotificacoesOriginal] = useState(DEFAULT_NOTIFICACOES);
-
-  const setoresOptions = useMemo(() => {
-    return setores
-      .map((setor) => {
-        const nome = getSetorNome(setor);
-        return nome ? { id: setor.id, nome } : null;
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [setores]);
+  const [preferencias, setPreferencias] = useState(DEFAULT_PREFERENCES);
+  const [preferenciasOriginal, setPreferenciasOriginal] = useState(DEFAULT_PREFERENCES);
 
   useEffect(() => {
     async function carregarConfiguracoes() {
       setLoadingPerfil(true);
 
       try {
-        const [profileResponse, setoresResponse] = await Promise.all([
+        const [profileResponse, preferencesResponse] = await Promise.all([
           api.get("/user/me/profile"),
-          api.get("/setores"),
+          api.get("/user/me/preferences"),
         ]);
 
         const nextPerfil = profileResponse.sucesso
@@ -140,8 +157,10 @@ export default function ConfiguracoesPage() {
         setPerfil(nextPerfil);
         setPerfilOriginal(nextPerfil);
 
-        if (setoresResponse.sucesso && Array.isArray(setoresResponse.data)) {
-          setSetores(setoresResponse.data);
+        if (preferencesResponse?.sucesso && preferencesResponse?.data) {
+          const nextPreferencias = savePreferencesToStorage(preferencesResponse.data);
+          setPreferencias(nextPreferencias);
+          setPreferenciasOriginal(nextPreferencias);
         }
       } catch (error) {
         console.error("Erro ao carregar configurações:", error);
@@ -158,6 +177,12 @@ export default function ConfiguracoesPage() {
     const preferencias = loadNotificationPreferences();
     setNotificacoes(preferencias);
     setNotificacoesOriginal(preferencias);
+
+    const preferenciasLocais = getStoredPreferences();
+    setPreferencias(preferenciasLocais);
+    setPreferenciasOriginal(preferenciasLocais);
+    applyPreferences(preferenciasLocais);
+
     carregarConfiguracoes();
   }, [funcionario, showToast, user]);
 
@@ -169,8 +194,6 @@ export default function ConfiguracoesPage() {
         nome: perfil.nome,
         email: perfil.email,
         telefone: perfil.telefone,
-        idSetor: perfil.idSetor || undefined,
-        cargo: perfil.cargo,
       });
 
       if (!response.sucesso) {
@@ -188,7 +211,7 @@ export default function ConfiguracoesPage() {
 
       showToast({
         type: "success",
-        title: "Perfil updated",
+        title: "Perfil atualizado",
         description: "Suas informações foram salvas.",
       });
     } catch (error) {
@@ -260,6 +283,47 @@ export default function ConfiguracoesPage() {
     });
   }
 
+  function handlePreferenciasChange(nextValues) {
+    const nextPreferencias = normalizePreferences({ ...preferencias, ...nextValues });
+    setPreferencias(nextPreferencias);
+    applyPreferences(nextPreferencias);
+  }
+
+  function handleDescartarPreferencias() {
+    setPreferencias(preferenciasOriginal);
+    applyPreferences(preferenciasOriginal);
+  }
+
+  async function handleSalvarPreferencias() {
+    setLoading(true);
+
+    try {
+      const response = await api.put("/user/me/preferences", { preferencias });
+
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao salvar preferencias.");
+      }
+
+      const nextPreferencias = savePreferencesToStorage(response.data || preferencias);
+      setPreferencias(nextPreferencias);
+      setPreferenciasOriginal(nextPreferencias);
+
+      showToast({
+        type: "success",
+        title: "Preferencias atualizadas",
+        description: "Suas escolhas de interface foram salvas.",
+      });
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "Erro ao salvar preferencias",
+        description: error.message || "Tente novamente em instantes.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleAvatarChange(event) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -289,13 +353,22 @@ export default function ConfiguracoesPage() {
         throw new Error(response.mensagem || response.erro || "Erro ao enviar imagem.");
       }
 
-      const avatarUrl = response.data?.imagem;
+      const avatarUrl = response.data?.avatarUrl || response.data?.imagem;
       setPerfil((current) => ({ ...current, avatarUrl }));
       setPerfilOriginal((current) => ({ ...current, avatarUrl }));
+      updateAuthData(
+        {
+          data: {
+            usuario: { ...(user || {}), avatarUrl },
+            funcionario: { ...(funcionario || {}), avatarUrl, imagem: avatarUrl },
+          },
+        },
+        { ...(funcionario || {}), avatarUrl, imagem: avatarUrl }
+      );
 
       showToast({
         type: "success",
-        title: "Foto updated",
+        title: "Foto atualizada",
         description: "Sua foto de perfil foi alterada.",
       });
     } catch (error) {
@@ -313,6 +386,14 @@ export default function ConfiguracoesPage() {
   // Função interna para disparar o logout global do app
   const handleSairDoSistema = () => {
     try {
+      if (
+        preferencias.confirmarAcoesCriticas &&
+        typeof window !== "undefined" &&
+        !window.confirm("Deseja sair do sistema?")
+      ) {
+        return;
+      }
+
       logout();
     } catch (error) {
       console.error("Erro ao efetuar logout:", error);
@@ -327,19 +408,17 @@ export default function ConfiguracoesPage() {
       />
 
       <div className="space-y-6 animate-in fade-in duration-700">
-        
-        {/* CONTAINER DAS ABAS MODIFICADO: Justify entre abas e o botão de Sair */}
         <div className="flex items-center justify-between border-b border-border gap-4 overflow-x-auto">
           <div className="flex gap-2">
             <TabButton active={abaAtiva === "perfil"} onClick={() => setAbaAtiva("perfil")} icon={<User size={16} />} label="Perfil" />
             <TabButton active={abaAtiva === "seguranca"} onClick={() => setAbaAtiva("seguranca")} icon={<Lock size={16} />} label="Segurança" />
             <TabButton active={abaAtiva === "notificacoes"} onClick={() => setAbaAtiva("notificacoes")} icon={<Bell size={16} />} label="Notificações" />
+            <TabButton active={abaAtiva === "preferencias"} onClick={() => setAbaAtiva("preferencias")} icon={<SlidersHorizontal size={16} />} label="Preferências" />
           </div>
 
-          {/* NOVO: Botão de Sair posicionado à direita das abas de navegação */}
-          <Button 
-            type="button" 
-            variant="destructive" 
+          <Button
+            type="button"
+            variant="destructive"
             className="h-9 gap-2 rounded-xl text-xs md:text-sm font-semibold mb-2"
             onClick={handleSairDoSistema}
           >
@@ -379,34 +458,19 @@ export default function ConfiguracoesPage() {
                       <Input type="email" value={perfil.email} onChange={(event) => setPerfil({ ...perfil, email: event.target.value })} className="h-11 rounded-xl" />
                     </Field>
                     <Field label="Telefone">
-                      <Input value={perfil.telefone} onChange={(event) => setPerfil({ ...perfil, telefone: event.target.value })} className="h-11 rounded-xl" />
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        value={perfil.telefone}
+                        onChange={(event) => setPerfil({ ...perfil, telefone: maskPhone(event.target.value) })}
+                        className="h-11 rounded-xl"
+                      />
                     </Field>
                     <Field label="Setor principal">
-                      <select
-                        value={perfil.idSetor || ""}
-                        onChange={(event) => {
-                          const selected = setoresOptions.find((setor) => String(setor.id) === event.target.value);
-                          setPerfil({ ...perfil, idSetor: event.target.value, setor: selected?.nome || "" });
-                        }}
-                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary"
-                      >
-                        <option value="">{perfil.setor || "Selecione um setor"}</option>
-                        {setoresOptions.map((setor) => (
-                          <option key={setor.id} value={setor.id}>{setor.nome}</option>
-                        ))}
-                      </select>
+                      <Input value={perfil.setor || "Nao informado"} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Cargo">
-                      <select
-                        value={perfil.cargo}
-                        disabled={!podeAlterarCargo}
-                        onChange={(event) => setPerfil({ ...perfil, cargo: event.target.value })}
-                        className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {CARGOS.map((cargo) => (
-                          <option key={cargo.value} value={cargo.value}>{cargo.label}</option>
-                        ))}
-                      </select>
+                      <Input value={getCargoLabel(perfil.cargo)} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Data de admissão">
                       <Input type="date" value={perfil.dataAdmissao ? String(perfil.dataAdmissao).slice(0, 10) : ""} disabled className="h-11 rounded-xl opacity-70" />
@@ -478,6 +542,76 @@ export default function ConfiguracoesPage() {
                   />
                 </div>
               )}
+
+              {abaAtiva === "preferencias" && (
+                <div className="space-y-6">
+                  <section className="rounded-2xl border border-border/70 bg-background/60 p-5">
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                      <SlidersHorizontal size={18} />
+                      Preferências de interface
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                      Ajuste aparência, navegação e comportamento da sua sessão no GetIN.
+                    </p>
+                  </section>
+
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="space-y-5">
+                      <PreferenceSection title="Aparência" icon={<Monitor size={18} />}>
+                        <SegmentedControl
+                          label="Idioma"
+                          value={preferencias.idioma}
+                          options={LANGUAGE_OPTIONS.map((option) => ({ ...option, icon: Languages }))}
+                          onChange={(idioma) => handlePreferenciasChange({ idioma })}
+                        />
+                        <SegmentedControl
+                          label="Tema"
+                          value={preferencias.tema}
+                          options={TEMA_OPTIONS}
+                          onChange={(tema) => handlePreferenciasChange({ tema })}
+                        />
+                        <SegmentedControl
+                          label="Densidade"
+                          value={preferencias.densidade}
+                          options={DENSIDADE_OPTIONS}
+                          onChange={(densidade) => handlePreferenciasChange({ densidade })}
+                        />
+                      </PreferenceSection>
+
+                      <PreferenceSection title="Navegação" icon={<PanelLeft size={18} />}>
+                        <SegmentedControl
+                          label="Menu lateral ao entrar"
+                          value={preferencias.menuLateral}
+                          options={MENU_LATERAL_OPTIONS}
+                          onChange={(menuLateral) => handlePreferenciasChange({ menuLateral })}
+                        />
+                      </PreferenceSection>
+
+                      <PreferenceSection title="Comportamento" icon={<Shield size={18} />}>
+                        <PreferenceCheckbox
+                          label="Reduzir animações"
+                          checked={preferencias.reduzirMovimento}
+                          onChange={(reduzirMovimento) => handlePreferenciasChange({ reduzirMovimento })}
+                        />
+                        <PreferenceCheckbox
+                          label="Confirmar ações críticas"
+                          checked={preferencias.confirmarAcoesCriticas}
+                          onChange={(confirmarAcoesCriticas) => handlePreferenciasChange({ confirmarAcoesCriticas })}
+                        />
+                      </PreferenceSection>
+                    </div>
+
+                    <PreferencesPreview preferencias={preferencias} />
+                  </div>
+
+                  <ActionRow
+                    onReset={handleDescartarPreferencias}
+                    onSave={handleSalvarPreferencias}
+                    loading={loading}
+                    saveLabel="Salvar preferências"
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
@@ -542,7 +676,7 @@ function TabButton({ active, onClick, icon, label }) {
 
 function CheckboxItem({ label, checked, onChange }) {
   return (
-    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-background/60 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40">
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
       <Checkbox checked={checked} onCheckedChange={onChange} className="h-5 w-5" />
       <span className="flex-1">{label}</span>
     </label>
@@ -551,13 +685,109 @@ function CheckboxItem({ label, checked, onChange }) {
 
 function NotificationGroup({ title, icon, children }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-border/70 bg-background/50 p-4">
+    <section className="space-y-3 rounded-2xl border border-border/70 bg-card/90 p-4 dark:bg-white/[0.03]">
       <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
         {icon}
         {title}
       </h2>
       <div className="grid gap-3 md:grid-cols-2">{children}</div>
     </section>
+  );
+}
+
+function PreferenceSection({ title, icon, children }) {
+  return (
+    <section className="space-y-4 border-b border-border/70 pb-5 last:border-b-0">
+      <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+        {icon}
+        {title}
+      </h3>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function SegmentedControl({ label, value, options, onChange }) {
+  return (
+    <div className="space-y-2">
+      <span className="block text-sm font-semibold text-foreground">{label}</span>
+      <div
+        className="grid gap-1 rounded-xl border border-border/70 bg-muted/40 p-1"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))" }}
+      >
+        {options.map(({ value: optionValue, label: optionLabel, icon: Icon }) => {
+          const active = value === optionValue;
+
+          return (
+            <button
+              key={optionValue}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(optionValue)}
+              className={`flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
+                active
+                  ? "bg-card text-primary shadow-sm ring-1 ring-border dark:bg-white/10"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground dark:hover:bg-white/[0.06]"
+              }`}
+            >
+              {Icon && <Icon size={16} />}
+              <span className="min-w-0 truncate">{optionLabel}</span>
+              {active && <Check size={14} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PreferenceCheckbox({ label, checked, onChange }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
+      <Checkbox checked={checked} onCheckedChange={onChange} className="h-5 w-5" />
+      <span className="flex-1">{label}</span>
+    </label>
+  );
+}
+
+function PreferencesPreview({ preferencias }) {
+  const compacta = preferencias.densidade === "compacta";
+  const rowClassName = compacta ? "px-3 py-2" : "px-4 py-3";
+  const badgeLabel = preferencias.menuLateral === "recolhido" ? "Menu recolhido" : "Menu expandido";
+
+  return (
+    <aside className="rounded-2xl border border-border/70 bg-background/60 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-foreground">Prévia</p>
+          <p className="text-xs text-muted-foreground">{badgeLabel}</p>
+        </div>
+        <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+          {compacta ? "Compacta" : "Confortável"}
+        </span>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        <div className={`${compacta ? "p-3" : "p-4"} border-b border-border`}>
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-primary/15" />
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-32 rounded-full bg-foreground/20" />
+              <div className="mt-2 h-2 w-20 rounded-full bg-muted-foreground/25" />
+            </div>
+          </div>
+        </div>
+
+        <div className="divide-y divide-border">
+          {["Visitante aprovado", "Check-in liberado", "Cracha em uso"].map((item) => (
+            <div key={item} className={`flex items-center justify-between gap-3 ${rowClassName}`}>
+              <span className="truncate text-xs font-semibold text-foreground">{item}</span>
+              <span className="h-2 w-10 rounded-full bg-secondary/50" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
   );
 }
 

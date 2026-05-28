@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Info, X } from "lucide-react";
+import { Users, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // --- ÍCONES NATIVOS ---
@@ -26,39 +26,39 @@ const TEAM = [
     avatar: "https://github.com/FernandoSnchs.png",
   },
   {
-    nome: "Bia Costa",
-    cargo: "Frontend Developer",
-    github: "https://github.com/",
+    nome: "Castro",
+    cargo: "Líder",
+    github: "https://github.com/ocastroxs",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bia",
+    avatar: "https://github.com/ocastroxs.png",
   },
   {
-    nome: "Carlos Lima",
-    cargo: "UI/UX Designer",
-    github: "https://github.com/",
+    nome: "Cauã Chiappin",
+    cargo: "Front-End",
+    github: "https://github.com/CauaChiappin",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos",
+    avatar: "https://github.com/CauaChiappin.png",
   },
   {
-    nome: "Dani Souza",
-    cargo: "DevOps Engineer",
-    github: "https://github.com/",
+    nome: "Ariã Monteiro",
+    cargo: "Back-End e IOT",
+    github: "https://github.com/zdr4kz",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dani",
+    avatar: "https://github.com/zdr4kz.png",
   },
   {
-    nome: "Eduardo Reis",
-    cargo: "Mobile Developer",
-    github: "https://github.com/",
+    nome: "Henrique Cosme",
+    cargo: "Back-End e Android",
+    github: "https://github.com/Z3rOoO",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Edu",
+    avatar: "https://github.com/Z3rOoO.png",
   },
   {
-    nome: "Fernanda Alves",
-    cargo: "QA Tester",
-    github: "https://github.com/",
+    nome: "Tiago Keney",
+    cargo: "Android",
+    github: "https://github.com/tikeney",
     linkedin: "https://linkedin.com/",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fefa",
+    avatar: "https://github.com/tikeney.png",
   },
 ];
 
@@ -173,15 +173,27 @@ export function FloatingAboutBubble() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        <div className="relative group">
-          <div className="absolute inset-0 rounded-full bg-primary/40 blur-md animate-pulse"></div>
-          
+        <div className="group relative">
+          <div className="absolute -inset-0.5 rounded-full border border-primary/20 bg-primary/5 opacity-75 transition-opacity group-hover:opacity-100" />
+
           <button
             type="button"
-            className="relative flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform hover:scale-110 active:scale-95 border-2 border-background/20"
+            className="relative flex h-10 items-center gap-1.5 rounded-full border border-border/70 bg-card/90 py-1 pl-2 pr-1.5 text-foreground shadow-lg shadow-slate-900/10 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card hover:shadow-xl active:scale-95 dark:border-white/10 dark:bg-[#020C17]/85 dark:shadow-black/30"
             aria-label="Sobre o projeto"
           >
-            <Info size={26} />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm shadow-primary/20">
+              <Users size={14} />
+            </span>
+            <span className="flex -space-x-1.5 pl-0.5">
+              {TEAM.slice(0, 2).map((member) => (
+                <span
+                  key={member.github}
+                  className="h-6 w-6 rounded-full border-2 border-card bg-muted bg-cover bg-center shadow-sm dark:border-[#020C17]"
+                  style={{ backgroundImage: `url(${member.avatar})` }}
+                  aria-hidden="true"
+                />
+              ))}
+            </span>
           </button>
         </div>
       </div>

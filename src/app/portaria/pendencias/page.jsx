@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -10,6 +11,7 @@ import {
   FileText,
   Filter,
   Loader2,
+  MapPin,
   Search,
   X
 } from "lucide-react";
@@ -17,8 +19,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF, formatPhone } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
@@ -93,7 +98,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);
@@ -126,16 +131,74 @@ function splitSetores(value) {
   return String(value || "")
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item && item.toLowerCase() !== "nenhum");
+}
+
+function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
+  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
+
+  if (setoresPermitidos.length > 0) {
+    return setoresPermitidos;
+  }
+
+  return splitSetores(fallback);
+}
+
+function hasObservacaoRelevante(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return Boolean(normalized && !normalized.includes("nenhuma observacao") && normalized !== "nenhuma");
+}
+
+function looksLikeDescricaoCompleta(value) {
+  return /(^|\|)\s*(visitante|cpf|telefone|email|e-mail|empresa|tag rfid|setor|setores permitidos|observa[^:]*):/i.test(String(value || ""));
+}
+
+const OBSERVACAO_DESCRICAO_LABELS = [
+  "Observacao da Portaria",
+  "Observacao",
+  "Observacoes",
+  "Observação da Portaria",
+  "Observação",
+  "Observações",
+  "Observa\u00c3\u00a7\u00c3\u00b5es"
+];
+
+function getObservacaoFromDescricao(descricao) {
+  return pickFirst(
+    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label))
+  );
+}
+
+function sanitizeObservacao(...values) {
+  for (const value of values) {
+    const observacaoExtraida = getObservacaoFromDescricao(value);
+
+    if (hasObservacaoRelevante(observacaoExtraida)) {
+      return observacaoExtraida;
+    }
+  }
+
+  for (const value of values) {
+    const observacao = String(value || "").trim();
+
+    if (!looksLikeDescricaoCompleta(observacao) && hasObservacaoRelevante(observacao)) {
+      return observacao;
+    }
+  }
+
+  return "Nenhuma observação cadastrada.";
 }
 
 function getObservacoes(registro, descricao) {
-  return pickFirst(
+  return sanitizeObservacao(
     registro?.observacoes,
-    getDescricaoValue(descricao, "Observações"),
-    getDescricaoValue(descricao, "Observações"),
-    descricao,
-    "Nenhuma observacao cadastrada."
+    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label)),
+    "Nenhuma observação cadastrada."
   );
 }
 
@@ -148,7 +211,19 @@ function normalizeRequisicao(registro) {
     registro?.dataRequisicao,
     registro?.createdAt
   );
-  const setor = pickFirst(getSetorNome(registro), getDescricaoValue(descricao, "Setor"));
+  const setorBackend = pickFirst(getSetorNome(registro), getDescricaoValue(descricao, "Setor"));
+  const setoresLista = getSetoresPermitidosFromDescricao(descricao, setorBackend);
+  const setoresPermitidos = setoresLista.join(", ");
+  const areaResponsavel = pickFirst(
+    registro?.setorResponsavel,
+    registro?.setor_responsavel,
+    getDescricaoValue(descricao, "Setor responsavel"),
+    registro?.areaResponsavel,
+    registro?.area_responsavel,
+    getDescricaoValue(descricao, "Area responsavel"),
+    getDescricaoValue(descricao, "Setor"),
+    setorBackend
+  );
   const visitante = pickFirst(
     registro?.visitante,
     registro?.nome,
@@ -163,8 +238,7 @@ function normalizeRequisicao(registro) {
     getDescricaoValue(descricao, "E-mail")
   );
   const empresa = pickFirst(getEmpresaNome(registro), getDescricaoValue(descricao, "Empresa"));
-  const motivo = pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "-");
-  const setoresLista = splitSetores(setor);
+  const motivo = normalizeMotivoVisita(pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "Outro"));
   const key = getRequisicaoIdentity({ ...registro, visitante, cpf, email });
 
   return {
@@ -176,12 +250,14 @@ function normalizeRequisicao(registro) {
     cpf,
     email,
     empresa: empresa || "-",
-    setor: setor || "-",
+    setor: setoresPermitidos || "-",
     setoresLista,
+    areaResponsavel: areaResponsavel || "-",
     motivo,
     status,
     solicitacao: dataDaRequisicao ? formatDateTime(dataDaRequisicao) : STATUS_LABEL[status] || status,
     dataDaRequisicao,
+    telefone: pickFirst(registro?.telefone, registro?.celular, usuario?.celular, getDescricaoValue(descricao, "Telefone")),
     observacoes: getObservacoes(registro, descricao)
   };
 }
@@ -250,14 +326,14 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300">
+      <div className="w-full max-w-lg animate-in zoom-in-95 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl duration-300">
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600">
-              <FileText size={17} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+              <FileText size={18} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">Observações</h2>
+              <h2 className="text-lg font-bold text-foreground">Observação da portaria</h2>
               <p className="text-xs text-muted-foreground">{requisicao.visitante} - {requisicao.setor}</p>
             </div>
           </div>
@@ -271,16 +347,16 @@ function ModalObservacoes({ isOpen, onClose, requisicao }) {
           </button>
         </div>
 
-        <div className="p-4">
-          <div className="rounded-2xl border border-border bg-background p-4 shadow-xs">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Registro da portaria</p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+        <div className="p-5">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-5 shadow-xs dark:border-blue-500/20 dark:bg-blue-950/30">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-200">Registro da portaria</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-950 dark:text-blue-100">
               {requisicao.observacoes || "Nenhuma observação cadastrada."}
             </p>
           </div>
         </div>
 
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border bg-muted/10 p-4">
           <Button variant="outline" onClick={onClose} className="h-11 w-full rounded-xl" type="button">
             Fechar
           </Button>
@@ -296,12 +372,19 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-medium text-foreground">{requisicao.visitante}</p>
-          <p className="text-xs text-muted-foreground">{requisicao.cpf || "-"}</p>
+          <p className="text-xs text-muted-foreground">{formatCPF(requisicao.cpf) || "-"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{requisicao.areaResponsavel}</td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.setor}</td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">
+        <div className="space-y-1">
+          <p>{formatPhone(requisicao.telefone) || "-"}</p>
+          <p className="max-w-[180px] truncate">{requisicao.email || "-"}</p>
+        </div>
+      </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{requisicao.solicitacao}</td>
       <td className="px-4 py-3 text-right">
         <Button
@@ -312,7 +395,7 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
           type="button"
         >
           <Eye size={14} />
-          Observacoes
+          Observação
         </Button>
       </td>
     </tr>
@@ -358,14 +441,19 @@ export default function PendenciasPage() {
 
     return requisicoes.filter((requisicao) => {
       const cpfDigitos = onlyDigits(requisicao.cpf);
+      const telefoneDigitos = onlyDigits(requisicao.telefone);
       const matchBusca =
         busca === "" ||
         requisicao.visitante.toLowerCase().includes(termoBusca) ||
         requisicao.empresa.toLowerCase().includes(termoBusca) ||
+        requisicao.areaResponsavel.toLowerCase().includes(termoBusca) ||
         requisicao.setor.toLowerCase().includes(termoBusca) ||
         requisicao.motivo.toLowerCase().includes(termoBusca) ||
+        (requisicao.telefone || "").toLowerCase().includes(termoBusca) ||
+        formatPhone(requisicao.telefone).toLowerCase().includes(termoBusca) ||
+        (requisicao.email || "").toLowerCase().includes(termoBusca) ||
         (requisicao.cpf || "").toLowerCase().includes(termoBusca) ||
-        (termoBuscaDigitos !== "" && cpfDigitos.includes(termoBuscaDigitos));
+        (termoBuscaDigitos !== "" && (cpfDigitos.includes(termoBuscaDigitos) || telefoneDigitos.includes(termoBuscaDigitos)));
 
       const setoresLista = requisicao.setoresLista?.length > 0 ? requisicao.setoresLista : [requisicao.setor];
       const matchSetor = filtroSetor === "Todos" || setoresLista.includes(filtroSetor);
@@ -382,7 +470,7 @@ export default function PendenciasPage() {
     return [
       "Todos",
       ...Array.from(new Set(setores.filter((setor) => setor && setor !== "-"))).sort((a, b) =>
-        a.localeCompare(b, "pt-BR")
+        a.localeCompare(b, getActiveLanguage())
       )
     ];
   }, [requisicoes]);
@@ -415,22 +503,26 @@ export default function PendenciasPage() {
         fileName: `pendencias_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
-          filtroSetor !== "Todos" ? `Setor: ${filtroSetor}` : null,
+          filtroSetor !== "Todos" ? `Setor permitido: ${filtroSetor}` : null,
         ].filter(Boolean),
         columns: [
           { header: "Visitante", weight: 1.4 },
           { header: "CPF", weight: 1 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor", weight: 1.1 },
+          { header: "Setor responsavel", weight: 1.1 },
+          { header: "Setores permitidos", weight: 1.1 },
           { header: "Motivo", weight: 1.5 },
+          { header: "Contato", weight: 1.2 },
           { header: "Solicitacao", weight: 1 },
         ],
         rows: requisicoesFiltradas.map((requisicao) => [
           requisicao.visitante,
-          requisicao.cpf,
+          formatCPF(requisicao.cpf),
           requisicao.empresa,
+          requisicao.areaResponsavel,
           requisicao.setor,
           requisicao.motivo,
+          [formatPhone(requisicao.telefone), requisicao.email].filter(Boolean).join(" / "),
           requisicao.solicitacao,
         ]),
       });
@@ -439,6 +531,20 @@ export default function PendenciasPage() {
       alert("Não foi possível exportar o PDF.");
     }
   };
+
+  const stats = useMemo(() => {
+    const setoresPermitidos = new Set(
+      requisicoes
+        .flatMap((requisicao) => requisicao.setoresLista || [])
+        .filter((setor) => setor && setor !== "-")
+    );
+    const comObservacao = requisicoes.filter((requisicao) => hasObservacaoRelevante(requisicao.observacoes)).length;
+    return {
+      totalPendentes: requisicoes.length,
+      setoresPermitidos: setoresPermitidos.size,
+      comObservacao
+    };
+  }, [requisicoes]);
 
   return (
     <>
@@ -450,14 +556,38 @@ export default function PendenciasPage() {
       />
 
       <div className="flex flex-col gap-5 p-4 md:p-6 animate-in fade-in duration-700">
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 shadow-sm">
-          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-blue-600" />
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-500/50 dark:bg-amber-950/60">
+          <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-amber-600" />
           <div>
-            <h3 className="text-sm font-bold text-blue-900 dark:text-blue-300">Requisições Pendentes</h3>
-            <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
-              Atualmente existem <strong>{requisicoesFiltradas.length}</strong> visitantes aguardando análise.
+            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">Requisicoes pendentes</h3>
+            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+              A lista considera visitantes ainda dentro do prazo de 24h e separa setor responsavel de setores permitidos.
             </p>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard
+            label="Total pendentes"
+            value={stats.totalPendentes}
+            icon={<AlertTriangle size={18} className="text-amber-600" />}
+            accentVar="#d97706"
+            sub="Aguardando aprovacao"
+          />
+          <StatCard
+            label="Setores permitidos"
+            value={stats.setoresPermitidos}
+            icon={<MapPin size={18} className="text-blue-600" />}
+            accentVar="#2563eb"
+            sub="Envolvidos nas solicitacoes"
+          />
+          <StatCard
+            label="Com observacao"
+            value={stats.comObservacao}
+            icon={<FileText size={18} className="text-amber-600" />}
+            accentVar="#d97706"
+            sub="Contexto adicional da portaria"
+          />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -466,7 +596,7 @@ export default function PendenciasPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, CPF, empresa, setor ou motivo..."
+                  placeholder="Buscar por nome, CPF, telefone, empresa, setor responsavel, setor permitido ou motivo..."
                   className="h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10"
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
@@ -524,7 +654,7 @@ export default function PendenciasPage() {
               )}
               {filtroSetor !== "Todos" && (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Setor: {filtroSetor}
+                  Setor permitido: {filtroSetor}
                 </span>
               )}
               <Button
@@ -551,8 +681,10 @@ export default function PendenciasPage() {
                 <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
-                  <th className="px-4 py-3">Setor</th>
+                  <th className="px-4 py-3">Setor responsavel</th>
+                  <th className="px-4 py-3">Setores permitidos</th>
                   <th className="px-4 py-3">Motivo</th>
+                  <th className="px-4 py-3">Contato</th>
                   <th className="px-4 py-3">Solicitacao</th>
                   <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
@@ -560,7 +692,7 @@ export default function PendenciasPage() {
               <tbody>
                 {loading && requisicoes.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center">
+                    <td colSpan={8} className="py-20 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
                         <span className="text-sm">Carregando pendencias...</span>
@@ -569,7 +701,7 @@ export default function PendenciasPage() {
                   </tr>
                 ) : requisicoesFiltradas.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-20 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="py-20 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Clock className="h-12 w-12 text-muted/30" />
                         <p>Nenhuma requisicao pendente encontrada.</p>
@@ -606,7 +738,7 @@ export default function PendenciasPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Filtrar por Setor
+              Filtrar por setores permitidos
             </label>
             <div className="grid grid-cols-1 gap-2">
               {setoresUnicos.map((setor) => (
@@ -620,7 +752,7 @@ export default function PendenciasPage() {
                       : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  <span>{setor === "Todos" ? "Todos os setores" : setor}</span>
+                  <span>{setor === "Todos" ? "Todos os setores permitidos" : setor}</span>
                   {tempFiltroSetor === setor && <Check size={14} />}
                 </button>
               ))}
@@ -630,7 +762,7 @@ export default function PendenciasPage() {
           {setoresUnicos.length === 1 && (
             <div className="rounded-xl border border-border bg-muted/40 p-4">
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Nenhum setor disponivel para filtrar nas pendencias atuais.
+                Nenhum setor permitido disponivel para filtrar nas pendencias atuais.
               </p>
             </div>
           )}

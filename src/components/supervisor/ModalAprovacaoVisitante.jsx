@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -18,17 +19,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
+import { formatCPF, formatPhone } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_STYLE = {
   pendente: "border-amber-200 bg-amber-50 text-amber-700",
   aprovado: "border-green-200 bg-green-50 text-green-700",
   recusado: "border-red-200 bg-red-50 text-red-700",
+  expirado: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
 const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 function formatDateTime(value) {
@@ -39,7 +44,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
@@ -49,6 +54,34 @@ function getSetorNome(item) {
   return item?.setor || item?.setores?.nome || item?.departamento?.nome || "-";
 }
 
+function pickFirst(...values) {
+  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
+}
+
+function getDescricaoValue(descricao, label) {
+  if (typeof descricao !== "string") return "";
+
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
+
+  return match?.[1]?.trim() || "";
+}
+
+function getObservacaoPortaria(requisicao) {
+  const descricao = requisicao?.descricao || "";
+  const observacao = pickFirst(
+    requisicao?.observacoes,
+    getDescricaoValue(descricao, "Observacao da Portaria"),
+    getDescricaoValue(descricao, "Observacao"),
+    getDescricaoValue(descricao, "Observacoes"),
+    getDescricaoValue(descricao, "Observação da Portaria"),
+    getDescricaoValue(descricao, "Observação"),
+    getDescricaoValue(descricao, "Observações")
+  );
+
+  return observacao || "Nenhuma observação registrada pela portaria.";
+}
+
 function getSolicitacoes(requisicao) {
   const itens = requisicao?.setoresSolicitados || requisicao?.requisicoes || requisicao?.itens || [requisicao];
 
@@ -56,7 +89,7 @@ function getSolicitacoes(requisicao) {
     id: item.id,
     setor: getSetorNome(item),
     status: item.status || "pendente",
-    motivo: item.motivo || requisicao?.motivo || "-",
+    motivo: normalizeMotivoVisita(item.motivo || requisicao?.motivo),
     dataDaRequisicao: item.dataDaRequisicao || requisicao?.dataDaRequisicao,
   }));
 }
@@ -132,6 +165,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
   if (!isOpen || !requisicao) return null;
 
   const usuario = requisicao.usuario || {};
+  const observacaoPortaria = getObservacaoPortaria(requisicao);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
@@ -159,9 +193,9 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
             </h3>
             <div className="grid gap-4 md:grid-cols-2">
               <Info label="Nome" value={usuario.nome || "-"} />
-              <Info label="CPF" value={usuario.cpf || "-"} />
+              <Info label="CPF" value={formatCPF(usuario.cpf) || "-"} />
               <Info label="E-mail" value={usuario.email || "-"} icon={<Mail size={14} />} />
-              <Info label="Telefone" value={usuario.celular || usuario.telefone || "-"} icon={<Phone size={14} />} />
+              <Info label="Telefone" value={formatPhone(usuario.celular || usuario.telefone) || "-"} icon={<Phone size={14} />} />
               <Info label="Empresa" value={requisicao.empresa || "-"} icon={<Building2 size={14} />} />
               <Info label="Solicitado em" value={formatDateTime(requisicao.dataDaRequisicao)} icon={<Clock size={14} />} />
             </div>
@@ -225,8 +259,16 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
             </section>
           )}
 
+          <section className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-900">
+              <FileText size={16} className="text-blue-700" />
+              Observação da portaria
+            </h3>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-blue-900/80">{observacaoPortaria}</p>
+          </section>
+
           <label className="block">
-            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observacoes</span>
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">Observações internas</span>
             <textarea
               placeholder="Adicione observações para auditoria interna"
               value={observacoes}

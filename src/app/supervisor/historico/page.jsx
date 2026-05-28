@@ -1,10 +1,12 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
   Download,
+  Eye,
   Filter,
   Info,
   Loader2,
@@ -19,17 +21,21 @@ import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 const STATUS_STYLE = {
   pendente: "bg-amber-100 text-amber-700",
   aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-600",
+  expirado: "bg-slate-100 text-slate-700",
 };
 
 function formatDateTime(value) {
@@ -40,7 +46,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
@@ -48,6 +54,33 @@ function formatDateTime(value) {
 
 function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
+}
+
+function getExpirationDate(requisicao) {
+  const validade = new Date(requisicao?.validade);
+
+  if (!Number.isNaN(validade.getTime())) {
+    return validade;
+  }
+
+  const dataDaRequisicao = new Date(requisicao?.dataDaRequisicao);
+
+  if (Number.isNaN(dataDaRequisicao.getTime())) {
+    return null;
+  }
+
+  return new Date(dataDaRequisicao.getTime() + 24 * 60 * 60 * 1000);
+}
+
+function getEffectiveStatus(requisicao) {
+  const status = String(requisicao?.status || "pendente").toLowerCase();
+  const expirationDate = getExpirationDate(requisicao);
+
+  if (status === "pendente" && expirationDate && expirationDate.getTime() <= Date.now()) {
+    return "expirado";
+  }
+
+  return status;
 }
 
 function getIdentity(requisicao) {
@@ -71,7 +104,7 @@ function groupByUsuarioEStatus(requisicoes) {
         status,
         usuario,
         empresa: requisicao.empresa || usuario.empresas?.nome || "-",
-        motivo: requisicao.motivo || "-",
+        motivo: normalizeMotivoVisita(requisicao.motivo),
         dataDaRequisicao: requisicao.dataDaRequisicao,
         setores: setor && setor !== "-" ? [setor] : [],
       });
@@ -85,7 +118,7 @@ function groupByUsuarioEStatus(requisicoes) {
     if (new Date(requisicao.dataDaRequisicao).getTime() > new Date(current.dataDaRequisicao).getTime()) {
       current.dataDaRequisicao = requisicao.dataDaRequisicao;
       current.empresa = requisicao.empresa || current.empresa;
-      current.motivo = requisicao.motivo || current.motivo;
+      current.motivo = normalizeMotivoVisita(requisicao.motivo || current.motivo);
     }
   });
 
@@ -94,7 +127,7 @@ function groupByUsuarioEStatus(requisicoes) {
   );
 }
 
-function LinhaHistorico({ registro }) {
+function LinhaHistorico({ registro, onDetalhes }) {
   const statusClass = STATUS_STYLE[registro.status] || STATUS_STYLE.pendente;
 
   return (
@@ -102,7 +135,7 @@ function LinhaHistorico({ registro }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-semibold text-foreground">{registro.usuario.nome || "-"}</p>
-          <p className="text-xs text-muted-foreground">{registro.usuario.cpf || "CPF não informado"}</p>
+          <p className="text-xs text-muted-foreground">{formatCPF(registro.usuario.cpf) || "CPF não informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "-"}</td>
@@ -124,7 +157,62 @@ function LinhaHistorico({ registro }) {
           {STATUS_LABEL[registro.status] || STATUS_LABEL.pendente}
         </span>
       </td>
+      <td className="px-4 py-3 text-right">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onDetalhes(registro)}
+          className="h-8 gap-1.5 rounded-lg text-[11px] font-bold"
+          type="button"
+        >
+          <Eye size={13} />
+          Detalhes
+        </Button>
+      </td>
     </tr>
+  );
+}
+
+function ModalDetalhesHistorico({ registro, onClose }) {
+  if (!registro) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Detalhes da requisicao</h2>
+            <p className="text-xs text-muted-foreground">{registro.usuario.nome || "-"} - {STATUS_LABEL[registro.status] || registro.status}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid gap-3 p-5 text-sm">
+          <Detail label="CPF" value={formatCPF(registro.usuario.cpf) || "-"} />
+          <Detail label="Empresa" value={registro.empresa || "-"} />
+          <Detail label="Setores" value={registro.setores.join(", ") || "-"} />
+          <Detail label="Motivo" value={registro.motivo || "-"} />
+          <Detail label="Solicitacao" value={formatDateTime(registro.dataDaRequisicao)} />
+        </div>
+
+        <div className="border-t border-border p-5">
+          <Button type="button" onClick={onClose} className="h-10 w-full rounded-xl">
+            Fechar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Detail({ label, value }) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/60 px-4 py-3">
+      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className="text-right text-sm font-semibold text-foreground">{value}</span>
+    </div>
   );
 }
 
@@ -133,6 +221,7 @@ export default function HistoricoSupervisorPage() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [registroSelecionado, setRegistroSelecionado] = useState(null);
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
 
@@ -148,7 +237,13 @@ export default function HistoricoSupervisorPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            status: getEffectiveStatus(requisicao),
+            motivo: normalizeMotivoVisita(requisicao.motivo),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -181,6 +276,7 @@ export default function HistoricoSupervisorPage() {
   const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
   const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
   const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
+  const countExpirados = requisicoes.filter((r) => r.status === "expirado").length;
 
   async function exportarPDF() {
     if (registrosFiltrados.length === 0) {
@@ -208,7 +304,7 @@ export default function HistoricoSupervisorPage() {
         ],
         rows: registrosFiltrados.map((registro) => [
           registro.usuario.nome || "-",
-          registro.usuario.cpf || "-",
+          formatCPF(registro.usuario.cpf) || "-",
           registro.empresa || "-",
           registro.setores.join(", ") || "-",
           registro.motivo || "-",
@@ -238,10 +334,11 @@ export default function HistoricoSupervisorPage() {
       />
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
+        <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando análise" accentVar="var(--warning)" />
           <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Expirados" value={countExpirados} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Mais de 24h pendente" accentVar="#64748b" />
         </div>
 
         <div className="mb-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -312,11 +409,12 @@ export default function HistoricoSupervisorPage() {
                     <th className="px-4 py-3 text-left">Motivo</th>
                     <th className="px-4 py-3 text-left">Solicitacao</th>
                     <th className="px-4 py-3 text-left">Status</th>
+                    <th className="px-4 py-3 text-right">Acoes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {registrosFiltrados.map((registro) => (
-                    <LinhaHistorico key={registro.key} registro={registro} />
+                    <LinhaHistorico key={registro.key} registro={registro} onDetalhes={setRegistroSelecionado} />
                   ))}
                 </tbody>
               </table>
@@ -339,6 +437,11 @@ export default function HistoricoSupervisorPage() {
         </div>
       </div>
 
+      <ModalDetalhesHistorico
+        registro={registroSelecionado}
+        onClose={() => setRegistroSelecionado(null)}
+      />
+
       <ModalFiltro
         isOpen={modalFiltroAberto}
         onClose={() => setModalFiltroAberto(false)}
@@ -351,7 +454,7 @@ export default function HistoricoSupervisorPage() {
               Status da Requisicao
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
+              {["todos", "pendente", "aprovado", "recusado", "expirado"].map((status) => (
                 <button
                   key={status}
                   type="button"

@@ -19,7 +19,7 @@ export default function ModalFiltro({
   onApply, 
   onClear, 
   children,
-  title = "Filtros Avançados"
+  title = "Filtros"
 }) {
   if (!isOpen) return null;
 
@@ -37,7 +37,7 @@ export default function ModalFiltro({
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">{title}</h2>
-              <p className="text-xs text-muted-foreground">Refine sua busca com múltiplos critérios</p>
+              <p className="text-xs text-muted-foreground">Refine sua busca</p>
             </div>
           </div>
           <button

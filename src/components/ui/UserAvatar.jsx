@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useMemo } from 'react';
-import { cn } from '@/lib/utils';
+import React, { useMemo, useState } from 'react';
+import { cn, getAvatarSrc } from '@/lib/utils';
 
 const AVATAR_COLORS = [
   'bg-blue-500',
@@ -19,10 +19,13 @@ const AVATAR_COLORS = [
  * com uma cor de fundo baseada no nome do usuário para manter consistência.
  */
 export default function UserAvatar({ name, email, src, className }) {
+  const [failedSrc, setFailedSrc] = useState("");
   const initials = useMemo(() => {
     if (!name) return 'U';
     return name.charAt(0).toUpperCase();
   }, [name]);
+
+  const avatarSrc = useMemo(() => getAvatarSrc(src), [src]);
 
   const backgroundColor = useMemo(() => {
     // Usar o nome ou email para gerar um índice consistente para a cor
@@ -43,8 +46,13 @@ export default function UserAvatar({ name, email, src, className }) {
         className
       )}
     >
-      {src ? (
-        <img src={src} alt={name || email || 'Avatar'} className="h-full w-full object-cover" />
+      {avatarSrc && failedSrc !== avatarSrc ? (
+        <img
+          src={avatarSrc}
+          alt={name || email || 'Avatar'}
+          className="h-full w-full object-cover"
+          onError={() => setFailedSrc(avatarSrc)}
+        />
       ) : (
         initials
       )}

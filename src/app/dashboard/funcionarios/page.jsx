@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
-  Users, Search, X, Download, Plus,
-  Check, Shield, User, Eye, Star,
+  Users, Search, X,
+  Check, Shield, Eye,
   Mail, Phone, Building2, Briefcase,
   Trash2, Edit, Loader2, Filter
 } from "lucide-react";
@@ -17,28 +18,24 @@ import { api } from "@/services/api";
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
 const TIPO_LABEL = {
-  func: "Funcionário",
   port: "Portaria",
   sup: "Supervisor",
-  ger: "Gerente",
   adm: "Administrador"
 };
 
 const TIPO_STYLE = {
-  func: "bg-purple-100 text-purple-700",
   port: "bg-blue-100 text-blue-700",
   sup: "bg-green-100 text-green-700",
-  ger: "bg-orange-100 text-orange-700",
   adm: "bg-red-100 text-red-700",
 };
 
 const TIPO_ICON = {
-  func: <User size={14} />,
   port: <Shield size={14} />,
   sup: <Eye size={14} />,
-  ger: <Star size={14} />,
   adm: <Briefcase size={14} />,
 };
+
+const CARGOS_VISIVEIS = new Set(["port", "sup", "adm"]);
 
 // Função para garantir que o Excel trate o CPF como texto (com pontos e traço)
 const formatarCpfParaCSV = (cpf) => {
@@ -93,7 +90,7 @@ function downloadCSV(data) {
 
 // ─── LINHA DA TABELA ─────────────────────────────────────────────────────────
 
-function LinhaFuncionario({ f }) {
+function LinhaFuncionario({ f, onEdit, onDelete }) {
   // Se f não existir por algum motivo bizarro, paramos aqui
   if (!f) return null;
   const formatarCPF = (cpf) => {
@@ -149,17 +146,17 @@ function LinhaFuncionario({ f }) {
         </div>
       </td>
       <td className="py-3 px-4">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIPO_STYLE[f.tipo] || "bg-gray-100 text-gray-700"}`}>
-          {TIPO_ICON[f.cargo] || <User size={14} />}
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${TIPO_STYLE[f.cargo] || "bg-gray-100 text-gray-700"}`}>
+          {TIPO_ICON[f.cargo] || <Briefcase size={14} />}
           {TIPO_LABEL[f.cargo] || f.tipo || "Sem tipo"}
         </span>
       </td>
       <td className="py-3 px-4 text-right">
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
+          <button onClick={() => onEdit(f)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
             <Edit size={16} />
           </button>
-          <button className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
+          <button onClick={() => onDelete(f)} className="rounded-xl p-2 text-muted-foreground transition-all duration-300 hover:bg-destructive/8 hover:text-destructive">
             <Trash2 size={16} />
           </button>
         </div>
@@ -171,6 +168,7 @@ function LinhaFuncionario({ f }) {
 // ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
 
 export default function FuncionariosPage() {
+  const router = useRouter();
   const [funcionarios, setFuncionarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -188,11 +186,11 @@ export default function FuncionariosPage() {
     // Se a sua API retorna { sucesso: true, data: [...] }
     if (response?.data?.sucesso || response?.sucesso) {
       const lista = response.data?.data || response.data || [];
-      setFuncionarios(lista);
+      setFuncionarios(lista.filter((funcionario) => CARGOS_VISIVEIS.has(funcionario.cargo)));
     } 
     // Se a API retornar o array direto
     else if (Array.isArray(response)) {
-      setFuncionarios(response);
+      setFuncionarios(response.filter((funcionario) => CARGOS_VISIVEIS.has(funcionario.cargo)));
     }
   } catch (error) {
     console.error("Erro ao carregar funcionários:", error);
@@ -230,7 +228,7 @@ export default function FuncionariosPage() {
 
   const stats = useMemo(() => ({
     total: funcionarios.length,
-    gerentes: funcionarios.filter(f => f.cargo === 'ger').length,
+    administradores: funcionarios.filter(f => f.cargo === 'adm').length,
     supervisores: funcionarios.filter(f => f.cargo === 'sup').length,
     portaria: funcionarios.filter(f => f.cargo === 'port').length,
   }), [funcionarios]);
@@ -245,6 +243,47 @@ export default function FuncionariosPage() {
     setBusca("");
   };
 
+  const handleEditar = async (funcionario) => {
+    const nome = window.prompt("Nome do funcionario", funcionario.usuario_nome || "");
+    if (nome === null) return;
+    const email = window.prompt("E-mail", funcionario.email || "");
+    if (email === null) return;
+    const celular = window.prompt("Celular", funcionario.celular || "");
+    if (celular === null) return;
+    const tipo = window.prompt("Tipo (port, sup, adm)", funcionario.cargo || funcionario.tipo || "port");
+    if (tipo === null) return;
+    if (!CARGOS_VISIVEIS.has(tipo)) {
+      alert("Informe apenas port, sup ou adm.");
+      return;
+    }
+
+    const response = await api.put(`/func/${funcionario.id}`, {
+      nome,
+      email,
+      celular,
+      tipo,
+    });
+
+    if (response.sucesso) {
+      carregarFuncionarios();
+    } else {
+      alert(response.mensagem || "Erro ao atualizar funcionario.");
+    }
+  };
+
+  const handleExcluir = async (funcionario) => {
+    if (!window.confirm(`Excluir funcionario ${funcionario.usuario_nome || funcionario.nome || ""}?`)) {
+      return;
+    }
+
+    const response = await api.delete(`/func/${funcionario.id}`);
+    if (response.sucesso) {
+      setFuncionarios((prev) => prev.filter((item) => item.id !== funcionario.id));
+    } else {
+      alert(response.mensagem || "Erro ao excluir funcionario.");
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 animate-in fade-in duration-700">
       <Topbar
@@ -253,7 +292,7 @@ export default function FuncionariosPage() {
         secondaryButtonText="Exportar CSV"
         onSecondaryButtonClick={() => downloadCSV(filtrados)}
         buttonText="Novo Funcionário"
-        onButtonClick={() => window.location.href = '/dashboard/funcionarios/registrarFuncionario'}
+        onButtonClick={() => router.push('/dashboard/funcionarios/registrarFuncionario')}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -266,11 +305,11 @@ export default function FuncionariosPage() {
           accentVar="var(--primary)"
         />
         <StatCard
-          label="Gerentes"
-          value={stats.gerentes}
+          label="Administradores"
+          value={stats.administradores}
           valueClassName="text-foreground"
-          icon={<Star size={17} className="text-foreground" />}
-          sub="liderança"
+          icon={<Briefcase size={17} className="text-foreground" />}
+          sub="gestao"
           accentVar="var(--chart-4)"
         />
         <StatCard
@@ -387,8 +426,13 @@ export default function FuncionariosPage() {
                   </td>
                 </tr>
               ) : filtrados.length > 0 ? (
-                filtrados.map((f) => (
-                  <LinhaFuncionario key={f.id || f.cpf || index} f={f} />
+                filtrados.map((f, index) => (
+                  <LinhaFuncionario
+                    key={f.id || f.cpf || index}
+                    f={f}
+                    onEdit={handleEditar}
+                    onDelete={handleExcluir}
+                  />
                 ))
               ) : (
                 <tr>
@@ -423,7 +467,7 @@ export default function FuncionariosPage() {
               Nível de Acesso
             </label>
             <div className="grid grid-cols-1 gap-2">
-              {["Todos", "ger", "sup", "port", "func"].map((tipo) => (
+              {["Todos", "adm", "sup", "port"].map((tipo) => (
                 <button
                   key={tipo}
                   type="button"
@@ -441,11 +485,6 @@ export default function FuncionariosPage() {
             </div>
           </div>
           
-          <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10">
-            <p className="text-[10px] text-purple-600 leading-relaxed">
-              <strong>Info:</strong> Filtrar por nível de acesso ajuda a gerenciar permissões e visualizar grupos específicos de colaboradores.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </div>

@@ -1,10 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { TIPOS_VISITANTE } from "@/lib/mockData";
 
-function PieTooltip({ active, payload }) {
+function renderActiveSector(props) {
+  const outerRadius = Number(props.outerRadius) || 0;
+
+  return (
+    <Sector
+      {...props}
+      outerRadius={outerRadius + 3}
+      stroke="var(--card)"
+      strokeWidth={4}
+      fillOpacity={1}
+    />
+  );
+}
+
+function PieTooltip({ active, payload, dataKey, nameKey, colorKey, total, peakItem }) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -14,19 +28,46 @@ function PieTooltip({ active, payload }) {
     return null;
   }
 
+  const value = Number(item[dataKey]) || 0;
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  const color = item[colorKey] || "var(--primary)";
+  const isPeak = peakItem && item[nameKey] === peakItem[nameKey] && value === (Number(peakItem[dataKey]) || 0);
+
   return (
-    <div className="min-w-[132px] rounded-xl border border-border bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-      <p className="text-xs font-semibold text-foreground">{item.name}</p>
-      <p className="mt-1 text-xs font-bold" style={{ color: item.color }}>
-        Total: {item.value}
-      </p>
+    <div className="min-w-[180px] rounded-xl border border-border bg-card/95 px-3 py-2.5 text-card-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <p className="truncate text-sm font-semibold text-foreground">{item[nameKey]}</p>
+          </div>
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Distribuicao
+          </p>
+        </div>
+        {isPeak ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-primary">
+            Principal
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-2.5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{value}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Do total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{percent}%</p>
+        </div>
+      </div>
     </div>
   );
 }
 
 export default function TiposVisitantesChart({
   title = "Motivos",
-  subtitle = "Por periodo - hoje",
+  subtitle = "Por período - hoje",
   data = TIPOS_VISITANTE,
   weekData = data,
   monthData = data,
@@ -37,29 +78,40 @@ export default function TiposVisitantesChart({
   nameKey = "name",
   colorKey = "color",
   mobileLayout = false,
+  showPeriodToggle = true,
 }) {
   const [view, setView] = useState("hoje");
 
   const chartData = useMemo(() => {
+    if (!showPeriodToggle) return data;
     if (view === "mes") return monthData;
     return view === "semana" ? weekData : data;
-  }, [data, weekData, monthData, view]);
+  }, [data, weekData, monthData, showPeriodToggle, view]);
 
   const total = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + item[dataKey], 0);
+    return chartData.reduce((sum, item) => sum + (Number(item[dataKey]) || 0), 0);
   }, [chartData, dataKey]);
 
-  const isEmpty = total === 0;
+  const peakItem = useMemo(() => {
+    return chartData.reduce((current, item) => {
+      if (!current) return item;
+      return (Number(item[dataKey]) || 0) > (Number(current[dataKey]) || 0) ? item : current;
+    }, null);
+  }, [chartData, dataKey]);
+
+  const isEmpty = chartData.length === 0;
   
   const emptyText = useMemo(() => {
+    if (!showPeriodToggle) return emptyMessage;
     if (view === "mes") return monthEmptyMessage;
     return view === "semana" ? weekEmptyMessage : emptyMessage;
-  }, [view, monthEmptyMessage, weekEmptyMessage, emptyMessage]);
+  }, [view, monthEmptyMessage, showPeriodToggle, weekEmptyMessage, emptyMessage]);
 
   const displaySubtitle = useMemo(() => {
-    if (view === "mes") return "Por periodo - mês";
-    return view === "semana" ? "Por periodo - semana" : "Por periodo - hoje";
-  }, [view]);
+    if (!showPeriodToggle) return subtitle;
+    if (view === "mes") return "Por período - mês";
+    return view === "semana" ? "Por período - semana" : "Por período - hoje";
+  }, [showPeriodToggle, subtitle, view]);
 
   const chartSize = mobileLayout ? 112 : 156;
 
@@ -68,18 +120,19 @@ export default function TiposVisitantesChart({
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuicao</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribuição</p>
             <h2 className={`${mobileLayout ? "text-xl" : "text-2xl"} font-semibold text-foreground`}>{title}</h2>
             <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
           </div>
 
-          <div className="flex rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30">
+          {showPeriodToggle ? (
+          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
             {["hoje", "semana", "mes"].map((item) => (
               <button
                 key={item}
                 onClick={() => setView(item)}
                 className={[
-                  "rounded-lg px-2.5 py-1.5 transition-all duration-300",
+                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
                   view === item
                     ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
                     : "hover:bg-white/80 hover:text-foreground",
@@ -89,6 +142,7 @@ export default function TiposVisitantesChart({
               </button>
             ))}
           </div>
+          ) : null}
         </div>
       </div>
 
@@ -117,13 +171,22 @@ export default function TiposVisitantesChart({
                   paddingAngle={2}
                   animationDuration={1500}
                   animationEasing="ease-out"
+                  activeShape={renderActiveSector}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
                   ))}
                 </Pie>
                 <Tooltip
-                  content={<PieTooltip />}
+                  content={
+                    <PieTooltip
+                      dataKey={dataKey}
+                      nameKey={nameKey}
+                      colorKey={colorKey}
+                      total={total}
+                      peakItem={peakItem}
+                    />
+                  }
                   wrapperStyle={{ outline: "none", zIndex: 20 }}
                 />
               </PieChart>
@@ -134,11 +197,11 @@ export default function TiposVisitantesChart({
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1">
+          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1 max-w-[280px]">
             {chartData.map((item, index) => (
               <div
                 key={index}
-                className={`grid items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "grid-cols-[1fr_auto] gap-2 p-2.5" : "grid-cols-[minmax(0,1fr)_40px] gap-3 px-2.5 py-2"}`}
+                className={`flex w-fit max-w-full items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "gap-2 p-2.5" : "gap-3 px-2.5 py-2"}`}
                 style={{ animationDelay: `${500 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
@@ -148,7 +211,7 @@ export default function TiposVisitantesChart({
                   />
                   <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
                 </div>
-                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} justify-self-end shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
+                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} min-w-6 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
               </div>
             ))}
           </div>

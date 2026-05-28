@@ -1,32 +1,36 @@
 "use client";
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useEffect, useMemo } from "react";
 import {
-  Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
+  AlertTriangle, Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import StatCard from "@/components/StatCard";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
 
-const STATUS_OPTIONS = ["Todos", "Pendente", "Aprovado", "Recusado"];
+const STATUS_OPTIONS = ["Todos", "Finalizado", "Em andamento", "Expirado"];
+
+const STATUS_FILTER_VALUE = {
+  Finalizado: "finalizado",
+  "Em andamento": "em_andamento",
+  Expirado: "expirado"
+};
 
 const STATUS_LABEL = {
-  pendente: "Pendente",
-  aprovado: "Aprovado",
-  recusado: "Recusado",
-  ativo: "Ativo",
-  finalizado: "Finalizado"
+  finalizado: "Finalizado",
+  em_andamento: "Em andamento",
+  expirado: "Expirado"
 };
 
 const STATUS_STYLE = {
-  pendente: "bg-amber-100 text-amber-700",
-  aprovado: "bg-green-100 text-green-700",
-  recusado: "bg-red-100 text-red-600",
-  ativo: "bg-green-100 text-green-700",
-  finalizado: "bg-blue-100 text-blue-700"
+  finalizado: "bg-green-100 text-green-700",
+  em_andamento: "bg-amber-100 text-amber-700",
+  expirado: "bg-slate-100 text-slate-700"
 };
 
 function pickFirst(...values) {
@@ -45,6 +49,28 @@ function getDescricaoValue(descricao, label) {
   return match?.[1]?.trim() || "";
 }
 
+function getResponseArray(response, keys = []) {
+  if (!response || typeof response !== "object" || !response.sucesso) {
+    return [];
+  }
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(response.data?.[key])) {
+      return response.data[key];
+    }
+
+    if (Array.isArray(response[key])) {
+      return response[key];
+    }
+  }
+
+  return [];
+}
+
 function formatDateTime(value) {
   if (!value) return "—";
 
@@ -53,7 +79,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);
@@ -67,7 +93,49 @@ function splitSetores(value) {
   return String(value || "")
     .split(",")
     .map((item) => item.trim())
-    .filter(Boolean);
+    .filter((item) => item && item.toLowerCase() !== "nenhum");
+}
+
+function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
+  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
+
+  if (setoresPermitidos.length > 0) {
+    return setoresPermitidos;
+  }
+
+  return splitSetores(fallback);
+}
+
+function normalizeHistoricoStatus(value, dataSaida, dataEntrada) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (normalized === "expirado" || normalized === "expirada") return "expirado";
+  if (["pendente", "aguardando", "em andamento", "em_andamento"].includes(normalized)) return "em_andamento";
+  if (
+    [
+      "aprovado",
+      "aprovada",
+      "recusado",
+      "recusada",
+      "rejeitado",
+      "negado",
+      "saida",
+      "saiu",
+      "dentro",
+      "ativo",
+      "liberado",
+      "finalizado",
+      "concluido"
+    ].includes(normalized)
+  ) {
+    return "finalizado";
+  }
+  if (dataSaida || dataEntrada) return "finalizado";
+  return "em_andamento";
 }
 
 function pickBestCapitalization(current, next) {
@@ -94,6 +162,16 @@ function normalizeRegistro(registro) {
   const departamento = registro?.departamento || registro?.setores || {};
   const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
   const descricao = registro?.descricao || "";
+  const setorBackend = pickFirst(registro?.setoresPermitidos, registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"));
+  const setoresPermitidos = getSetoresPermitidosFromDescricao(descricao, setorBackend);
+  const setorResponsavel = pickFirst(
+    getDescricaoValue(descricao, "Setor responsavel"),
+    getDescricaoValue(descricao, "Area responsavel"),
+    getDescricaoValue(descricao, "Setor"),
+    setorBackend
+  );
+  const dataEntrada = pickFirst(registro?.dataEntrada, registro?.entrada, registro?.dataDaRequisicao, registro?.dataDeEntrada);
+  const dataSaida = pickFirst(registro?.dataSaida, registro?.dataDeSaida);
 
   return {
     ...registro,
@@ -108,13 +186,36 @@ function normalizeRegistro(registro) {
     ),
     email: pickFirst(registro?.email, usuario?.email, getDescricaoValue(descricao, "Email"), getDescricaoValue(descricao, "E-mail")),
     empresa: pickFirst(registro?.empresa, registro?.empresa_visitante, usuario?.empresa, getDescricaoValue(descricao, "Empresa")),
-    setor: pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor")),
-    setoresLista: splitSetores(pickFirst(registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"))),
-    dataEntrada: pickFirst(registro?.dataEntrada, registro?.dataDaRequisicao, registro?.dataDeEntrada),
-    dataSaida: pickFirst(registro?.dataSaida, registro?.dataDeSaida),
-    status: registro?.status || (registro?.dataSaida || registro?.dataDeSaida ? "finalizado" : "ativo"),
+    setor: setorResponsavel,
+    setorResponsavel,
+    setoresPermitidos,
+    setoresLista: setoresPermitidos,
+    dataEntrada,
+    dataSaida,
+    status: normalizeHistoricoStatus(registro?.status, dataSaida, dataEntrada),
     observacoes: pickFirst(registro?.observacoes, descricao)
   };
+}
+
+function isFuncionarioRegistro(registro) {
+  const usuario = registro?.usuario || {};
+  const tipo = String(
+    pickFirst(
+      registro?.tipo,
+      registro?.cargo,
+      usuario?.tipo,
+      usuario?.cargo,
+      usuario?.funcionario?.tipo,
+      usuario?.funcionario?.cargo
+    )
+  )
+    .trim()
+    .toLowerCase();
+
+  return Boolean(
+    usuario?.funcionario ||
+      ["func", "funcionario", "funcionário", "port", "portaria", "sup", "supervisor", "ger", "gerente"].includes(tipo)
+  );
 }
 
 // Helpers do historico
@@ -167,7 +268,7 @@ function dedupeRegistrosPorVisitante(registros) {
   const registrosPorVisitante = new Map();
 
   registros.forEach((registro) => {
-    const key = getRegistroIdentity(registro);
+    const key = `${getRegistroIdentity(registro)}|${registro.status || "em_andamento"}`;
     const registroAtual = registrosPorVisitante.get(key);
 
     if (!registroAtual) {
@@ -184,7 +285,8 @@ function dedupeRegistrosPorVisitante(registros) {
       ...principal,
       empresa: pickBestCapitalization(registroAtual.empresa, registro.empresa),
       setoresLista,
-      setor: setoresLista.length > 0 ? setoresLista.join(", ") : principal.setor
+      setoresPermitidos: setoresLista,
+      setor: principal.setor || registroAtual.setor || registro.setor
     });
   });
 
@@ -258,8 +360,18 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 <MapPin size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor responsavel</p>
                 <p className="text-sm font-semibold text-foreground">{registro.setor}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
+                <MapPin size={16} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setores permitidos</p>
+                <p className="text-sm font-semibold text-foreground">{registro.setoresPermitidos?.join(", ") || "—"}</p>
               </div>
             </div>
 
@@ -304,9 +416,6 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
 
 // ─── LINHA DO HISTÓRICO ─────────────────────────────────────────────────────
 function LinhaHistorico({ registro, onDetalhes }) {
-  const status = STATUS_LABEL[registro.status] || registro.status || "Ativo";
-  const statusClass = STATUS_STYLE[registro.status] || "bg-muted text-muted-foreground";
-
   return (
     <tr className="border-b border-border hover:bg-muted/50 transition-colors">
       <td className="px-4 py-3">
@@ -331,8 +440,8 @@ function LinhaHistorico({ registro, onDetalhes }) {
       <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
       <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
       <td className="px-4 py-3">
-        <span className={`inline-flex px-2.5 py-1 rounded-md text-[11px] font-bold ${statusClass}`}>
-          {status}
+        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[registro.status] || STATUS_STYLE.em_andamento}`}>
+          {STATUS_LABEL[registro.status] || registro.status || "Em andamento"}
         </span>
       </td>
       <td className="px-4 py-3 text-right">
@@ -370,13 +479,24 @@ export default function HistoricoPage() {
   async function fetchHistorico() {
     try {
       setLoading(true);
-      const response = await api.get('/requisicao-visitante');
+      const [historicoResponse, requisicoesResponse] = await Promise.all([
+        api.get("/portaria/historico"),
+        api.get("/requisicao-visitante")
+      ]);
+      const historico = getResponseArray(historicoResponse, ["dados", "historico", "visitantes"]);
+      const requisicoes = getResponseArray(requisicoesResponse, ["dados", "requisicoes"]);
+      const dados = [...historico, ...requisicoes];
 
-      if (response.sucesso && Array.isArray(response.data)) {
-        setRegistros(dedupeRegistrosPorVisitante(response.data.map(normalizeRegistro)));
-      }
+      setRegistros(
+        dedupeRegistrosPorVisitante(
+          dados
+            .filter((registro) => !isFuncionarioRegistro(registro))
+            .map(normalizeRegistro)
+        )
+      );
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
+      setRegistros([]);
     } finally {
       setLoading(false);
     }
@@ -390,19 +510,21 @@ export default function HistoricoPage() {
       const termoBuscaDigitos = onlyDigits(busca);
       const cpfFormatado = maskCPF(r.cpf).toLowerCase();
       const cpfDigitos = onlyDigits(r.cpf);
-      const status = STATUS_LABEL[r.status] || r.status;
+      const setoresPermitidos = (r.setoresPermitidos || []).join(" ").toLowerCase();
       const matchBusca = busca === "" ||
         (r.visitante || "").toLowerCase().includes(termoBusca) ||
         (r.cpf || "").toLowerCase().includes(termoBusca) ||
         cpfFormatado.includes(termoBusca) ||
         (termoBuscaDigitos !== "" && cpfDigitos.includes(termoBuscaDigitos)) ||
         (r.empresa || "").toLowerCase().includes(termoBusca) ||
+        (r.setor || "").toLowerCase().includes(termoBusca) ||
+        setoresPermitidos.includes(termoBusca) ||
         (r.telefone || "").toLowerCase().includes(termoBusca) ||
         telefoneFormatado.includes(termoBusca) ||
         (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
         (r.email || "").toLowerCase().includes(termoBusca);
 
-      const matchStatus = filtroStatus === "Todos" || status === filtroStatus;
+      const matchStatus = filtroStatus === "Todos" || r.status === STATUS_FILTER_VALUE[filtroStatus];
 
       const matchData = filtroData === "" ||
         String(r.dataEntrada || "").includes(filtroData);
@@ -413,9 +535,9 @@ export default function HistoricoPage() {
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
-    Pendente: registros.filter((r) => r.status === "pendente").length,
-    Aprovado: registros.filter((r) => r.status === "aprovado").length,
-    Recusado: registros.filter((r) => r.status === "recusado").length,
+    "Em andamento": registros.filter((r) => r.status === "em_andamento").length,
+    Finalizado: registros.filter((r) => r.status === "finalizado").length,
+    Expirado: registros.filter((r) => r.status === "expirado").length,
   }), [registros]);
 
   function handleDetalhes(registro) {
@@ -458,10 +580,11 @@ export default function HistoricoPage() {
           { header: "Telefone", weight: 1 },
           { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor", weight: 1.1 },
+          { header: "Setor responsavel", weight: 1.1 },
+          { header: "Setores permitidos", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Saída", weight: 1.1 },
-          { header: "Status", weight: 0.8 },
+          { header: "Status", weight: 0.9 },
         ],
         rows: registrosFiltrados.map((r) => [
           r.visitante,
@@ -470,6 +593,7 @@ export default function HistoricoPage() {
           r.email,
           r.empresa,
           r.setor,
+          r.setoresPermitidos?.join(", ") || "-",
           formatDateTime(r.dataEntrada),
           formatDateTime(r.dataSaida),
           STATUS_LABEL[r.status] || r.status,
@@ -490,6 +614,37 @@ export default function HistoricoPage() {
         subtitle="Registro completo de entradas e saídas"
       />
 
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard
+          label="Registros"
+          value={registros.length}
+          icon={<Calendar size={18} className="text-blue-600" />}
+          accentVar="#2563eb"
+          sub="No historico"
+        />
+        <StatCard
+          label="Em andamento"
+          value={resumoStatus["Em andamento"]}
+          icon={<LogIn size={18} className="text-amber-600" />}
+          accentVar="#d97706"
+          sub="Requisicoes pendentes"
+        />
+        <StatCard
+          label="Finalizado"
+          value={resumoStatus.Finalizado}
+          icon={<LogOut size={18} className="text-green-600" />}
+          accentVar="#16a34a"
+          sub="Aceitas ou recusadas"
+        />
+        <StatCard
+          label="Expirado"
+          value={resumoStatus.Expirado}
+          icon={<AlertTriangle size={18} className="text-slate-600" />}
+          accentVar="#64748b"
+          sub="Mais de 24h pendente"
+        />
+      </div>
+
       {/* Barra de Filtros Padronizada */}
       <div className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm animate-in fade-in duration-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -497,7 +652,7 @@ export default function HistoricoPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
-                placeholder="Buscar por nome, CPF, telefone, e-mail ou empresa..."
+                placeholder="Buscar por nome, CPF, telefone, e-mail, empresa ou setor..."
                 className="h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
@@ -588,7 +743,7 @@ export default function HistoricoPage() {
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Contato</th>
                 <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Setor</th>
+                <th className="px-4 py-3">Setor responsavel</th>
                 <th className="px-4 py-3">Entrada</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
@@ -613,7 +768,7 @@ export default function HistoricoPage() {
               ) : (
                 registrosFiltrados.map((r) => (
                   <LinhaHistorico
-                    key={r.id}
+                    key={`${getRegistroIdentity(r)}-${r.status}-${r.id || r.dataEntrada || r.dataDaRequisicao}`}
                     registro={r}
                     onDetalhes={handleDetalhes}
                   />

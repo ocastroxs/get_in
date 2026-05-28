@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://get-in-ilp5.onrender.com';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://api.getin.dev.br').replace(/\/+$/, '');
 
 const getHeaders = (tokenOverride = null) => {
   const headers = {
@@ -74,9 +74,19 @@ const parseResponse = async (response) => {
   };
 };
 
+const getEndpointPath = (endpoint) => `/${String(endpoint || '').replace(/^\/+/, '')}`;
+
 const request = async (endpoint, options) => {
-  const response = await fetch(`${API_URL}${endpoint}`, options);
-  return parseResponse(response);
+  try {
+    const response = await fetch(`${API_URL}${getEndpointPath(endpoint)}`, options);
+    return parseResponse(response);
+  } catch {
+    return {
+      sucesso: false,
+      status: 0,
+      mensagem: 'Não foi possível conectar à API.',
+    };
+  }
 };
 
 const sanitizeFuncionario = (funcionario) => {
@@ -158,6 +168,7 @@ export const api = {
   async get(endpoint) {
     return request(endpoint, {
       method: 'GET',
+      cache: 'no-store',
       headers: getHeaders(),
     });
   },

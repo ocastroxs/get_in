@@ -1,6 +1,8 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   Check,
@@ -23,11 +25,14 @@ import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
 };
 
 function formatDateTime(value) {
@@ -38,7 +43,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
@@ -46,6 +51,21 @@ function formatDateTime(value) {
 
 function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
+}
+
+function getRequisicaoTimestamp(requisicao) {
+  const timestamp = new Date(requisicao?.dataDaRequisicao || requisicao?.validade).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function sortRequisicoesDesc(a, b) {
+  const timestampDiff = getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a);
+
+  if (timestampDiff !== 0) {
+    return timestampDiff;
+  }
+
+  return Number(b?.id || 0) - Number(a?.id || 0);
 }
 
 export default function SupervisorDashboardPage() {
@@ -68,7 +88,12 @@ export default function SupervisorDashboardPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            motivo: normalizeMotivoVisita(requisicao.motivo),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -80,8 +105,13 @@ export default function SupervisorDashboardPage() {
     }
   }
 
+  const ultimasRequisicoes = useMemo(
+    () => [...requisicoes].sort(sortRequisicoesDesc).slice(0, 10),
+    [requisicoes]
+  );
+
   const requisicoesFiltradas = useMemo(() => {
-    return requisicoes.filter((requisicao) => {
+    return ultimasRequisicoes.filter((requisicao) => {
       const usuario = requisicao.usuario || {};
       const termoBusca = busca.toLowerCase();
       const matchBusca =
@@ -94,12 +124,13 @@ export default function SupervisorDashboardPage() {
 
       return matchBusca && matchStatus;
     });
-  }, [requisicoes, busca, filtroStatus]);
+  }, [ultimasRequisicoes, busca, filtroStatus]);
 
-  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
-  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
-  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
-  const countTotal = requisicoes.length;
+  const countPendentes = ultimasRequisicoes.filter((r) => r.status === "pendente").length;
+  const countAprovados = ultimasRequisicoes.filter((r) => r.status === "aprovado").length;
+  const countRecusados = ultimasRequisicoes.filter((r) => r.status === "recusado").length;
+  const countExpirados = ultimasRequisicoes.filter((r) => r.status === "expirado").length;
+  const countTotal = ultimasRequisicoes.length;
 
   const aplicarFiltros = () => setFiltroStatus(tempFiltroStatus);
 
@@ -126,6 +157,7 @@ export default function SupervisorDashboardPage() {
         ].filter(Boolean),
         columns: [
           { header: "Visitante", weight: 1.4 },
+          { header: "CPF", weight: 1 },
           { header: "Empresa", weight: 1.1 },
           { header: "Setor", weight: 1.1 },
           { header: "Motivo", weight: 1.2 },
@@ -136,9 +168,10 @@ export default function SupervisorDashboardPage() {
           const usuario = requisicao.usuario || {};
           return [
             usuario.nome || "-",
+            formatCPF(usuario.cpf) || "-",
             requisicao.empresa || "-",
             getSetorNome(requisicao),
-            requisicao.motivo || "-",
+            normalizeMotivoVisita(requisicao.motivo),
             formatDateTime(requisicao.dataDaRequisicao),
             STATUS_LABEL[requisicao.status] || requisicao.status || "Pendente",
           ];
@@ -154,15 +187,18 @@ export default function SupervisorDashboardPage() {
     <>
       <Topbar
         title="Dashboard do Supervisor"
-          subtitle="Visão geral das solicitações de visitantes"
+        subtitle="Visão geral das últimas 10 solicitações de visitantes"
+        buttonText="Analisar pendentes"
+        buttonHref="/supervisor/aprovacoes"
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Ação necessária" : "Nenhuma"} />
-          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub={`${countAprovados} setor(es)`} />
-          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub={`${countRecusados} rejeitado(s)`} />
-          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Requisições" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <StatCard label="Total" value={countTotal} icon={<Users size={20} className="text-blue-600" />} accentVar="#2563eb" sub="Últimas 10 requisições" />
+          <StatCard label="Aprovados" value={countAprovados} icon={<CheckCircle2 size={20} className="text-green-600" />} accentVar="#16a34a" sub="Nas últimas 10" />
+          <StatCard label="Pendentes" value={countPendentes} icon={<AlertTriangle size={20} className="text-amber-600" />} accentVar="#d97706" sub={countPendentes > 0 ? "Ação necessária" : "Nenhuma nas últimas 10"} />
+          <StatCard label="Recusados" value={countRecusados} icon={<XCircle size={20} className="text-red-600" />} accentVar="#dc2626" sub="Nas últimas 10" />
+          <StatCard label="Expirados" value={countExpirados} icon={<XCircle size={20} className="text-slate-600" />} accentVar="#64748b" sub="Nas últimas 10" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -206,8 +242,8 @@ export default function SupervisorDashboardPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
             <div>
-              <h2 className="text-sm font-bold text-foreground">Listagem de Requisicoes</h2>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">Histórico e pendências recentes por setor</p>
+              <h2 className="text-sm font-bold text-foreground">Últimas 10 Requisições</h2>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">KPIs, filtros e tabela consideram apenas as últimas 10 solicitações</p>
             </div>
             <Clock size={20} className="text-primary opacity-60" />
           </div>
@@ -222,30 +258,62 @@ export default function SupervisorDashboardPage() {
               <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {requisicoesFiltradas.slice(0, 10).map((requisicao) => {
-                const usuario = requisicao.usuario || {};
-                const status = requisicao.status || "pendente";
-                const statusColor = {
-                  pendente: "bg-amber-100 text-amber-700",
-                  aprovado: "bg-green-100 text-green-700",
-                  recusado: "bg-red-100 text-red-600",
-                }[status] || "bg-gray-100 text-gray-700";
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3">Visitante</th>
+                    <th className="px-4 py-3">Empresa</th>
+                    <th className="px-4 py-3">Setor</th>
+                    <th className="px-4 py-3">Solicitacao</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {requisicoesFiltradas.map((requisicao) => {
+                    const usuario = requisicao.usuario || {};
+                    const status = requisicao.status || "pendente";
+                    const statusColor = {
+                      pendente: "bg-amber-100 text-amber-700",
+                      aprovado: "bg-green-100 text-green-700",
+                      recusado: "bg-red-100 text-red-600",
+                      expirado: "bg-slate-100 text-slate-700",
+                    }[status] || "bg-gray-100 text-gray-700";
+                    const actionHref = status === "pendente" ? "/supervisor/aprovacoes" : "/supervisor/historico";
+                    const actionLabel = status === "pendente" ? "Analisar" : "Histórico";
 
-                return (
-                  <div key={requisicao.id} className="grid gap-3 p-4 transition hover:bg-muted/30 md:grid-cols-[1.5fr_1fr_1fr_auto] md:items-center">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-                      <p className="mt-1 truncate text-[11px] text-muted-foreground">{requisicao.empresa || "-"} - {requisicao.motivo || "-"}</p>
-                    </div>
-                    <p className="text-xs font-semibold text-foreground">{getSetorNome(requisicao)}</p>
-                    <span className="text-[10px] font-mono text-muted-foreground">{formatDateTime(requisicao.dataDaRequisicao)}</span>
-                    <span className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
-                      {STATUS_LABEL[status] || status}
-                    </span>
-                  </div>
-                );
-              })}
+                    return (
+                      <tr key={requisicao.id} className="transition hover:bg-muted/40">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
+                          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF não informado"}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm text-foreground">{requisicao.empresa || "-"}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{normalizeMotivoVisita(requisicao.motivo)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-xs font-semibold text-foreground">{getSetorNome(requisicao)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-[10px] font-mono text-muted-foreground">
+                          {formatDateTime(requisicao.dataDaRequisicao)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                            {STATUS_LABEL[status] || status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link href={actionHref}>
+                            <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] font-bold">
+                              {actionLabel}
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -276,7 +344,7 @@ export default function SupervisorDashboardPage() {
             Status da Requisicao
           </label>
           <div className="grid grid-cols-1 gap-2">
-            {["Todos", "Pendente", "Aprovado", "Recusado"].map((status) => (
+            {["Todos", "Pendente", "Aprovado", "Recusado", "Expirado"].map((status) => (
               <button
                 key={status}
                 type="button"

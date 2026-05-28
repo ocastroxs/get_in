@@ -13,7 +13,6 @@ export const MENU_ITEMS = {
       { id: "crachas", label: "Crachás", icon: "CreditCard", href: "/crachas" },
     ],
     operacao: [
-      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
       { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
@@ -29,7 +28,6 @@ export const MENU_ITEMS = {
       { id: "setores", label: "Setores", icon: "Building2", href: "/dashboard/setores" },
     ],
     operacao: [
-      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
       { id: "empresas", label: "Empresas", icon: "Briefcase", href: "/empresas" },
       { id: "relatorios", label: "Relatórios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
@@ -37,7 +35,7 @@ export const MENU_ITEMS = {
   visitante: {
     principal: [
       { id: "minha-visita", label: "Minha Visita", icon: "User", href: "/minha-visita" },
-      { id: "checkin", label: "Check-in / Out", icon: "ArrowLeftRight", href: "/checkin" },
+      { id: "relatorios", label: "Relatorios", icon: "FileBarChart", href: "/dashboard/relatorios" },
     ],
   },
 };
@@ -57,27 +55,29 @@ export const STATS_TODAY = {
   tempo: { value : "1h 24m"}
 };
 
-export const ENTRADAS_POR_HORA = [
-  { hora: "08h", value: 2 },
-  { hora: "09h", value: 4 },
-  { hora: "10h", value: 6 },
-  { hora: "11h", value: 8 },
-  { hora: "12h", value: 5 },
-  { hora: "13h", value: 3 },
-  { hora: "14h", value: 2 },
-  { hora: "15h", value: 1 },
-  { hora: "16h", value: 1 },
-  { hora: "17h", value: 0 },
-];
+export const ENTRADAS_POR_HORA = Array.from({ length: 24 }, (_, hora) => ({
+  hora: `${String(hora).padStart(2, "0")}h`,
+  value: {
+    8: 2,
+    9: 4,
+    10: 6,
+    11: 8,
+    12: 5,
+    13: 3,
+    14: 2,
+    15: 1,
+    16: 1,
+  }[hora] ?? 0,
+}));
 
 export const ENTRADAS_POR_SEMANA = [
-  { hora: "Seg", value: 24 },
-  { hora: "Ter", value: 28 },
-  { hora: "Qua", value: 35 },
-  { hora: "Qui", value: 31 },
-  { hora: "Sex", value: 39 },
-  { hora: "Sab", value: 17 },
-  { hora: "Dom", value: 12 },
+  { hora: "16/05", diaSemana: "Sab", value: 24 },
+  { hora: "17/05", diaSemana: "Dom", value: 28 },
+  { hora: "18/05", diaSemana: "Seg", value: 35 },
+  { hora: "19/05", diaSemana: "Ter", value: 31 },
+  { hora: "20/05", diaSemana: "Qua", value: 39 },
+  { hora: "21/05", diaSemana: "Qui", value: 17 },
+  { hora: "22/05", diaSemana: "Sex", value: 12 },
 ];
 
 export const PICO_MOVIMENTO = [

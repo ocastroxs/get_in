@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -21,12 +22,15 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisitante";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { formatCPF } from "@/lib/utils";
+import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const STATUS_LABEL = {
   todos: "Todos",
   pendente: "Pendente",
   aprovado: "Aprovado",
   recusado: "Recusado",
+  expirado: "Expirado",
   misto: "Misto",
 };
 
@@ -34,6 +38,7 @@ const STATUS_STYLE = {
   pendente: "bg-amber-100 text-amber-700",
   aprovado: "bg-green-100 text-green-700",
   recusado: "bg-red-100 text-red-600",
+  expirado: "bg-slate-100 text-slate-700",
   misto: "bg-blue-100 text-blue-700",
 };
 
@@ -45,14 +50,49 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
 }
 
+function isToday(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
+
+function getExpirationDate(requisicao) {
+  const validade = new Date(requisicao?.validade);
+
+  if (!Number.isNaN(validade.getTime())) {
+    return validade;
+  }
+
+  const dataDaRequisicao = new Date(requisicao?.dataDaRequisicao);
+
+  if (Number.isNaN(dataDaRequisicao.getTime())) {
+    return null;
+  }
+
+  return new Date(dataDaRequisicao.getTime() + 24 * 60 * 60 * 1000);
+}
+
 function getSetorNome(requisicao) {
   return requisicao?.setores?.nome || requisicao?.departamento?.nome || requisicao?.setor || "-";
+}
+
+function getEffectiveStatus(requisicao) {
+  const status = String(requisicao?.status || "pendente").toLowerCase();
+  const expirationDate = getExpirationDate(requisicao);
+
+  if (status === "pendente" && expirationDate && expirationDate.getTime() <= Date.now()) {
+    return "expirado";
+  }
+
+  return status;
 }
 
 function getGroupKey(requisicao) {
@@ -74,13 +114,16 @@ function groupRequisicoes(requisicoes) {
     const current = groups.get(key);
     const nextSetor = {
       ...requisicao,
+      status: getEffectiveStatus(requisicao),
       setor: getSetorNome(requisicao),
+      motivo: normalizeMotivoVisita(requisicao.motivo),
     };
 
     if (!current) {
       groups.set(key, {
         ...requisicao,
         key,
+        motivo: normalizeMotivoVisita(requisicao.motivo),
         setoresSolicitados: [nextSetor],
       });
       return;
@@ -94,10 +137,13 @@ function groupRequisicoes(requisicoes) {
   });
 
   return Array.from(groups.values()).map((group) => {
-    const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => item.status || "pendente")));
+    const statuses = Array.from(new Set(group.setoresSolicitados.map((item) => getEffectiveStatus(item))));
+    const hasPendencia = group.setoresSolicitados.some((item) => getEffectiveStatus(item) === "pendente");
+
     return {
       ...group,
-      status: statuses.length === 1 ? statuses[0] : "misto",
+      hasPendencia,
+      status: hasPendencia ? "pendente" : statuses.length === 1 ? statuses[0] : "misto",
     };
   });
 }
@@ -112,7 +158,7 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-sm font-bold text-foreground">{usuario.nome || "-"}</p>
-          <p className="text-[11px] text-muted-foreground">{usuario.cpf || "CPF não informado"}</p>
+          <p className="text-[11px] text-muted-foreground">{formatCPF(usuario.cpf) || "CPF não informado"}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa || "-"}</td>
@@ -125,7 +171,7 @@ function LinhaRequisicao({ requisicao, onAprovar }) {
           ))}
         </div>
       </td>
-      <td className="px-4 py-3 text-sm text-foreground">{requisicao.motivo || "-"}</td>
+      <td className="px-4 py-3 text-sm text-foreground">{normalizeMotivoVisita(requisicao.motivo)}</td>
       <td className="whitespace-nowrap px-4 py-3 text-[11px] font-mono text-muted-foreground">
         {formatDateTime(requisicao.dataDaRequisicao)}
       </td>
@@ -173,7 +219,13 @@ export default function AprovacoesSupervisorPage() {
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {
-        setRequisicoes(response.data);
+        setRequisicoes(
+          response.data.map((requisicao) => ({
+            ...requisicao,
+            status: getEffectiveStatus(requisicao),
+            motivo: normalizeMotivoVisita(requisicao.motivo),
+          }))
+        );
       } else {
         setRequisicoes([]);
       }
@@ -185,7 +237,12 @@ export default function AprovacoesSupervisorPage() {
     }
   }
 
-  const requisicoesAgrupadas = useMemo(() => groupRequisicoes(requisicoes), [requisicoes]);
+  const requisicoesHoje = useMemo(
+    () => requisicoes.filter((requisicao) => isToday(requisicao.dataDaRequisicao)),
+    [requisicoes]
+  );
+
+  const requisicoesAgrupadas = useMemo(() => groupRequisicoes(requisicoesHoje), [requisicoesHoje]);
 
   const requisicoesFiltradas = useMemo(() => {
     return requisicoesAgrupadas.filter((requisicao) => {
@@ -200,15 +257,18 @@ export default function AprovacoesSupervisorPage() {
         setores.includes(termoBusca);
       const matchStatus =
         filtroStatus === "todos" ||
-        requisicao.setoresSolicitados.some((item) => item.status === filtroStatus);
+        (filtroStatus === "misto"
+          ? requisicao.status === "misto"
+          : requisicao.setoresSolicitados.some((item) => getEffectiveStatus(item) === filtroStatus));
 
       return matchBusca && matchStatus;
     });
   }, [requisicoesAgrupadas, busca, filtroStatus]);
 
-  const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
-  const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
-  const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
+  const countAprovadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "aprovado").length;
+  const countPendentesHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "pendente").length;
+  const countRecusadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "recusado").length;
+  const countExpiradosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "expirado").length;
 
   function handleAprovar(requisicao) {
     setRequisicaoSelecionada(requisicao);
@@ -235,6 +295,7 @@ export default function AprovacoesSupervisorPage() {
         subtitle: "Solicitações de visitantes por setor",
           fileName: `aprovações_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
+          "Data: hoje",
           busca ? `Busca: ${busca}` : null,
           filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
         ].filter(Boolean),
@@ -251,10 +312,10 @@ export default function AprovacoesSupervisorPage() {
           const usuario = r.usuario || {};
           return [
             usuario.nome || "-",
-            usuario.cpf || "-",
+            formatCPF(usuario.cpf) || "-",
             r.empresa || "-",
-            r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[item.status] || item.status})`).join(", "),
-            r.motivo || "-",
+            r.setoresSolicitados.map((item) => `${item.setor} (${STATUS_LABEL[getEffectiveStatus(item)] || getEffectiveStatus(item)})`).join(", "),
+            normalizeMotivoVisita(r.motivo),
             formatDateTime(r.dataDaRequisicao),
             STATUS_LABEL[r.status] || r.status,
           ];
@@ -274,11 +335,11 @@ export default function AprovacoesSupervisorPage() {
       />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 animate-in fade-in duration-700">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard label="Pendentes" value={countPendentes} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando analise" accentVar="var(--warning)" />
-          <StatCard label="Aprovados" value={countAprovados} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
-          <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
-                  <StatCard label="Recusados" value={countRecusados} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <StatCard label="Aprovados de hoje" value={countAprovadosHoje} valueClassName="text-green-600" icon={<CheckCircle2 size={17} className="text-green-600" />} sub="Setores autorizados" accentVar="var(--chart-2)" />
+          <StatCard label="Pendentes de hoje" value={countPendentesHoje} valueClassName="text-amber-600" icon={<AlertTriangle size={17} className="text-amber-600" />} sub="Aguardando análise" accentVar="var(--warning)" />
+          <StatCard label="Recusados de hoje" value={countRecusadosHoje} valueClassName="text-red-600" icon={<XCircle size={17} className="text-red-600" />} sub="Acesso não autorizado" accentVar="var(--destructive)" />
+          <StatCard label="Expirados de hoje" value={countExpiradosHoje} valueClassName="text-slate-600" icon={<XCircle size={17} className="text-slate-600" />} sub="Vencidos hoje" accentVar="#64748b" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -322,7 +383,8 @@ export default function AprovacoesSupervisorPage() {
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
-            <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações</h3>
+            <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações de hoje</h3>
+            <p className="text-xs text-muted-foreground">Pendentes ficam validas por ate 24h; depois aparecem como expiradas.</p>
           </div>
 
           {loading ? (
@@ -332,8 +394,7 @@ export default function AprovacoesSupervisorPage() {
           ) : requisicoesFiltradas.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-20 text-center">
               <AlertTriangle size={32} className="mb-3 text-muted-foreground opacity-30" />
-              <p className="text-sm text-muted-foreground">Nenhuma requisicao encontrada.</p>
-                          <p className="text-sm text-muted-foreground">Nenhuma requisição encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma requisição de hoje encontrada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -376,10 +437,10 @@ export default function AprovacoesSupervisorPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Status da Requisicao
+              Status do setor
             </label>
             <div className="grid grid-cols-1 gap-2">
-              {["todos", "pendente", "aprovado", "recusado"].map((status) => (
+              {["todos", "aprovado", "pendente", "recusado", "expirado", "misto"].map((status) => (
                 <button
                   key={status}
                   type="button"

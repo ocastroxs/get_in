@@ -4,8 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/login-form"
 import { getAuthTipo, getFlowRouteByTipo, useAuth } from "@/lib/AuthContext"
-import { ChevronRight, Users, ShieldCheck, Activity } from "lucide-react"
+import { Building2, ChevronRight, ShieldCheck, Users } from "lucide-react"
 import { publicService } from "@/services/api"
+import BrandLogo from "@/components/BrandLogo"
 
 /* ─────────────────────────────────────────────
    Componente de Título Animado
@@ -87,7 +88,7 @@ function AnimatedTitle() {
   const parts = renderHighlightedText();
 
   return (
-    <h1 className="text-6xl font-bold leading-tight text-white tracking-tight font-heading min-h-[200px]">
+    <h1 className="text-5xl font-bold leading-tight text-white tracking-tight font-heading min-h-[160px]">
       {parts.map((part, idx) => (
         <span key={idx} className={part.isHighlight ? "text-blue-400" : ""}>
           {part.text}
@@ -102,6 +103,33 @@ function AnimatedTitle() {
    Canvas de partículas adaptado para o painel
    escuro (azul marinho) do lado esquerdo
 ───────────────────────────────────────────── */
+function createPanelParticle(canvas) {
+  return {
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: Math.random() * 1.8 + 0.6,
+    vx: (Math.random() - 0.5) * 0.4,
+    vy: (Math.random() - 0.5) * 0.4,
+    opacity: Math.random() * 0.45 + 0.08
+  }
+}
+
+function updatePanelParticle(particle, canvas) {
+  particle.x += particle.vx
+  particle.y += particle.vy
+  if (particle.x > canvas.width) particle.x = 0
+  else if (particle.x < 0) particle.x = canvas.width
+  if (particle.y > canvas.height) particle.y = 0
+  else if (particle.y < 0) particle.y = canvas.height
+}
+
+function drawPanelParticle(particle, ctx) {
+  ctx.fillStyle = `rgba(96, 165, 250, ${particle.opacity})`
+  ctx.beginPath()
+  ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 function PanelParticles() {
   const canvasRef = useRef(null)
 
@@ -118,38 +146,15 @@ function PanelParticles() {
     window.addEventListener("resize", resize)
     resize()
 
-    class Particle {
-      constructor() { this.reset() }
-      reset() {
-        this.x = Math.random() * canvas.width
-        this.y = Math.random() * canvas.height
-        this.size = Math.random() * 1.8 + 0.6
-        this.vx = (Math.random() - 0.5) * 0.4
-        this.vy = (Math.random() - 0.5) * 0.4
-        this.opacity = Math.random() * 0.45 + 0.08
-      }
-      update() {
-        this.x += this.vx
-        this.y += this.vy
-        if (this.x > canvas.width)  this.x = 0
-        else if (this.x < 0)        this.x = canvas.width
-        if (this.y > canvas.height) this.y = 0
-        else if (this.y < 0)        this.y = canvas.height
-      }
-      draw() {
-        ctx.fillStyle = `rgba(96, 165, 250, ${this.opacity})`
-        ctx.beginPath()
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
-        ctx.fill()
-      }
-    }
-
     const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 12000))
-    const particles = Array.from({ length: count }, () => new Particle())
+    const particles = Array.from({ length: count }, () => createPanelParticle(canvas))
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      particles.forEach(p => { p.update(); p.draw() })
+      particles.forEach(p => {
+        updatePanelParticle(p, canvas)
+        drawPanelParticle(p, ctx)
+      })
 
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -271,14 +276,28 @@ export default function LoginPage() {
         />
 
         <div className="absolute inset-0 bg-gradient-to-br from-[#0B2447]/60 via-transparent to-[#0B2447]/80 pointer-events-none" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
+
+        {/* Conteúdo */}
 
         <div className="relative z-10 flex h-full flex-col p-10">
           <div className="animate-in fade-in slide-in-from-top-4 duration-700">
-            <img src="/logo-w.svg" alt="GetIN" className="h-10 w-auto" />
+            <BrandLogo variant="light" />
           </div>
 
-          <div className="flex-1 flex flex-col gap-5 justify-center">
+          <div className="flex-1 flex flex-col gap-5 max-w-lg justify-center">
+            <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-100">
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 w-fit group hover:bg-blue-500/15 transition-all duration-300">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" />
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 text-blue-400" />
+                <span className="text-[11px] uppercase tracking-[0.18em] text-blue-400 font-semibold">
+                  Sistema Ativo
+                </span>
+              </div>
+            </div>
+
             <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-200">
               <AnimatedTitle />
             </div>
@@ -295,7 +314,10 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-4 divide-x divide-white/[0.08]">
               <StatItem value={stats.visitasHoje} label="Visitas hoje" icon={Users} />
               <div className="pl-4">
-                <StatItem value={stats.setoresTotal} label="Setores cadastrados" icon={Activity} />
+                <StatItem value={stats.setoresTotal} label="Setores cadastrados" icon={Building2} />
+              </div>
+              <div className="pl-4">
+                <StatItem value={stats.usuariosTotal} label="Usuarios ativos" icon={ShieldCheck} />
               </div>
             </div>
           </div>

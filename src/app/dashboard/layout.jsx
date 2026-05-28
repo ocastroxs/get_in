@@ -54,12 +54,12 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="relative isolate flex min-h-screen">
       <ParticlesBackground />
       <Sidebar />
       <main
         ref={wrapperRef}
-        className="dashboard-scroll ml-[0px] h-screen flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6"
+        className="dashboard-scroll relative z-10 ml-[0px] h-screen flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6"
       >
         <div ref={contentRef}>{children}</div>
       </main>

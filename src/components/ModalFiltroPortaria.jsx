@@ -7,6 +7,29 @@ import { Input } from "@/components/ui/input";
 import { FieldSet, FieldGroup, FieldLegend, Field, FieldLabel, FieldContent } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const CONFIG_PADRAO = {
+  busca: {
+    label: "Buscar",
+    placeholder: "Nome, CPF ou empresa..."
+  },
+  data: {
+    label: "Data",
+    placeholder: "Selecione uma data"
+  },
+  status: {
+    label: "Status",
+    opcoes: [
+      { label: "Todos", value: "Todos" },
+      { label: "Ativo", value: "ativo" },
+      { label: "Saída", value: "saida" }
+    ]
+  },
+  setores: {
+    label: "Setores",
+    opcoes: []
+  }
+};
+
 /**
  * ModalFiltroPortaria - Componente reutilizável de modal de filtros para fluxo de portaria
  * 
@@ -30,33 +53,8 @@ export default function ModalFiltroPortaria({
   onLimpar,
   config = {}
 }) {
-  // Configuração padrão
-  const configPadrao = {
-    busca: {
-      label: "Buscar",
-      placeholder: "Nome, CPF ou empresa..."
-    },
-    data: {
-      label: "Data",
-      placeholder: "Selecione uma data"
-    },
-    status: {
-      label: "Status",
-      opcoes: [
-        { label: "Todos", value: "Todos" },
-        { label: "Ativo", value: "ativo" },
-        { label: "Pendente", value: "pendente" },
-        { label: "Saída", value: "saida" }
-      ]
-    },
-    setores: {
-      label: "Setores",
-      opcoes: []
-    }
-  };
-
   const configMerged = useMemo(() => ({
-    ...configPadrao,
+    ...CONFIG_PADRAO,
     ...config
   }), [config]);
 

@@ -17,10 +17,10 @@ function buildMessage(alertas) {
   }
 
   if (remaining > 0) {
-    return `${preview} e mais ${remaining} visitante(s) estao sem saida registrada.`;
+    return `${preview} e mais ${remaining} visitante(s) estão sem saída registrada.`;
   }
 
-  return `${preview} estao sem saida registrada.`;
+  return `${preview} estão sem saída registrada.`;
 }
 
 export default function AlertaBanner({ alertas = [], onDismiss }) {
@@ -32,26 +32,28 @@ export default function AlertaBanner({ alertas = [], onDismiss }) {
       : `${alertas.length} visitantes precisam de atenção`;
 
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-950">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 text-red-600">
-          <AlertTriangle size={18} />
+    <div className="relative overflow-hidden rounded-[24px] border border-rose-200/60 bg-gradient-to-br from-rose-50/90 via-orange-50/80 to-white/85 p-5 text-red-950 shadow-xl shadow-rose-900/10 backdrop-blur-md transition-all duration-300">
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/65 text-red-600 shadow-sm ring-1 ring-rose-200/70 backdrop-blur">
+            <AlertTriangle size={20} />
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-sm font-bold tracking-tight">{title}</p>
+            <p className="text-xs leading-relaxed text-red-800/90">{buildMessage(alertas)}</p>
+          </div>
         </div>
 
-        <div className="space-y-1">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-sm text-red-800">{buildMessage(alertas)}</p>
-        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-red-500 transition-all hover:bg-white/65 hover:text-red-700 active:scale-95"
+          aria-label="Fechar alerta"
+        >
+          <X size={18} />
+        </button>
       </div>
-
-      <button
-        type="button"
-        onClick={onDismiss}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-100 hover:text-red-700"
-        aria-label="Fechar alerta"
-      >
-        <X size={16} />
-      </button>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 const MARGIN = 36;
 const ROW_PADDING_X = 6;
 const ROW_PADDING_Y = 6;
@@ -7,7 +8,7 @@ const LINE_HEIGHT = 11;
 const HEADER_HEIGHT = 24;
 
 function formatGeneratedAt() {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date());
