@@ -36,9 +36,9 @@ export default function PortariaSidebar() {
       <aside
         className={`
           fixed left-0 top-0 z-50 flex h-screen flex-col
-          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7] pt-8 pb-6
+          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7]/70 pt-8 pb-6 backdrop-blur-xl
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-          dark:border-white/10 dark:bg-[#020C17]
+          dark:border-white/10 dark:bg-[#020C17]/70
           ${isExpanded ? 'w-[300px] px-4' : 'w-[80px] px-2'}
         `}
       >
