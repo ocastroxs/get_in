@@ -1,7 +1,7 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -20,6 +20,7 @@ import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisitante";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -207,15 +208,11 @@ export default function AprovacoesSupervisorPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("todos");
 
-  useEffect(() => {
-    fetchRequisicoes();
-    const interval = setInterval(fetchRequisicoes, 30 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  useAutoRefresh(fetchRequisicoes);
 
-  async function fetchRequisicoes() {
+  async function fetchRequisicoes({ silent = false } = {}) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await api.get("/requisicao-visitante");
 
       if (response?.sucesso && Array.isArray(response.data)) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { getActiveLanguage } from "@/lib/i18n-core";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { 
   Search, 
   Download, 
@@ -26,6 +26,7 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -133,8 +134,8 @@ export default function CirculacaoPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [tempFiltroStatus, setTempFiltroStatus] = useState("Todos");
 
-  const carregarDados = async () => {
-    setLoading(true);
+  const carregarDados = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       // Carregando logs de circulação
       const responseLogs = await api.get('/views/logs');
@@ -154,9 +155,7 @@ export default function CirculacaoPage() {
     }
   };
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
+  useAutoRefresh(carregarDados);
 
   const registrosFiltrados = useMemo(() => {
     return circulacao.filter(reg => {

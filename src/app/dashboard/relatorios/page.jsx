@@ -25,6 +25,7 @@ import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
 import { api } from "@/services/api";
@@ -174,8 +175,8 @@ export default function RelatoriosPage() {
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [page, setPage] = useState(1);
 
-  const carregarRelatorios = useCallback(async () => {
-    setLoading(true);
+  const carregarRelatorios = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError("");
 
     try {
@@ -198,6 +199,8 @@ export default function RelatoriosPage() {
   useEffect(() => {
     carregarRelatorios();
   }, [carregarRelatorios]);
+
+  useAutoRefresh(carregarRelatorios, { immediate: false });
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
