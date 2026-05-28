@@ -1,10 +1,24 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { TIPOS_VISITANTE } from "@/lib/mockData";
 
-function PieTooltip({ active, payload }) {
+function renderActiveSector(props) {
+  const outerRadius = Number(props.outerRadius) || 0;
+
+  return (
+    <Sector
+      {...props}
+      outerRadius={outerRadius + 3}
+      stroke="var(--card)"
+      strokeWidth={4}
+      fillOpacity={1}
+    />
+  );
+}
+
+function PieTooltip({ active, payload, dataKey, nameKey, colorKey, total, peakItem }) {
   if (!active || !payload?.length) {
     return null;
   }
@@ -14,12 +28,39 @@ function PieTooltip({ active, payload }) {
     return null;
   }
 
+  const value = Number(item[dataKey]) || 0;
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  const color = item[colorKey] || "var(--primary)";
+  const isPeak = peakItem && item[nameKey] === peakItem[nameKey] && value === (Number(peakItem[dataKey]) || 0);
+
   return (
-    <div className="min-w-[132px] rounded-xl border border-border bg-white/95 px-3 py-2 shadow-lg backdrop-blur-sm">
-      <p className="text-xs font-semibold text-foreground">{item.name}</p>
-      <p className="mt-1 text-xs font-bold" style={{ color: item.color }}>
-        Total: {item.value}
-      </p>
+    <div className="min-w-[180px] rounded-xl border border-border bg-card/95 px-3 py-2.5 text-card-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <p className="truncate text-sm font-semibold text-foreground">{item[nameKey]}</p>
+          </div>
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Distribuicao
+          </p>
+        </div>
+        {isPeak ? (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-primary">
+            Principal
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-2.5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{value}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Do total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{percent}%</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -48,7 +89,14 @@ export default function TiposVisitantesChart({
   }, [data, weekData, monthData, showPeriodToggle, view]);
 
   const total = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + item[dataKey], 0);
+    return chartData.reduce((sum, item) => sum + (Number(item[dataKey]) || 0), 0);
+  }, [chartData, dataKey]);
+
+  const peakItem = useMemo(() => {
+    return chartData.reduce((current, item) => {
+      if (!current) return item;
+      return (Number(item[dataKey]) || 0) > (Number(current[dataKey]) || 0) ? item : current;
+    }, null);
   }, [chartData, dataKey]);
 
   const isEmpty = chartData.length === 0;
@@ -123,13 +171,22 @@ export default function TiposVisitantesChart({
                   paddingAngle={2}
                   animationDuration={1500}
                   animationEasing="ease-out"
+                  activeShape={renderActiveSector}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={index} fill={entry[colorKey]} className="transition-all hover:opacity-80" />
                   ))}
                 </Pie>
                 <Tooltip
-                  content={<PieTooltip />}
+                  content={
+                    <PieTooltip
+                      dataKey={dataKey}
+                      nameKey={nameKey}
+                      colorKey={colorKey}
+                      total={total}
+                      peakItem={peakItem}
+                    />
+                  }
                   wrapperStyle={{ outline: "none", zIndex: 20 }}
                 />
               </PieChart>

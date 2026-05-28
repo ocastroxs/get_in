@@ -13,6 +13,7 @@ import { ArrowRightLeft, Clock3, LogOut, Users } from "lucide-react";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 const LIMITE_ALERTA_HORAS = 8;
+const PRAZO_REQUISICAO_HORAS = 24;
 
 const STATS_VAZIAS = {
   visitantes: { value: 0 },
@@ -115,6 +116,36 @@ function getSaidaVisitante(item) {
   return parseDataCampos(item, ["dataSaida", "saida", "dataDeSaida"]);
 }
 
+function getDataRequisicao(item) {
+  return parseDataCampos(item, ["dataDaRequisicao"]);
+}
+
+function normalizarStatusRequisicao(status) {
+  return String(status || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isStatusRecusado(status) {
+  return ["recusado", "recusada", "rejeitado", "rejeitada", "negado", "negada"].includes(
+    normalizarStatusRequisicao(status)
+  );
+}
+
+function isRequisicaoExpirada(requisicao, agora = new Date()) {
+  const status = normalizarStatusRequisicao(requisicao?.status || "pendente");
+  if (status === "expirado" || status === "expirada") return true;
+  if (status !== "pendente") return false;
+
+  const dataRequisicao = getDataRequisicao(requisicao);
+  if (!dataRequisicao) return false;
+
+  const horas = (agora - dataRequisicao) / (1000 * 60 * 60);
+  return horas >= PRAZO_REQUISICAO_HORAS;
+}
+
 function isDentro(item) {
   const status = String(item?.status || "").toLowerCase();
   return status === "dentro" || status === "ativo" || (!!getEntradaVisitante(item) && !getSaidaVisitante(item));
@@ -194,22 +225,18 @@ function entradasGerais(logs) {
     }));
 }
 
-function processarStatusGeral(requisicoes, visitantesLocal = [], logs = []) {
+function processarStatusGeral(requisicoes, logs = []) {
+  const agora = new Date();
   const counts = {
-    dentro: visitantesLocal.filter(isDentro).length,
-    pendente: 0,
     finalizado: logs.filter((log) => getSaidaVisitante(log)).length,
+    recusado: requisicoes.filter((req) => isStatusRecusado(req?.status)).length,
+    expirado: requisicoes.filter((req) => isRequisicaoExpirada(req, agora)).length,
   };
 
-  requisicoes.forEach((req) => {
-    const status = String(req.status || "").toLowerCase();
-    if (status === "pendente") counts.pendente += 1;
-  });
-
   return [
-    { name: "Dentro da fabrica", value: counts.dentro, color: "var(--chart-2)" },
-    { name: "Aguard. aprovacao", value: counts.pendente, color: "var(--chart-3)" },
-    { name: "Saida registrada", value: counts.finalizado, color: "rgba(15, 58, 125, 0.18)" },
+    { name: "Finalizados", value: counts.finalizado, color: "var(--chart-2)" },
+    { name: "Recusados", value: counts.recusado, color: "var(--destructive)" },
+    { name: "Expirados", value: counts.expirado, color: "var(--muted-foreground)" },
   ];
 }
 
@@ -262,7 +289,7 @@ export default function DashboardPage() {
           setMotivosGeral(agruparMotivosGeral(requisicoes));
           setPicoSetores(agruparPicoPorSetor(requisicoes));
           setEntradasGeral(entradasGerais(logs));
-          setStatusGeral(processarStatusGeral(requisicoes, visitantesLocal, logs));
+          setStatusGeral(processarStatusGeral(requisicoes, logs));
           setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
         }
       } catch (error) {
@@ -367,7 +394,7 @@ export default function DashboardPage() {
           mobileLayout="list"
           data={statusGeral}
           showPeriodToggle={false}
-          subtitle="Visao geral de permanencia, pendencias e saidas."
+          subtitle="Finalizados, recusados e expirados no historico."
         />
       </div>
 
@@ -445,7 +472,7 @@ export default function DashboardPage() {
             <StatusVisitantesChart
               data={statusGeral}
               showPeriodToggle={false}
-              subtitle="Visao geral de permanencia, pendencias e saidas."
+              subtitle="Finalizados, recusados e expirados no historico."
             />
           </div>
         </section>

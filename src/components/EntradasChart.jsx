@@ -47,6 +47,53 @@ function normalizarSemanaBrasileira(items) {
   });
 }
 
+function EntradasTooltip({ active, payload, dataKey, nameKey, total, peakItem, view }) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const item = payload[0]?.payload;
+  if (!item) {
+    return null;
+  }
+
+  const value = Number(item[dataKey]) || 0;
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  const label =
+    view === "semana" && item.diaSemana
+      ? `${item[nameKey]} ${item.diaSemana}`
+      : item[nameKey];
+  const isPeak = peakItem && item[nameKey] === peakItem[nameKey] && value === (Number(peakItem[dataKey]) || 0);
+
+  return (
+    <div className="min-w-[188px] rounded-xl border border-border bg-card/95 px-3 py-2.5 text-card-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{label}</p>
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Periodo
+          </p>
+        </div>
+        {isPeak ? (
+          <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary">
+            Pico do periodo
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-2.5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{value}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Do total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{percent}%</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EntradasChart({
   title = "Entradas por Periodo",
   subtitle = "Fluxo registrado ao longo do dia",
@@ -78,11 +125,12 @@ export default function EntradasChart({
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
-    const values = chartData.map((item) => item[dataKey]);
+    const values = chartData.map((item) => Number(item[dataKey]) || 0);
     const peakValue = Math.max(...values, 0);
-    const peakItem = chartData.find((item) => item[dataKey] === peakValue);
+    const peakIndex = values.findIndex((value) => value === peakValue);
+    const peakItem = chartData[peakIndex];
     const total = values.reduce((sum, value) => sum + value, 0);
-    const previous = chartData[Math.max(values.indexOf(peakValue) - 1, 0)]?.[dataKey] ?? peakValue;
+    const previous = values[Math.max(peakIndex - 1, 0)] ?? peakValue;
     const deltaPct = previous > 0 ? Math.round(((peakValue - previous) / previous) * 100) : 0;
 
     return {
@@ -183,15 +231,29 @@ export default function EntradasChart({
                   width={30}
                 />
                 <Tooltip
-                  cursor={{ fill: "rgba(15,58,125,0.035)" }}
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.96)",
-                    boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
-                  }}
+                  cursor={{ fill: "rgba(15,58,125,0.055)", radius: 10 }}
+                  content={
+                    <EntradasTooltip
+                      dataKey={dataKey}
+                      nameKey={nameKey}
+                      total={chartMeta.total}
+                      peakItem={chartMeta.peakItem}
+                      view={view}
+                    />
+                  }
+                  wrapperStyle={{ outline: "none", zIndex: 20 }}
                 />
-                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={view === "hoje" || view === "mes" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}>
+                <Bar
+                  dataKey={dataKey}
+                  radius={[10, 10, 0, 0]}
+                  maxBarSize={view === "hoje" || view === "mes" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}
+                  activeBar={{
+                    fillOpacity: 0.96,
+                    stroke: "var(--foreground)",
+                    strokeOpacity: 0.18,
+                    strokeWidth: 2,
+                  }}
+                >
                   {chartData.map((entry, index) => {
                     const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
                     return (
