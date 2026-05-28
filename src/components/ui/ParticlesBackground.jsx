@@ -131,7 +131,7 @@ const ParticlesBackground = () => {
         left: 0,
         width: '100%',
         height: '100%',
-        zIndex: -1,
+        zIndex: 0,
         pointerEvents: 'none',
         transition: 'background 0.5s ease-in-out',
         // Troquei o #0A2540 por #020C17 (Marinho super escuro). 

@@ -36,57 +36,59 @@ export default function PortariaSidebar() {
       <aside
         className={`
           fixed left-0 top-0 z-50 flex h-screen flex-col
-          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7]/70 pt-8 pb-6 backdrop-blur-xl
+          overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]/40 pt-8 pb-6 backdrop-blur-[2px]
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
-          dark:border-white/10 dark:bg-[#020C17]/70
+          dark:border-white/10 dark:bg-[#020C17]/40
           ${isExpanded ? 'w-[300px] px-4' : 'w-[80px] px-2'}
         `}
       >
-        <SidebarHeader
-          isDark={isDark}
-          isExpanded={isExpanded}
-          onToggleTheme={toggleTheme}
-          onToggleExpanded={() => setIsExpanded((current) => !current)}
-        />
-
-        {!isExpanded && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="mx-auto mb-6 flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
-            aria-label="Expandir menu lateral"
-          >
-            <PanelLeft size={20} strokeWidth={1.5} />
-          </button>
-        )}
-
-        {isExpanded && (
-          <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
-            Fluxo de Portaria
-          </p>
-        )}
-
-        <nav className="flex flex-col gap-2">
-          {PORTARIA_ITEMS.map(({ href, icon: Icon, label }) => (
-            <NavItem
-              key={href}
-              isExpanded={isExpanded}
-              href={href}
-              icon={<Icon size={20} strokeWidth={1.5} />}
-              label={label}
-              active={isActive(href)}
-            />
-          ))}
-        </nav>
-
-        <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
-
-        <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
-          <SidebarUserProfile
+        <div className="relative z-10 flex min-h-full flex-col">
+          <SidebarHeader
+            isDark={isDark}
             isExpanded={isExpanded}
-            fallbackName="Portaria"
-            fallbackEmail="portaria@getin.com"
+            onToggleTheme={toggleTheme}
+            onToggleExpanded={() => setIsExpanded((current) => !current)}
           />
+
+          {!isExpanded && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="mx-auto mb-6 flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
+              aria-label="Expandir menu lateral"
+            >
+              <PanelLeft size={20} strokeWidth={1.5} />
+            </button>
+          )}
+
+          {isExpanded && (
+            <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
+              Fluxo de Portaria
+            </p>
+          )}
+
+          <nav className="flex flex-col gap-2">
+            {PORTARIA_ITEMS.map(({ href, icon: Icon, label }) => (
+              <NavItem
+                key={href}
+                isExpanded={isExpanded}
+                href={href}
+                icon={<Icon size={20} strokeWidth={1.5} />}
+                label={label}
+                active={isActive(href)}
+              />
+            ))}
+          </nav>
+
+          <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
+
+          <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
+            <SidebarUserProfile
+              isExpanded={isExpanded}
+              fallbackName="Portaria"
+              fallbackEmail="portaria@getin.com"
+            />
+          </div>
         </div>
       </aside>
 

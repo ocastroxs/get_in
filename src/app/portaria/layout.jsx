@@ -17,10 +17,10 @@ export default function PortariaLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="relative isolate flex min-h-screen">
       <ParticlesBackground />
       <PortariaSidebar />
-      <main className="ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">{children}</main>
+      <main className="relative z-10 ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">{children}</main>
     </div>
   );
 }
