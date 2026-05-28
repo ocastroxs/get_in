@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SidebarUserProfile from '@/components/SidebarUserProfile';
+import { useSidebarPreference } from '@/hooks/useSidebarPreference';
 import { useAppTheme } from '@/lib/theme';
 
 const SUPERVISOR_ITEMS = [
@@ -24,7 +24,7 @@ const SUPERVISOR_ITEMS = [
 
 export default function SupervisorSidebar() {
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useSidebarPreference();
   const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) =>

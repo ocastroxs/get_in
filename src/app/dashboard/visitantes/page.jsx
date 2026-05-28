@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   Users, ArrowRightLeft, Clock3,
@@ -57,7 +58,7 @@ function parseData(value) {
 function formatarDataHora(value) {
   const data = parseData(value);
   if (!data) return value || "-";
-  return data.toLocaleString("pt-BR", {
+  return data.toLocaleString(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",

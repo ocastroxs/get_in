@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRightLeft,
@@ -40,7 +41,7 @@ function formatarData(value) {
   if (!value) return "-";
   const data = new Date(value);
   if (Number.isNaN(data.getTime())) return value;
-  return data.toLocaleString("pt-BR", {
+  return data.toLocaleString(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",

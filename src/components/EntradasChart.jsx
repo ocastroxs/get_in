@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useMemo, useState } from "react";
 import {
   Bar,
@@ -19,7 +20,7 @@ const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const DATA_BR_RE = /^\d{2}\/\d{2}$/;
 
 function formatarDiaMes(data) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     timeZone: "America/Sao_Paulo",

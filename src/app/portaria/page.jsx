@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -202,7 +203,7 @@ function buildSelectOptions(registros, getLabel) {
     }
   });
 
-  return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, getActiveLanguage()));
 }
 
 function normalizeVisitante(visitante) {
@@ -280,7 +281,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);

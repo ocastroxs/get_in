@@ -7,6 +7,8 @@ import RouteChangeIndicator from "@/components/RouteChangeIndicator";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { FloatingAboutBubble } from "@/components/ui/FloatingAboutBubble";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
+import { PREFERENCES_INIT_SCRIPT } from "@/lib/preferences-script";
+import { I18nProvider } from "@/lib/i18n";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -37,17 +39,20 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-br" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="pt-BR" className="h-full antialiased" suppressHydrationWarning>
       <body className={cn(poppins.variable, inter.variable, ibmPlexMono.variable, "min-h-full")}
       suppressHydrationWarning> 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <AuthProvider>
-          <ToastProvider>
-            <RouteChangeIndicator />
-            <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
-            <FloatingAboutBubble/>
-          </ToastProvider>
-        </AuthProvider>
+        <script dangerouslySetInnerHTML={{ __html: PREFERENCES_INIT_SCRIPT }} />
+        <I18nProvider>
+          <AuthProvider>
+            <ToastProvider>
+              <RouteChangeIndicator />
+              <ConsoleWarningSuppressor>{children}</ConsoleWarningSuppressor>
+              <FloatingAboutBubble/>
+            </ToastProvider>
+          </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );

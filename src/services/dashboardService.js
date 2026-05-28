@@ -1,3 +1,4 @@
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { api } from "./api";
 
 /**
@@ -9,7 +10,7 @@ const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
 const formatarDiaMes = (data) =>
-  new Intl.DateTimeFormat("pt-BR", {
+  new Intl.DateTimeFormat(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     timeZone: "America/Sao_Paulo",

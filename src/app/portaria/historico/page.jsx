@@ -1,4 +1,5 @@
 "use client";
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useEffect, useMemo } from "react";
 import {
   AlertTriangle, Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
@@ -78,7 +79,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);

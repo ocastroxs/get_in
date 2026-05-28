@@ -131,6 +131,22 @@
   --tracking-normal: 0em;
 }
 
+html[data-density="compacta"] {
+  --spacing: 0.225rem;
+}
+
+html[data-density="confortavel"] {
+  --spacing: 0.25rem;
+}
+
+html[data-reduce-motion="true"] *,
+html.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
 .dark {
   --background: oklch(0 0 0);
   --foreground: oklch(0.9328 0.0025 228.7857);

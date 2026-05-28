@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useState } from "react";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
@@ -21,7 +22,7 @@ const STATS_VAZIAS = {
 };
 
 function formatarDataEntrada(data) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",

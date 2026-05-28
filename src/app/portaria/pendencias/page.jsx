@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -97,7 +98,7 @@ function formatDateTime(value) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     dateStyle: "short",
     timeStyle: "short"
   }).format(date);
@@ -469,7 +470,7 @@ export default function PendenciasPage() {
     return [
       "Todos",
       ...Array.from(new Set(setores.filter((setor) => setor && setor !== "-"))).sort((a, b) =>
-        a.localeCompare(b, "pt-BR")
+        a.localeCompare(b, getActiveLanguage())
       )
     ];
   }, [requisicoes]);

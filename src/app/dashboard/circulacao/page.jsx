@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useEffect, useMemo } from "react";
 import { 
   Search, 
@@ -67,7 +68,7 @@ function formatarHora(value) {
   if (!value) return "-";
   const data = new Date(value);
   if (Number.isNaN(data.getTime())) return value;
-  return data.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return data.toLocaleTimeString(getActiveLanguage(), { hour: "2-digit", minute: "2-digit" });
 }
 
 function normalizarLog(log) {

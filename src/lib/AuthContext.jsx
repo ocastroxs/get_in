@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { applyPreferences, getStoredPreferences, savePreferencesToStorage } from "@/lib/preferences";
+import { api } from "@/services/api";
 
 const AuthContext = createContext();
 
@@ -295,6 +297,30 @@ export function AuthProvider({ children }) {
       }
     }
   }, [funcionario, isAuthenticated, isLoading, pathname, router, user]);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    let isMounted = true;
+
+    applyPreferences(getStoredPreferences());
+
+    if (isAuthenticated) {
+      api.get("/user/me/preferences").then((response) => {
+        if (!isMounted || !response?.sucesso || !response?.data) {
+          return;
+        }
+
+        savePreferencesToStorage(response.data);
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, isLoading]);
 
   const updateAuthData = (userData, funcionarioData = null, options = {}) => {
     const remember = options.remember ?? Boolean(localStorage.getItem(TOKEN_KEY));

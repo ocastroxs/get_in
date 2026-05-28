@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SidebarUserProfile from '@/components/SidebarUserProfile';
+import { useSidebarPreference } from '@/hooks/useSidebarPreference';
 import { useAppTheme } from '@/lib/theme';
 
 const PORTARIA_ITEMS = [
@@ -26,7 +26,7 @@ const PORTARIA_ITEMS = [
 
 export default function PortariaSidebar() {
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useSidebarPreference();
   const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) => pathname === href;

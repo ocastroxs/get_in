@@ -1,4 +1,5 @@
 "use client";
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Check, User, Building2, MapPin, Phone, ChevronRight, ChevronDown, Lock, Lightbulb, Shield, Clock, Bell, Info, X, PhoneCall, RefreshCw, ScanLine } from "lucide-react";
 import Link from "next/link";
@@ -212,7 +213,7 @@ export default function NovoCadastroPage() {
         : null;
     })
     .filter(Boolean)
-    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    .sort((a, b) => a.label.localeCompare(b.label, getActiveLanguage()));
 
   const setoresDisponiveis = setorOptions;
 
