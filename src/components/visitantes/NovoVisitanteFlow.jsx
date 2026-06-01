@@ -11,6 +11,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { MOTIVO_OPTIONS, normalizeMotivoVisita } from "@/lib/visitanteMotivos";
 
 const EMPRESA_NENHUMA = "Nenhuma";
+const CREATE_VIRTUAL_TAG_VALUE = "__CREATE_VIRTUAL_TAG__";
 
 function onlyDigits(value) {
   return String(value || "").replace(/\D/g, "");
@@ -73,6 +74,16 @@ function buildEmpresasOptions(registros) {
   });
 
   return Array.from(empresasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+function getTagSelectionLabel(value, tags = []) {
+  if (!value) return "Nao selecionada";
+  if (value === CREATE_VIRTUAL_TAG_VALUE) return "Criar nova TAG virtual";
+
+  const tag = tags.find((item) => item.codigoTag === value);
+  if (!tag) return value;
+
+  return `TAG - ${tag.codigoTag}`;
 }
 
 function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
@@ -183,8 +194,10 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
   const [loading, setLoading] = useState(false);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [loadingSetores, setLoadingSetores] = useState(true);
+  const [loadingTags, setLoadingTags] = useState(true);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
+  const [tagsDisponiveis, setTagsDisponiveis] = useState([]);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
@@ -216,6 +229,17 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     .sort((a, b) => a.label.localeCompare(b.label, getActiveLanguage()));
 
   const setoresDisponiveis = setorOptions;
+
+  const tagOptions = [
+    ...tagsDisponiveis.map((tag) => ({
+      value: tag.codigoTag,
+      label: `TAG - ${tag.codigoTag}`,
+    })),
+    {
+      value: CREATE_VIRTUAL_TAG_VALUE,
+      label: "Criar nova TAG virtual",
+    },
+  ];
 
   const empresaOptions = [
     { value: EMPRESA_NENHUMA, label: EMPRESA_NENHUMA },
@@ -289,28 +313,27 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
   }, []);
 
   useEffect(() => {
-    let ativo = true;
+    async function fetchTagsDisponiveis() {
+      setLoadingTags(true);
 
-    async function fetchLatestTag() {
       try {
-        const response = await api.get("/tags/latest");
-        const codigoTag = response?.data?.codigoTag;
+        const response = await api.get("/tags/disponiveis");
 
-        if (ativo && codigoTag) {
-          setForm((current) => current.rfidTag === codigoTag ? current : { ...current, rfidTag: codigoTag });
+        if (response.sucesso && Array.isArray(response.data)) {
+          setTagsDisponiveis(response.data);
+          return;
         }
+
+        setTagsDisponiveis([]);
       } catch (error) {
-        console.warn("Não foi possível carregar a tag RFID:", error);
+        console.error("Erro ao carregar TAGs disponiveis:", error);
+        setTagsDisponiveis([]);
+      } finally {
+        setLoadingTags(false);
       }
     }
 
-    fetchLatestTag();
-    const interval = setInterval(fetchLatestTag, 3000);
-
-    return () => {
-      ativo = false;
-      clearInterval(interval);
-    };
+    fetchTagsDisponiveis();
   }, []);
 
   useEffect(() => {
@@ -468,6 +491,11 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
       return;
     }
 
+    if (!form.rfidTag) {
+      alert("Selecione uma TAG ou escolha criar uma nova TAG virtual.");
+      return;
+    }
+
     if (loadingSetores || setorOptions.length === 0 || setoresSelecionados.length === 0) {
       alert("Não foi possível carregar os setores. Atualize a página e tente novamente.");
       return;
@@ -481,15 +509,30 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     setLoading(true);
     try {
       const visitanteUsuario = await getOrCreateVisitanteUsuario();
-      if (form.rfidTag) {
-        const tagResponse = await api.put(`/tags/code/${encodeURIComponent(form.rfidTag)}/assign`, {
-          idUsuario: visitanteUsuario.id
+      let codigoTagFinal = form.rfidTag;
+
+      if (form.rfidTag === CREATE_VIRTUAL_TAG_VALUE) {
+        const tagResponse = await api.put("/tags/virtual/assign", {
+          idUsuario: visitanteUsuario.id,
         });
 
-        if (!tagResponse.sucesso) {
-          console.warn("Não foi possível vincular a TAG RFID:", tagResponse.mensagem || tagResponse.erro);
+        if (!tagResponse.sucesso || !tagResponse.data?.codigoTag) {
+          throw new Error(tagResponse.mensagem || tagResponse.erro || "Erro ao criar TAG virtual.");
         }
+
+        codigoTagFinal = tagResponse.data.codigoTag;
+      } else {
+        const tagResponse = await api.put(`/tags/code/${encodeURIComponent(form.rfidTag)}/assign`, {
+          idUsuario: visitanteUsuario.id,
+        });
+
+        if (!tagResponse.sucesso || !tagResponse.data?.codigoTag) {
+          throw new Error(tagResponse.mensagem || tagResponse.erro || "Erro ao vincular TAG.");
+        }
+
+        codigoTagFinal = tagResponse.data.codigoTag;
       }
+
       const idDepartamento = getDepartamentoId();
       const setoresPermitidos = form.setoresAcesso.length > 0 ? form.setoresAcesso.join(", ") : "Nenhum";
       const descricao = [
@@ -498,7 +541,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         `Telefone: ${form.telefone}`,
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
-        `TAG RFID: ${form.rfidTag || "Não informada"}`,
+        `TAG RFID: ${codigoTagFinal || "Não informada"}`,
         `Setor responsavel: ${form.setor || "Não informado"}`,
         `Setores permitidos: ${setoresPermitidos}`,
         `Observacoes: ${observacao || "Nenhuma"}`
@@ -517,13 +560,14 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         setorResponsavel: form.setor,
         telefone: form.telefone,
         email: form.email.trim().toLowerCase(),
-        codigoTag: form.rfidTag,
+        codigoTag: codigoTagFinal,
         setoresAcesso: form.setoresAcesso
       };
       
       const response = await api.post('/requisicao-visitante', payload);
       
       if (response.sucesso) {
+        setForm((current) => ({ ...current, rfidTag: codigoTagFinal }));
         setStep(2);
         setTempoEspera(0);
       } else {
@@ -556,7 +600,8 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     { key: "setorResponsavel", label: "Setor responsavel", completed: Boolean(form.setor) },
     { key: "setoresPermitidos", label: "Setores permitidos", completed: form.setoresAcesso.length > 0 },
     { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
-    { key: "emailContato", label: "E-mail de contato", completed: emailValido }
+    { key: "emailContato", label: "E-mail de contato", completed: emailValido },
+    { key: "tagSelecionada", label: "TAG selecionada", completed: Boolean(form.rfidTag) }
   ];
 
   return (
@@ -769,16 +814,13 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       TAG RFID
                     </label>
-                    <div className="relative">
-                      <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        placeholder="Aguardando leitura RFID"
-                        value={form.rfidTag}
-                        readOnly
-                        className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 font-mono text-sm shadow-xs"
-                      />
-                    </div>
+                    <PrettySelect
+                      value={form.rfidTag}
+                      onChange={(value) => setForm({ ...form, rfidTag: value })}
+                      placeholder={loadingTags ? "Carregando TAGs..." : "Selecione uma TAG"}
+                      options={tagOptions}
+                      Icon={ScanLine}
+                    />
                   </div>
                 </div>
               </div>
@@ -908,7 +950,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                         { label: "Telefone", value: form.telefone || "—" },
                         { label: "E-mail", value: form.email || "—" },
                         { label: "Motivo", value: form.motivo || "—" },
-                        { label: "TAG", value: form.rfidTag || "Nao informada" },
+                        { label: "TAG", value: getTagSelectionLabel(form.rfidTag, tagsDisponiveis) },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center justify-between gap-3 text-[10px]">
                           <span className="font-bold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</span>

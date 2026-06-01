@@ -2,17 +2,13 @@
 
 import { useState, useMemo, Fragment } from 'react';
 import { 
-  Shield, 
   Eye, 
-  ShieldAlert, 
   Check, 
-  Minus, 
   X, 
   RotateCcw, 
   Save,
   Search,
-  Filter,
-  Loader2
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -146,12 +142,6 @@ export default function PermissoesPage() {
         <Topbar
           title="Permissões"
           subtitle="Determine com mais clareza o que cada perfil e visitante pode acessar no sistema."
-          secondaryButtonText="Descartar"
-          onSecondaryButtonClick={handleDescartar}
-          buttonText={loading ? "Salvando..." : "Salvar Alterações"}
-          onButtonClick={handleSalvar}
-          secondaryButtonDisabled={loading}
-          buttonDisabled={loading}
         />
 
         {/* Abas */}
@@ -266,6 +256,28 @@ export default function PermissoesPage() {
             />
           )}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleDescartar}
+          disabled={loading}
+          className="h-10 gap-2 rounded-xl border-border/60 bg-background/80"
+        >
+          <RotateCcw size={15} />
+          Descartar
+        </Button>
+        <Button
+          type="button"
+          onClick={handleSalvar}
+          disabled={loading}
+          className="h-10 gap-2 rounded-xl"
+        >
+          <Save size={15} />
+          {loading ? "Salvando..." : "Aplicar alterações"}
+        </Button>
       </div>
 
       {/* Modal de Filtro Padronizado */}

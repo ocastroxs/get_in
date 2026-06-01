@@ -20,7 +20,7 @@ const STATS_VAZIAS = {
   visitantes: { value: 0 },
   entradas: { value: 0 },
   saidas: { value: 0, aindaDentro: 0 },
-  ativos: { value: 0, expirados: 0 },
+  ativos: { value: 0, alertas: 0 },
 };
 
 function formatarDataEntrada(data) {
@@ -152,7 +152,7 @@ function isDentro(item) {
   return status === "dentro" || status === "ativo" || (!!getEntradaVisitante(item) && !getSaidaVisitante(item));
 }
 
-function isPermanenciaExpirada(item, agora = new Date()) {
+function isAlertaPermanencia(item, agora = new Date()) {
   if (!isDentro(item)) return false;
 
   const entrada = getEntradaVisitante(item);
@@ -245,7 +245,7 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
   const entradas = logs.filter((item) => getEntradaVisitante(item));
   const saidas = logs.filter((item) => getSaidaVisitante(item));
   const ativosAgora = visitantesLocal.filter(isDentro);
-  const expirados = ativosAgora.filter((item) => isPermanenciaExpirada(item)).length;
+  const alertas = ativosAgora.filter((item) => isAlertaPermanencia(item)).length;
 
   return {
     visitantes: {
@@ -260,7 +260,7 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
     },
     ativos: {
       value: ativosAgora.length,
-      expirados,
+      alertas,
     },
   };
 }
@@ -369,7 +369,7 @@ export default function DashboardPage() {
             valueClassName="text-blue-900"
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
             sub="Permanencia ativa"
-            insight={`${stats.ativos.expirados} expirado(s)`}
+            insight={`${stats.ativos.alertas} alerta(s) de permanencia`}
             accentVar="#1e3a8a"
           />
         </section>
@@ -444,7 +444,7 @@ export default function DashboardPage() {
               valueClassName="text-blue-900"
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
               sub="Pessoas em permanencia ativa"
-              insight={`${stats.ativos.expirados} expirado(s)`}
+              insight={`${stats.ativos.alertas} alerta(s) de permanencia`}
               accentVar="#1e3a8a"
             />
           </div>

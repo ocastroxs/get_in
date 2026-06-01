@@ -6,7 +6,7 @@ import {
   Layers, CheckSquare, TrendingDown, TrendingUp,
   Filter, Search, X,
   Plus, Pencil, Trash2,
-  AlertTriangle, Check, Loader2,
+  AlertTriangle, Check, Download, Loader2,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
 
@@ -135,21 +136,6 @@ function enriquecerSetoresComVisitas(setores, requisicoes) {
       ultimaVisita: ultima ? ultima.toISOString() : null,
     };
   });
-}
-
-function toCSV(rows) {
-  const cols = ["Nome", "Responsavel", "Visitantes", "Ultima Visita", "Status"];
-  const lines = rows.map((r) =>
-    [r.nome, r.responsavel || "-", r.visitantes || 0, formatarData(r.ultimaVisita) || "-", STATUS_LABEL[statusKey(r.status)] || "-"].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
-}
-
-function downloadCSV(rows) {
-  const blob = new Blob([toCSV(rows)], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a"); a.href = url; a.download = "setores.csv"; a.click();
-  URL.revokeObjectURL(url);
 }
 
 // ─── MODAL CONFIRMAÇÃO DE EXCLUSÃO ───────────────────────────────────────────
@@ -465,13 +451,47 @@ export default function SetoresPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (filtrados.length === 0) {
+      alert("Nao ha dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Setores",
+        subtitle: "Controle de setores integrado ao backend",
+        fileName: `setores_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          statusFiltro !== "Todos" ? `Status: ${STATUS_LABEL[statusKey(statusFiltro)] || statusFiltro}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Setor", weight: 1.4 },
+          { header: "Visitantes", weight: 0.8 },
+          { header: "Ultima Visita", weight: 1 },
+          { header: "Responsavel", weight: 1.2 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: filtrados.map((setor) => [
+          setor.nome || "-",
+          setor.visitantes || 0,
+          formatarData(setor.ultimaVisita) || "-",
+          setor.responsavel || "-",
+          STATUS_LABEL[statusKey(setor.status)] || setor.status || "-",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Nao foi possivel exportar o PDF.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Gestão de Setores"
         subtitle="Controle de setores integrado ao backend."
-        secondaryButtonText="Exportar CSV"
-        onSecondaryButtonClick={() => downloadCSV(filtrados)}
         buttonText="Novo Setor"
         onButtonClick={() => setModalSetor({ open: true, data: null })}
       />
@@ -522,8 +542,20 @@ export default function SetoresPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-            {filtrados.length} resultado(s)
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+            <Button
+              type="button"
+              onClick={exportarPDF}
+              variant="outline"
+              disabled={loading || filtrados.length === 0}
+              className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Exportar PDF</span>
+            </Button>
+            <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+              {filtrados.length} resultado(s)
+            </div>
           </div>
         </div>
 

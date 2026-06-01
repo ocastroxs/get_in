@@ -22,16 +22,26 @@ import SidebarUserProfile from '@/components/SidebarUserProfile';
 import { useSidebarPreference } from '@/hooks/useSidebarPreference';
 import { useAppTheme } from '@/lib/theme';
 
-const ADMIN_ITEMS = [
-  { href: '/dashboard', icon: Home, label: 'Dashboard' },
-  { href: '/dashboard/visitantes', icon: Users, label: 'Visitantes' },
-  { href: '/dashboard/funcionarios', icon: UserSquare2, label: 'Funcionarios' },
-  { href: '/dashboard/crachas', icon: IdCard, label: 'Crachas' },
-  { href: '/dashboard/setores', icon: Building2, label: 'Setores' },
-  { href: '/dashboard/circulacao', icon: MapPinned, label: 'Circulacao' },
-  { href: '/dashboard/permissao', icon: ShieldCheck, label: 'Permissoes' },
-  { href: '/dashboard/empresas', icon: Building, label: 'Empresas' },
-  { href: '/dashboard/relatorios', icon: FileText, label: 'Relatorios' },
+const ADMIN_SECTIONS = [
+  {
+    title: 'Fluxo Administrativo',
+    items: [
+      { href: '/dashboard', icon: Home, label: 'Dashboard' },
+      { href: '/dashboard/visitantes', icon: Users, label: 'Visitantes' },
+      { href: '/dashboard/funcionarios', icon: UserSquare2, label: 'Funcionarios' },
+      { href: '/dashboard/crachas', icon: IdCard, label: 'Crachas' },
+      { href: '/dashboard/setores', icon: Building2, label: 'Setores' },
+      { href: '/dashboard/empresas', icon: Building, label: 'Empresas' },
+    ],
+  },
+  {
+    title: 'Gestão e Auditoria',
+    items: [
+      { href: '/dashboard/circulacao', icon: MapPinned, label: 'Circulacao' },
+      { href: '/dashboard/permissao', icon: ShieldCheck, label: 'Permissoes' },
+      { href: '/dashboard/relatorios', icon: FileText, label: 'Relatorios' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -74,22 +84,26 @@ export default function Sidebar() {
             </button>
           )}
 
-          {isExpanded && (
-            <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
-              Fluxo Administrativo
-            </p>
-          )}
-
           <nav className="flex flex-col gap-2">
-            {ADMIN_ITEMS.map(({ href, icon: Icon, label }) => (
-              <NavItem
-                key={href}
-                isExpanded={isExpanded}
-                href={href}
-                icon={<Icon size={20} strokeWidth={1.5} />}
-                label={label}
-                active={isActive(href)}
-              />
+            {ADMIN_SECTIONS.map(({ title, items }, sectionIndex) => (
+              <div key={title} className={`flex flex-col gap-2 ${sectionIndex > 0 ? 'mt-4' : ''}`}>
+                {isExpanded && (
+                  <p className="mb-1 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
+                    {title}
+                  </p>
+                )}
+
+                {items.map(({ href, icon: Icon, label }) => (
+                  <NavItem
+                    key={href}
+                    isExpanded={isExpanded}
+                    href={href}
+                    icon={<Icon size={20} strokeWidth={1.5} />}
+                    label={label}
+                    active={isActive(href)}
+                  />
+                ))}
+              </div>
             ))}
           </nav>
 

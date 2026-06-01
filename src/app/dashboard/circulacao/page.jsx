@@ -5,15 +5,12 @@ import { useState, useMemo } from "react";
 import { 
   Search, 
   Download, 
-  Printer, 
   Clock, 
   MoreHorizontal, 
   Activity, 
-  Map, 
   Users, 
   ArrowRight,
   AlertTriangle,
-  RefreshCw,
   Building2,
   Navigation,
   Loader2,
@@ -28,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
@@ -48,22 +46,6 @@ const STATUS_DOT = {
   "Concluído": "bg-blue-500",
   "Alerta": "bg-red-500"
 };
-
-function toCSV(rows) {
-  const cols = ["Pessoa", "Origem", "Destino", "Horário", "Status"];
-  const lines = rows.map((r) =>
-    [r.pessoa || "—", r.origem || "—", r.destino || "—", r.horario || "—", r.status || "—"].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
-}
-
-function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = "circulacao.csv"; a.click();
-  URL.revokeObjectURL(url);
-}
 
 function formatarHora(value) {
   if (!value) return "-";
@@ -187,15 +169,47 @@ export default function CirculacaoPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (registrosFiltrados.length === 0) {
+      alert("Nao ha dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Circulacao Interna",
+        subtitle: "Monitoramento de fluxo e ocupacao em tempo real",
+        fileName: `circulacao_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "Todos" ? `Status: ${filtroStatus}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Pessoa", weight: 1.3 },
+          { header: "Origem", weight: 1.1 },
+          { header: "Destino", weight: 1.1 },
+          { header: "Horario", weight: 0.8 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: registrosFiltrados.map((registro) => [
+          registro.pessoa || "-",
+          registro.origem || "-",
+          registro.destino || "-",
+          registro.horario || "-",
+          registro.status || "-",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Nao foi possivel exportar o PDF.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Circulação Interna"
         subtitle="Monitoramento de fluxo e ocupação em tempo real"
-        secondaryButtonText="Atualizar"
-        onSecondaryButtonClick={carregarDados}
-        buttonText="Ver Mapa de Calor"
-        onButtonClick={() => {}}
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -272,8 +286,20 @@ export default function CirculacaoPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-            {registrosFiltrados.length} resultado(s)
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+            <Button
+              type="button"
+              onClick={exportarPDF}
+              variant="outline"
+              disabled={loading || registrosFiltrados.length === 0}
+              className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Exportar PDF</span>
+            </Button>
+            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+              {registrosFiltrados.length} resultado(s)
+            </div>
           </div>
         </div>
 
@@ -354,15 +380,6 @@ export default function CirculacaoPage() {
                 Últimas movimentações internas detectadas
               </p>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => downloadCSV(registrosFiltrados)}
-              className="h-8 gap-2 rounded-xl border-border/70 bg-white/75 text-xs hover:border-primary/20 hover:bg-white"
-            >
-              <Download size={14} />
-              Exportar
-            </Button>
           </div>
 
           <div className="overflow-x-auto">

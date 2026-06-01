@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import {
   Users, ArrowRightLeft, Clock3,
   Search, X, Check, Loader2, Filter,
-  Eye
+  Download, Eye
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { exportTableToPdf } from "@/lib/exportPdf";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -270,6 +271,46 @@ export default function VisitantesPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (filtrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Visitantes",
+        subtitle: "Gestão de acesso e monitoramento de visitantes",
+        fileName: `visitantes_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          statusFiltro !== "Todos" ? `Status: ${STATUS_LABEL[statusFiltro] || statusFiltro}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.3 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.1 },
+          { header: "Setor", weight: 1.2 },
+          { header: "Entrada", weight: 1 },
+          { header: "Saída", weight: 1 },
+          { header: "Status", weight: 0.9 },
+        ],
+        rows: filtrados.map((visitante) => [
+          visitante.nome,
+          visitante.cpf,
+          visitante.empresa,
+          visitante.setor,
+          visitante.entrada,
+          visitante.saida,
+          STATUS_LABEL[visitante.status] || visitante.status,
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
+  }
+
   return (
     <>
       <ModalDetalhesVisitante visitante={visitanteDetalhes} onClose={() => setVisitanteDetalhes(null)} />
@@ -357,8 +398,20 @@ export default function VisitantesPage() {
               </Button>
             </div>
 
-            <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-              {filtrados.length} resultado(s)
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+              <Button
+                type="button"
+                onClick={exportarPDF}
+                variant="outline"
+                disabled={loading || filtrados.length === 0}
+                className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Exportar PDF</span>
+              </Button>
+              <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+                {filtrados.length} resultado(s)
+              </div>
             </div>
           </div>
 

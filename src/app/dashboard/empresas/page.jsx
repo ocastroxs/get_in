@@ -3,7 +3,7 @@
 import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useMemo } from "react";
 import {
-  Building2,
+  Download,
   Plus,
   Search,
   X,
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
@@ -56,22 +57,6 @@ const EMPRESA_VAZIA = {
   contato: "",
   status: "Ativa",
 };
-
-function toCSV(rows) {
-  const cols = ["Empresa", "CNPJ", "Responsável", "Contato", "Visitantes", "Última Visita", "Status"];
-  const lines = rows.map((r) =>
-    [r.nome || "—", r.cnpj || "—", r.responsavel || "—", r.contato || "—", r.visitantes || 0, r.ultimaVisita || "—", r.status || "—"].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
-}
-
-function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = "empresas.csv"; a.click();
-  URL.revokeObjectURL(url);
-}
 
 function formatarUltimaVisita(value) {
   if (!value) return null;
@@ -356,6 +341,46 @@ export default function EmpresasPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (empresasFiltradas.length === 0) {
+      alert("Nao ha dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Empresas Terceirizadas",
+        subtitle: "Gestao de empresas terceirizadas e visitantes",
+        fileName: `empresas_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          filtroStatus !== "Todas" ? `Status: ${filtroStatus}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Empresa", weight: 1.4 },
+          { header: "CNPJ", weight: 1 },
+          { header: "Responsavel", weight: 1.1 },
+          { header: "Contato", weight: 1 },
+          { header: "Visitantes", weight: 0.8 },
+          { header: "Ultima Visita", weight: 1 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: empresasFiltradas.map((empresa) => [
+          empresa.nome || "-",
+          empresa.cnpj || "-",
+          empresa.responsavel || "-",
+          empresa.contato || "-",
+          empresa.visitantes || 0,
+          formatarUltimaVisita(empresa.ultimaVisita) || "-",
+          empresa.status || "-",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Nao foi possivel exportar o PDF.");
+    }
+  }
+
   const handleSaveEmpresa = (empresa, isEdicao) => {
     if (!empresa?.id) {
       carregarEmpresas();
@@ -402,8 +427,6 @@ export default function EmpresasPage() {
       <Topbar
         title="Empresas Terceirizadas"
         subtitle="Gestão de empresas terceirizadas e visitantes"
-        secondaryButtonText="Exportar CSV"
-        onSecondaryButtonClick={() => downloadCSV(empresasFiltradas)}
         buttonText="Cadastrar Empresa"
         onButtonClick={() => setModalEmpresa({ open: true, data: null })}
       />
@@ -482,8 +505,20 @@ export default function EmpresasPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-            {empresasFiltradas.length} resultado(s)
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+            <Button
+              type="button"
+              onClick={exportarPDF}
+              variant="outline"
+              disabled={loading || empresasFiltradas.length === 0}
+              className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Exportar PDF</span>
+            </Button>
+            <div className="px-3 py-2 rounded-xl bg-muted/40 border border-border/50 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+              {empresasFiltradas.length} resultado(s)
+            </div>
           </div>
         </div>
 
