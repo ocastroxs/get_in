@@ -49,50 +49,77 @@ const SECONDARY_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isControlOpen, setIsControlOpen] = useState(true);
   const [isAccessOpen, setIsAccessOpen] = useState(true);
   const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) => pathname === href;
+  const closeMobileSidebar = () => setIsMobileOpen(false);
+  const closeSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setIsExpanded(false);
+      return;
+    }
+
+    setIsMobileOpen(false);
+  };
 
   return (
     <>
+      <button
+        type="button"
+        onClick={() => {
+          setIsExpanded(true);
+          setIsMobileOpen(true);
+        }}
+        className={`fixed left-4 top-4 z-[60] flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-white/90 text-gray-700 shadow-lg shadow-black/5 backdrop-blur transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none hover:bg-white hover:text-black active:scale-95 dark:border-white/10 dark:bg-[#061320]/90 dark:text-gray-200 dark:hover:bg-[#0b1b2b] lg:hidden ${
+          isMobileOpen ? 'pointer-events-none -translate-x-2 opacity-0' : 'translate-x-0 opacity-100'
+        }`}
+        aria-label="Abrir menu lateral"
+      >
+        <PanelLeft size={22} strokeWidth={1.7} />
+      </button>
+
+      <button
+        type="button"
+        onClick={closeMobileSidebar}
+        className={`fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ${
+          isMobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-label="Fechar menu lateral"
+      />
+
       <aside
         className={`
-          fixed left-0 top-0 z-50 flex h-screen flex-col
-          overflow-y-auto border-r border-gray-200/60 bg-[#f4f5f7] pt-8 pb-6
-          transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          fixed left-0 top-0 z-50 flex h-screen w-[300px] max-w-[calc(100vw-32px)]
+          transform-gpu flex-col overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]
+          px-4 pt-8 pb-6 shadow-2xl shadow-black/10 transition-all
+          duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          will-change-transform motion-reduce:transition-none
           dark:border-white/10 dark:bg-[#020C17]
-          ${isExpanded ? 'w-[300px] px-4' : 'w-[80px] px-2'}
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-[calc(100%+16px)]'}
+          ${isExpanded ? 'lg:w-[300px] lg:translate-x-0 lg:px-4' : 'lg:w-[80px] lg:translate-x-0 lg:px-2'}
         `}
       >
         <SidebarHeader
           isDark={isDark}
           isExpanded={isExpanded}
           onToggleTheme={toggleTheme}
-          onToggleExpanded={() => setIsExpanded((current) => !current)}
+          onClose={closeSidebar}
+          onOpen={() => setIsExpanded(true)}
         />
-
-        {!isExpanded && (
-          <button
-            type="button"
-            onClick={() => setIsExpanded(true)}
-            className="mx-auto mb-6 flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
-            aria-label="Expandir menu lateral"
-          >
-            <PanelLeft size={20} strokeWidth={1.5} />
-          </button>
-        )}
 
         <nav className="flex flex-col gap-2">
           {MAIN_ITEMS.map(({ href, icon: Icon, label }) => (
             <NavItem
               key={href}
-              isExpanded={isExpanded}
               href={href}
               icon={<Icon size={20} strokeWidth={1.5} />}
               label={label}
               active={isActive(href)}
+              isExpanded={isExpanded}
+              onNavigate={closeMobileSidebar}
             />
           ))}
         </nav>
@@ -100,33 +127,55 @@ export default function Sidebar() {
         <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
 
         <CollapsibleSection
-          isExpanded={isExpanded}
           title="Controle"
           icon={<Inbox size={20} strokeWidth={1.5} />}
           open={isControlOpen}
+          isExpanded={isExpanded}
           onToggle={() => {
-            if (!isExpanded) setIsExpanded(true);
+            if (!isExpanded) {
+              setIsExpanded(true);
+              return;
+            }
+
             setIsControlOpen((current) => !current);
           }}
         >
           {CONTROL_ITEMS.map((item) => (
-            <SubItem key={item.href} href={item.href} label={item.label} active={isActive(item.href)} />
+            <SubItem
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              active={isActive(item.href)}
+              isExpanded={isExpanded}
+              onNavigate={closeMobileSidebar}
+            />
           ))}
         </CollapsibleSection>
 
         <div className="mt-3">
           <CollapsibleSection
-            isExpanded={isExpanded}
             title="Acesso"
             icon={<Lock size={20} strokeWidth={1.5} />}
             open={isAccessOpen}
+            isExpanded={isExpanded}
             onToggle={() => {
-              if (!isExpanded) setIsExpanded(true);
+              if (!isExpanded) {
+                setIsExpanded(true);
+                return;
+              }
+
               setIsAccessOpen((current) => !current);
             }}
           >
             {ACCESS_ITEMS.map((item) => (
-              <SubItem key={item.href} href={item.href} label={item.label} active={isActive(item.href)} />
+              <SubItem
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                active={isActive(item.href)}
+                isExpanded={isExpanded}
+                onNavigate={closeMobileSidebar}
+              />
             ))}
           </CollapsibleSection>
         </div>
@@ -135,11 +184,12 @@ export default function Sidebar() {
           {SECONDARY_ITEMS.map(({ href, icon: Icon, label }) => (
             <NavItem
               key={href}
-              isExpanded={isExpanded}
               href={href}
               icon={<Icon size={20} strokeWidth={1.5} />}
               label={label}
               active={isActive(href)}
+              isExpanded={isExpanded}
+              onNavigate={closeMobileSidebar}
             />
           ))}
         </div>
@@ -151,36 +201,49 @@ export default function Sidebar() {
             fallbackEmail="admin@getin.com"
           />
           <NavItem
-            isExpanded={isExpanded}
             href="/configuracoes"
             icon={<Settings size={20} strokeWidth={1.5} />}
             label="Configurações"
             active={isActive('/configuracoes')}
+            isExpanded={isExpanded}
+            onNavigate={closeMobileSidebar}
           />
         </div>
       </aside>
 
       <div
-        className={`hidden shrink-0 transition-all duration-500 lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
+        className={`hidden shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
         aria-hidden="true"
       />
     </>
   );
 }
 
-function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) {
+function SidebarHeader({ isDark, isExpanded, onToggleTheme, onClose, onOpen }) {
   return (
-    <div className={`mb-7 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
-      <div className={isExpanded ? 'min-w-0 overflow-hidden' : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5'}>
-        <BrandLogo variant="dark" compact={!isExpanded} className="dark:hidden" />
-        <BrandLogo variant="light" compact={!isExpanded} className="hidden dark:flex" />
+    <div className={`mb-7 flex items-center transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
+      {isExpanded ? (
+      <div className="min-w-0 overflow-hidden">
+        <BrandLogo variant="dark" className="dark:hidden" />
+        <BrandLogo variant="light" className="hidden dark:flex" />
       </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-all duration-300 ease-out hover:bg-gray-100 hover:text-black active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+          aria-label="Expandir menu lateral"
+          title="Expandir menu lateral"
+        >
+          <PanelLeft size={20} strokeWidth={1.5} />
+        </button>
+      )}
 
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onToggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white/50 text-gray-600 transition-all active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white/50 text-gray-600 transition-all duration-300 ease-out active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
           title={isDark ? 'Modo claro' : 'Modo escuro'}
           aria-label={isDark ? 'Alternar para o modo claro' : 'Alternar para o modo escuro'}
         >
@@ -190,8 +253,8 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) 
         {isExpanded && (
           <button
             type="button"
-            onClick={onToggleExpanded}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors duration-300 ease-out hover:text-black dark:hover:text-white"
             aria-label="Recolher menu lateral"
           >
             <PanelLeftClose size={20} strokeWidth={1.5} />
@@ -202,14 +265,14 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) 
   );
 }
 
-function CollapsibleSection({ isExpanded, title, icon, open, onToggle, children }) {
+function CollapsibleSection({ title, icon, open, isExpanded, onToggle, children }) {
   return (
     <div className="flex flex-col">
       <button
         type="button"
         onClick={onToggle}
         className={`
-          flex cursor-pointer items-center transition-all duration-300
+          flex cursor-pointer items-center transition-all duration-300 ease-out
           ${
             isExpanded
               ? 'justify-between rounded-[20px] bg-[#18181b] px-4 py-3 text-white shadow-lg shadow-blue-500/10 dark:bg-[#4DA8EA]'
@@ -220,7 +283,7 @@ function CollapsibleSection({ isExpanded, title, icon, open, onToggle, children 
       >
         <div className="flex items-center gap-3 overflow-hidden">
           <span className="flex min-w-[20px] items-center justify-center">{icon}</span>
-          {isExpanded && <span className="whitespace-nowrap text-[14px] font-medium">{title}</span>}
+          <span className={`whitespace-nowrap text-[14px] font-medium transition-all duration-300 ease-out ${isExpanded ? 'max-w-32 opacity-100' : 'max-w-0 opacity-0'}`}>{title}</span>
         </div>
         {isExpanded && (open ? <Minus size={16} strokeWidth={1.5} /> : <Plus size={16} strokeWidth={1.5} />)}
       </button>
@@ -236,33 +299,35 @@ function CollapsibleSection({ isExpanded, title, icon, open, onToggle, children 
   );
 }
 
-function NavItem({ isExpanded, href, icon, label, active }) {
+function NavItem({ href, icon, label, active, isExpanded, onNavigate }) {
   return (
     <Link
       href={href}
-      title={!isExpanded ? label : undefined}
+      onClick={onNavigate}
       className={`
-        group flex items-center justify-between transition-all duration-200
+        group flex items-center justify-between transition-all duration-300 ease-out
         ${
           active
             ? 'bg-white text-black shadow-sm dark:bg-[#4DA8EA] dark:text-white'
             : 'text-gray-500 hover:bg-black/5 hover:text-black dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white'
         }
-        ${isExpanded ? 'rounded-[20px] px-4 py-2.5' : 'mx-auto flex h-12 w-12 justify-center rounded-full p-3'}
+        ${isExpanded ? 'rounded-[20px] px-4 py-2.5' : 'mx-auto h-12 w-12 justify-center rounded-full p-3'}
       `}
+      title={!isExpanded ? label : undefined}
     >
-      <div className="flex items-center gap-4 overflow-hidden">
+      <div className={`flex items-center overflow-hidden transition-[gap] duration-300 ease-out ${isExpanded ? 'gap-4' : 'gap-0'}`}>
         <span className="relative flex flex-shrink-0 items-center justify-center">{icon}</span>
-        {isExpanded && <span className="whitespace-nowrap text-[14px] font-medium">{label}</span>}
+        <span className={`whitespace-nowrap text-[14px] font-medium transition-all duration-300 ease-out ${isExpanded ? 'max-w-44 opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
       </div>
     </Link>
   );
 }
 
-function SubItem({ href, label, active }) {
+function SubItem({ href, label, active, onNavigate }) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={`
         flex items-center gap-3 rounded-[18px] px-4 py-2.5 text-[13.5px] font-medium transition-all
         ${
