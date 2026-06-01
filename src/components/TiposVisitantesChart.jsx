@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { TIPOS_VISITANTE } from "@/lib/mockData";
+import PeriodToggle from "@/components/ui/PeriodToggle";
 
 function renderActiveSector(props) {
   const outerRadius = Number(props.outerRadius) || 0;
@@ -42,7 +43,7 @@ function PieTooltip({ active, payload, dataKey, nameKey, colorKey, total, peakIt
             <p className="truncate text-sm font-semibold text-foreground">{item[nameKey]}</p>
           </div>
           <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Distribuicao
+            Distribuição
           </p>
         </div>
         {isPeak ? (
@@ -67,7 +68,7 @@ function PieTooltip({ active, payload, dataKey, nameKey, colorKey, total, peakIt
 
 export default function TiposVisitantesChart({
   title = "Motivos",
-  subtitle = "Por período - hoje",
+  subtitle = "Por período - dia",
   data = TIPOS_VISITANTE,
   weekData = data,
   monthData = data,
@@ -110,13 +111,13 @@ export default function TiposVisitantesChart({
   const displaySubtitle = useMemo(() => {
     if (!showPeriodToggle) return subtitle;
     if (view === "mes") return "Por período - mês";
-    return view === "semana" ? "Por período - semana" : "Por período - hoje";
+    return view === "semana" ? "Por período - semana" : "Por período - dia";
   }, [showPeriodToggle, subtitle, view]);
 
-  const chartSize = mobileLayout ? 112 : 156;
+  const chartSize = mobileLayout ? 168 : 220;
 
   return (
-    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "gap-4 p-5 min-h-[280px]"}`}>
+    <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-400 ${mobileLayout ? "gap-4 p-5" : "gap-4 p-5 min-h-[330px]"}`}>
       <div className="animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-1">
@@ -125,44 +126,33 @@ export default function TiposVisitantesChart({
             <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
           </div>
 
-          {showPeriodToggle ? (
-          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
-            {["hoje", "semana", "mes"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setView(item)}
-                className={[
-                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
-                  view === item
-                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
-                    : "hover:bg-white/80 hover:text-foreground",
-                ].join(" ")}
-              >
-                {item === "mes" ? "mês" : item}
-              </button>
-            ))}
-          </div>
-          ) : null}
+          {showPeriodToggle ? <PeriodToggle value={view} onChange={setView} /> : null}
         </div>
       </div>
 
       {isEmpty ? (
-        <div className={`flex flex-col items-center justify-center ${mobileLayout ? "py-8" : "py-12"}`}>
+        <div className={`rounded-2xl border border-border/70 bg-muted/35 flex flex-col items-center justify-center ${mobileLayout ? "py-10" : "min-h-[220px] py-12"}`}>
           <div className="text-center">
             <p className="text-sm text-muted-foreground">{emptyText}</p>
           </div>
         </div>
       ) : (
-        <div className={`mt-1 flex ${mobileLayout ? "flex-col gap-4" : "flex-1 items-center gap-6"}`}>
-          <div className="relative shrink-0 self-center cursor-pointer transition-transform duration-500 hover:scale-105">
+        <div
+          className={`mt-1 rounded-2xl border border-border/70 bg-muted/35 p-4 ${
+            mobileLayout
+              ? "flex flex-col gap-4"
+              : "grid min-h-[250px] flex-1 grid-cols-[240px_minmax(0,1fr)] items-center gap-7"
+          }`}
+        >
+          <div className="relative mx-auto shrink-0 cursor-pointer transition-transform duration-500 hover:scale-[1.02]">
             <ResponsiveContainer width={chartSize} height={chartSize}>
               <PieChart>
                 <Pie
                   data={chartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={mobileLayout ? 38 : 50}
-                  outerRadius={mobileLayout ? 52 : 70}
+                  innerRadius={mobileLayout ? 54 : 72}
+                  outerRadius={mobileLayout ? 78 : 102}
                   dataKey={dataKey}
                   startAngle={90}
                   endAngle={-270}
@@ -192,26 +182,26 @@ export default function TiposVisitantesChart({
               </PieChart>
             </ResponsiveContainer>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`${mobileLayout ? "text-xl" : "text-2xl"} font-mono font-semibold text-foreground`}>{total}</span>
+              <span className={`${mobileLayout ? "text-2xl" : "text-3xl"} font-mono font-semibold text-foreground`}>{total}</span>
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">total</span>
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-center gap-2.5 pr-1 max-w-[280px]">
+          <div className={`grid min-w-0 content-center gap-3 ${mobileLayout ? "grid-cols-1" : "grid-cols-2"}`}>
             {chartData.map((item, index) => (
               <div
                 key={index}
-                className={`flex w-fit max-w-full items-center rounded-xl hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "gap-2 p-2.5" : "gap-3 px-2.5 py-2"}`}
+                className={`flex min-w-0 items-center justify-between rounded-xl border border-border/70 bg-background/70 hover:bg-background transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700 ${mobileLayout ? "w-full gap-2 p-3" : "w-full gap-3 px-3.5 py-3"}`}
                 style={{ animationDelay: `${500 + index * 50}ms` }}
               >
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span
-                    className="h-3 w-3 shrink-0 rounded-full shadow-sm"
+                    className="h-2.5 w-2.5 shrink-0 rounded-full shadow-sm"
                     style={{ backgroundColor: item[colorKey] }}
                   />
-                  <span className={`truncate font-medium text-muted-foreground ${mobileLayout ? "text-[11px]" : "text-[15px] leading-tight"}`}>{item[nameKey]}</span>
+                  <span className={`min-w-0 truncate font-medium text-muted-foreground ${mobileLayout ? "text-xs" : "text-sm leading-tight"}`}>{item[nameKey]}</span>
                 </div>
-                <span className={`${mobileLayout ? "text-[11px]" : "text-xs"} min-w-6 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
+                <span className={`${mobileLayout ? "text-xs" : "text-xs"} ml-2 min-w-7 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center font-bold text-foreground`}>{item[dataKey]}</span>
               </div>
             ))}
           </div>

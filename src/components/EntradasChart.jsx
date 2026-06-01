@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { BarChart3 } from "lucide-react";
 import { ENTRADAS_POR_HORA } from "@/lib/mockData";
+import PeriodToggle from "@/components/ui/PeriodToggle";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const DATA_BR_RE = /^\d{2}\/\d{2}$/;
@@ -71,12 +72,12 @@ function EntradasTooltip({ active, payload, dataKey, nameKey, total, peakItem, v
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{label}</p>
           <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Periodo
+            Período
           </p>
         </div>
         {isPeak ? (
           <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary">
-            Pico do periodo
+            Pico do período
           </span>
         ) : null}
       </div>
@@ -95,7 +96,7 @@ function EntradasTooltip({ active, payload, dataKey, nameKey, total, peakItem, v
 }
 
 export default function EntradasChart({
-  title = "Entradas por Periodo",
+  title = "Entradas por Período",
   subtitle = "Fluxo registrado ao longo do dia",
   data = ENTRADAS_POR_HORA,
   weekData = data,
@@ -157,6 +158,8 @@ export default function EntradasChart({
         </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {showPeriodToggle ? <PeriodToggle value={view} onChange={setView} /> : null}
+
           <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30 sm:w-auto">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
             <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
@@ -164,25 +167,6 @@ export default function EntradasChart({
               <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
             </p>
           </div>
-
-          {showPeriodToggle ? (
-          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
-            {["hoje", "semana", "mes"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setView(item)}
-                className={[
-                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
-                  view === item
-                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
-                    : "hover:bg-white/80 hover:text-foreground",
-                ].join(" ")}
-              >
-                {item === "mes" ? "mês" : item}
-              </button>
-            ))}
-          </div>
-          ) : null}
         </div>
       </div>
 
@@ -194,7 +178,7 @@ export default function EntradasChart({
           <div className="space-y-1 px-4">
             <h3 className="text-sm font-semibold text-foreground">Sem dados de fluxo</h3>
             <p className="text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
-              {emptyMessage || `Nao foram registradas entradas de visitantes para o periodo selecionado (${view === "hoje" ? "hoje" : view === "semana" ? "esta semana" : "este mes"}).`}
+              {emptyMessage || `Não foram registradas entradas de visitantes para o período selecionado (${view === "hoje" ? "dia" : view === "semana" ? "semana" : "mês"}).`}
             </p>
           </div>
         </div>
@@ -279,24 +263,24 @@ export default function EntradasChart({
 
           <div className="mt-5 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automatico</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automático</p>
               <p className="mt-1 text-sm text-foreground">
-                Pico as <span className="font-semibold">{peakLabel}</span> com{" "}
+                Pico às <span className="font-semibold">{peakLabel}</span> com{" "}
                 <span className="font-semibold">{chartMeta.peakItem?.[dataKey] ?? 0} visitantes</span>.
               </p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {showPeriodToggle ? "Comparativo" : "Historico"}
+                {showPeriodToggle ? "Comparativo" : "Histórico"}
               </p>
               {showPeriodToggle ? (
                 <p className="mt-1 text-sm text-foreground">
-                  Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
-                  com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
+                  Variação de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relação ao intervalo anterior,
+                  com <span className="font-semibold">{chartMeta.total} registros</span> no período.
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-foreground">
-                  Total de <span className="font-semibold">{chartMeta.total} registros</span> no historico carregado.
+                  Total de <span className="font-semibold">{chartMeta.total} registros</span> no histórico carregado.
                 </p>
               )}
             </div>

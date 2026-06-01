@@ -51,17 +51,6 @@ export default function SupervisorSidebar() {
             onToggleExpanded={() => setIsExpanded((current) => !current)}
           />
 
-          {!isExpanded && (
-            <button
-              type="button"
-              onClick={() => setIsExpanded(true)}
-              className="mx-auto mb-6 flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
-              aria-label="Expandir menu lateral"
-            >
-              <PanelLeft size={20} strokeWidth={1.5} />
-            </button>
-          )}
-
           {isExpanded && (
             <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
               Fluxo Supervisor
@@ -104,10 +93,22 @@ export default function SupervisorSidebar() {
 function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) {
   return (
     <div className={`mb-7 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
-      <div className={isExpanded ? 'min-w-0 overflow-hidden' : 'flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/5'}>
-        <BrandLogo variant="dark" compact={!isExpanded} className="dark:hidden" />
-        <BrandLogo variant="light" compact={!isExpanded} className="hidden dark:flex" />
-      </div>
+      {isExpanded ? (
+        <div className="min-w-0 overflow-hidden">
+          <BrandLogo variant="dark" className="dark:hidden" />
+          <BrandLogo variant="light" className="hidden dark:flex" />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-100 hover:text-black active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+          aria-label="Expandir menu lateral"
+          title="Expandir menu lateral"
+        >
+          <PanelLeft size={20} strokeWidth={1.5} />
+        </button>
+      )}
 
       <div className="flex items-center gap-2">
         <button
