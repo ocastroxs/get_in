@@ -26,6 +26,7 @@ import ModalFiltro from "@/components/ui/ModalFiltro";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import { onlyDigits } from "@/lib/utils";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
 
@@ -227,9 +228,6 @@ function LinhaEmpresa({ emp, maxVisitantes, index, onEdit, onDelete }) {
           </div>
           <div>
             <p className="text-xs font-bold leading-none">{emp.nome || "—"}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">
-              {[emp.categoria, emp.cnpj ? `CNPJ ${emp.cnpj}` : null].filter(Boolean).join(" / ") || "Sem dados complementares"}
-            </p>
           </div>
         </div>
       </td>
@@ -306,11 +304,19 @@ export default function EmpresasPage() {
   useAutoRefresh(carregarEmpresas);
 
   const empresasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    const termoNumerico = onlyDigits(busca);
+
     return empresas.filter((emp) => {
       const matchesStatus = filtroStatus === "Todas" || emp.status === filtroStatus;
-      const matchesBusca = !busca.trim() ||
-        (emp.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
-        (emp.cnpj || "").includes(busca);
+      const cnpj = emp.cnpj || "";
+      const contato = emp.contato || "";
+      const matchesBusca = !termo ||
+        (emp.nome || "").toLowerCase().includes(termo) ||
+        cnpj.toLowerCase().includes(termo) ||
+        contato.toLowerCase().includes(termo) ||
+        (termoNumerico !== "" && onlyDigits(cnpj).includes(termoNumerico)) ||
+        (termoNumerico !== "" && onlyDigits(contato).includes(termoNumerico));
       return matchesStatus && matchesBusca;
     });
   }, [empresas, filtroStatus, busca]);
@@ -473,7 +479,7 @@ export default function EmpresasPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
-                placeholder="Buscar empresa, CNPJ..."
+                placeholder="Buscar empresa, CNPJ, contato..."
                 className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}

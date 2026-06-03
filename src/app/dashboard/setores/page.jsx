@@ -3,7 +3,7 @@
 import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useMemo } from "react";
 import {
-  Layers, CheckSquare, TrendingDown, TrendingUp,
+  Layers, UserCheck, TrendingDown, TrendingUp,
   Filter, Search, X,
   Plus, Pencil, Trash2,
   AlertTriangle, Check, Download, Loader2,
@@ -409,7 +409,7 @@ export default function SetoresPage() {
 
   const stats = useMemo(() => ({
     total: setores.length,
-    ativos: setores.filter(s => statusKey(s.status) === "ativo").length,
+    comResponsavel: setores.filter(s => Number(s.idGestor) > 0 || Boolean(String(s.responsavel || "").trim())).length,
     maisVisitado: setores.reduce((a, b) => (b.visitantes || 0) > (a.visitantes || 0) ? b : a, setores[0]) || {},
     menosVisitado: setores.reduce((a, b) => (b.visitantes || 0) < (a.visitantes || 0) ? b : a, setores[0]) || {},
   }), [setores]);
@@ -498,7 +498,7 @@ export default function SetoresPage() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total" value={stats.total} valueClassName="text-primary" icon={<Layers size={17} className="text-primary" />} sub="setores" accentVar="var(--primary)" />
-        <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="#16a34a" />
+        <StatCard label="Com Responsavel" value={stats.comResponsavel} valueClassName="text-blue-600" icon={<UserCheck size={17} className="text-blue-600" />} sub="gestor definido" accentVar="#2563eb" />
         <StatCard label="Mais Visitado" value={stats.maisVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingUp size={17} className="text-foreground" />} sub={`${stats.maisVisitado?.visitantes || 0} visitas`} accentVar="var(--chart-4)" />
         <StatCard label="Menos Visitado" value={stats.menosVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingDown size={17} className="text-muted-foreground" />} sub={`${stats.menosVisitado?.visitantes || 0} visitas`} accentVar="var(--border)" />
       </div>
