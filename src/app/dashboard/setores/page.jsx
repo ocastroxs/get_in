@@ -13,7 +13,10 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 
@@ -142,8 +145,9 @@ function enriquecerSetoresComVisitas(setores, requisicoes) {
 
 function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm mx-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
@@ -155,7 +159,7 @@ function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
             <X size={18} />
           </button>
         </div>
-        <div className="px-6 py-5">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5" data-lenis-prevent>
           <p className="text-sm text-muted-foreground">
             Tem certeza que deseja excluir o setor{" "}
             <strong className="text-foreground">{setor.nome}</strong>?
@@ -174,6 +178,7 @@ function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -230,8 +235,9 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -244,7 +250,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
               <AlertTriangle size={13} className="text-red-500 mt-0.5 shrink-0" />
@@ -262,7 +268,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsavel</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsável</label>
             <select
               value={form.idGestor}
               onChange={set("idGestor")}
@@ -311,6 +317,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -407,6 +414,15 @@ export default function SetoresPage() {
     });
   }, [setores, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: setoresPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total: setores.length,
     comResponsavel: setores.filter(s => Number(s.idGestor) > 0 || Boolean(String(s.responsavel || "").trim())).length,
@@ -453,7 +469,7 @@ export default function SetoresPage() {
 
   async function exportarPDF() {
     if (filtrados.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
@@ -469,8 +485,8 @@ export default function SetoresPage() {
         columns: [
           { header: "Setor", weight: 1.4 },
           { header: "Visitantes", weight: 0.8 },
-          { header: "Ultima Visita", weight: 1 },
-          { header: "Responsavel", weight: 1.2 },
+          { header: "Última Visita", weight: 1 },
+          { header: "Responsável", weight: 1.2 },
           { header: "Status", weight: 0.8 },
         ],
         rows: filtrados.map((setor) => [
@@ -483,7 +499,7 @@ export default function SetoresPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -498,7 +514,7 @@ export default function SetoresPage() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total" value={stats.total} valueClassName="text-primary" icon={<Layers size={17} className="text-primary" />} sub="setores" accentVar="var(--primary)" />
-        <StatCard label="Com Responsavel" value={stats.comResponsavel} valueClassName="text-blue-600" icon={<UserCheck size={17} className="text-blue-600" />} sub="gestor definido" accentVar="#2563eb" />
+        <StatCard label="Com Responsável" value={stats.comResponsavel} valueClassName="text-blue-600" icon={<UserCheck size={17} className="text-blue-600" />} sub="gestor definido" accentVar="#2563eb" />
         <StatCard label="Mais Visitado" value={stats.maisVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingUp size={17} className="text-foreground" />} sub={`${stats.maisVisitado?.visitantes || 0} visitas`} accentVar="var(--chart-4)" />
         <StatCard label="Menos Visitado" value={stats.menosVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingDown size={17} className="text-muted-foreground" />} sub={`${stats.menosVisitado?.visitantes || 0} visitas`} accentVar="var(--border)" />
       </div>
@@ -595,8 +611,8 @@ export default function SetoresPage() {
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Visitantes</th>
-                <th className="px-4 py-3">Ultima Visita</th>
-                <th className="px-4 py-3">Responsavel</th>
+                <th className="px-4 py-3">Última Visita</th>
+                <th className="px-4 py-3">Responsável</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
@@ -618,7 +634,7 @@ export default function SetoresPage() {
                   </td>
                 </tr>
               ) : (
-                filtrados.map(s => (
+                setoresPagina.map(s => (
                   <LinhaSetor
                     key={s.id}
                     setor={s}
@@ -630,6 +646,15 @@ export default function SetoresPage() {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentCount={setoresPagina.length}
+          onPageChange={setPage}
+          itemLabel="setor(es)"
+        />
       </div>
 
       {modalSetor.open && (

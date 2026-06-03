@@ -13,7 +13,10 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { api } from "@/services/api";
 
@@ -180,8 +183,9 @@ function ModalEditarFuncionario({ funcionario, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in zoom-in-95 duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between border-b border-border bg-muted/20 px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -203,7 +207,7 @@ function ModalEditarFuncionario({ funcionario, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
+          <div className="max-h-[70vh] overflow-y-auto px-5 py-5" data-lenis-prevent>
             <div className="mb-5 rounded-2xl border border-border/60 bg-muted/25 p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -303,6 +307,7 @@ function ModalEditarFuncionario({ funcionario, onClose, onSave }) {
         </form>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -409,7 +414,7 @@ export default function FuncionariosPage() {
 
   useAutoRefresh(carregarFuncionarios);
 
-  const filtrados = useMemo(() => {
+const filtrados = useMemo(() => {
   return funcionarios.filter((f) => {
     // 1. Filtro de Tipo
     const matchTipo = filtroTipo === "Todos" || f.cargo === filtroTipo;
@@ -430,6 +435,15 @@ export default function FuncionariosPage() {
     return matchTipo && matchBusca;
   });
 }, [funcionarios, filtroTipo, busca]);
+
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: funcionariosPagina,
+  } = usePagination(filtrados);
 
   const stats = useMemo(() => ({
     total: funcionarios.length,
@@ -491,7 +505,7 @@ export default function FuncionariosPage() {
   };
 
   const handleExcluir = async (funcionario) => {
-    if (!window.confirm(`Excluir funcionario ${funcionario.usuario_nome || funcionario.nome || ""}?`)) {
+    if (!window.confirm(`Excluir funcionário ${funcionario.usuario_nome || funcionario.nome || ""}?`)) {
       return;
     }
 
@@ -499,7 +513,7 @@ export default function FuncionariosPage() {
     if (response.sucesso) {
       setFuncionarios((prev) => prev.filter((item) => item.id !== funcionario.id));
     } else {
-      alert(response.mensagem || "Erro ao excluir funcionario.");
+      alert(response.mensagem || "Erro ao excluir funcionário.");
     }
   };
 
@@ -534,7 +548,7 @@ export default function FuncionariosPage() {
           value={stats.administradores}
           valueClassName="text-foreground"
           icon={<Briefcase size={17} className="text-foreground" />}
-          sub="gestao"
+          sub="gestão"
           accentVar="var(--chart-4)"
         />
         <StatCard
@@ -663,7 +677,7 @@ export default function FuncionariosPage() {
                   </td>
                 </tr>
               ) : filtrados.length > 0 ? (
-                filtrados.map((f, index) => (
+                funcionariosPagina.map((f, index) => (
                   <LinhaFuncionario
                     key={f.id || f.cpf || index}
                     f={f}
@@ -684,11 +698,15 @@ export default function FuncionariosPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-4 py-3 border-t border-border bg-muted/20 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Mostrando <strong>{filtrados.length}</strong> de <strong>{funcionarios.length}</strong> funcionários
-          </p>
-        </div>
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentCount={funcionariosPagina.length}
+          onPageChange={setPage}
+          itemLabel="funcionário(s)"
+        />
       </div>
 
       {/* Modal de Filtro Padronizado */}

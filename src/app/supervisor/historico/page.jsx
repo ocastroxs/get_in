@@ -19,7 +19,10 @@ import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -178,11 +181,12 @@ function ModalDetalhesHistorico({ registro, onClose }) {
   if (!registro) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b border-border bg-muted/20 p-5">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Detalhes da requisicao</h2>
+            <h2 className="text-lg font-bold text-foreground">Detalhes da requisição</h2>
             <p className="text-xs text-muted-foreground">{registro.usuario.nome || "-"} - {STATUS_LABEL[registro.status] || registro.status}</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground">
@@ -190,12 +194,12 @@ function ModalDetalhesHistorico({ registro, onClose }) {
           </button>
         </div>
 
-        <div className="grid gap-3 p-5 text-sm">
+        <div className="grid max-h-[70vh] gap-3 overflow-y-auto p-5 text-sm" data-lenis-prevent>
           <Detail label="CPF" value={formatCPF(registro.usuario.cpf) || "-"} />
           <Detail label="Empresa" value={registro.empresa || "-"} />
           <Detail label="Setores" value={registro.setores.join(", ") || "-"} />
           <Detail label="Motivo" value={registro.motivo || "-"} />
-          <Detail label="Solicitacao" value={formatDateTime(registro.dataDaRequisicao)} />
+          <Detail label="Solicitação" value={formatDateTime(registro.dataDaRequisicao)} />
         </div>
 
         <div className="border-t border-border p-5">
@@ -205,6 +209,7 @@ function ModalDetalhesHistorico({ registro, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -270,6 +275,15 @@ export default function HistoricoSupervisorPage() {
     });
   }, [registros, busca, filtroStatus]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: registrosPagina,
+  } = usePagination(registrosFiltrados);
+
   const countPendentes = requisicoes.filter((r) => r.status === "pendente").length;
   const countAprovados = requisicoes.filter((r) => r.status === "aprovado").length;
   const countRecusados = requisicoes.filter((r) => r.status === "recusado").length;
@@ -327,7 +341,7 @@ export default function HistoricoSupervisorPage() {
     <>
       <Topbar
         title="Histórico de Aprovações"
-        subtitle="Visualize todas as requisicoes processadas"
+        subtitle="Visualize todas as requisições processadas"
       />
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
@@ -404,18 +418,29 @@ export default function HistoricoSupervisorPage() {
                     <th className="px-4 py-3 text-left">Empresa</th>
                     <th className="px-4 py-3 text-left">Setor</th>
                     <th className="px-4 py-3 text-left">Motivo</th>
-                    <th className="px-4 py-3 text-left">Solicitacao</th>
+                    <th className="px-4 py-3 text-left">Solicitação</th>
                     <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {registrosFiltrados.map((registro) => (
+                  {registrosPagina.map((registro) => (
                     <LinhaHistorico key={registro.key} registro={registro} onDetalhes={setRegistroSelecionado} />
                   ))}
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && registrosFiltrados.length > 0 && (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={registrosPagina.length}
+              onPageChange={setPage}
+              itemLabel="registro(s)"
+            />
           )}
         </div>
 
@@ -425,9 +450,9 @@ export default function HistoricoSupervisorPage() {
               <Info size={18} />
             </div>
             <div>
-              <h3 className="mb-1 text-sm font-bold text-slate-900">Sobre o Historico</h3>
+              <h3 className="mb-1 text-sm font-bold text-slate-900">Sobre o Histórico</h3>
               <p className="text-xs leading-relaxed text-slate-700">
-                Este historico consolida todos os setores do mesmo visitante por status. Assim, setores aprovados, recusados e pendentes aparecem em logs separados e mais faceis de auditar.
+                Este histórico consolida todos os setores do mesmo visitante por status. Assim, setores aprovados, recusados e pendentes aparecem em logs separados e mais fáceis de auditar.
               </p>
             </div>
           </div>
@@ -448,7 +473,7 @@ export default function HistoricoSupervisorPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Status da Requisicao
+              Status da Requisição
             </label>
             <div className="grid grid-cols-2 gap-2">
               {["todos", "pendente", "aprovado", "recusado", "expirado"].map((status) => (

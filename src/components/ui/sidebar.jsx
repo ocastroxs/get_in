@@ -28,8 +28,8 @@ const ADMIN_SECTIONS = [
     items: [
       { href: '/dashboard', icon: Home, label: 'Dashboard' },
       { href: '/dashboard/visitantes', icon: Users, label: 'Visitantes' },
-      { href: '/dashboard/funcionarios', icon: UserSquare2, label: 'Funcionarios' },
-      { href: '/dashboard/crachas', icon: IdCard, label: 'Crachas' },
+      { href: '/dashboard/funcionarios', icon: UserSquare2, label: 'Funcionários' },
+      { href: '/dashboard/crachas', icon: IdCard, label: 'Crachás' },
       { href: '/dashboard/setores', icon: Building2, label: 'Setores' },
       { href: '/dashboard/empresas', icon: Building, label: 'Empresas' },
     ],
@@ -37,9 +37,9 @@ const ADMIN_SECTIONS = [
   {
     title: 'Gestão e Auditoria',
     items: [
-      { href: '/dashboard/circulacao', icon: MapPinned, label: 'Circulacao' },
-      { href: '/dashboard/permissao', icon: ShieldCheck, label: 'Permissoes' },
-      { href: '/dashboard/relatorios', icon: FileText, label: 'Relatorios' },
+      { href: '/dashboard/circulacao', icon: MapPinned, label: 'Circulação' },
+      { href: '/dashboard/permissao', icon: ShieldCheck, label: 'Permissões' },
+      { href: '/dashboard/relatorios', icon: FileText, label: 'Relatórios' },
     ],
   },
 ];
@@ -58,7 +58,7 @@ export default function Sidebar() {
     <>
       <aside
         className={`
-          fixed left-0 top-0 z-50 flex h-screen flex-col
+          fixed left-0 top-0 z-50 hidden h-screen flex-col lg:flex
           overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]/40 pt-8 pb-6 backdrop-blur-[2px]
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
           dark:border-white/10 dark:bg-[#020C17]/40
@@ -112,7 +112,36 @@ export default function Sidebar() {
         className={`hidden shrink-0 transition-all duration-500 lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
         aria-hidden="true"
       />
+      <MobileNav items={ADMIN_SECTIONS.flatMap((section) => section.items)} isActive={isActive} />
     </>
+  );
+}
+
+function MobileNav({ items, isActive }) {
+  return (
+    <nav
+      className="fixed inset-x-3 bottom-3 z-50 flex gap-1 overflow-x-auto rounded-2xl border border-gray-200/80 bg-white/95 p-2 shadow-lg backdrop-blur lg:hidden dark:border-white/10 dark:bg-[#020C17]/95"
+      aria-label="Navegação principal"
+    >
+      {items.map(({ href, icon: Icon, label }) => {
+        const active = isActive(href);
+
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={`flex min-w-[72px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-colors ${
+              active
+                ? 'bg-[#4DA8EA] text-white'
+                : 'text-gray-500 hover:bg-black/5 hover:text-black dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white'
+            }`}
+          >
+            <Icon size={17} strokeWidth={1.8} />
+            <span className="max-w-[64px] truncate">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

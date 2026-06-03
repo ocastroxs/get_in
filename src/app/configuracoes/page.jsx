@@ -431,7 +431,7 @@ export default function ConfiguracoesPage() {
           {loadingPerfil ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Carregando configuracoes...
+              Carregando configurações...
             </div>
           ) : (
             <>
@@ -467,7 +467,7 @@ export default function ConfiguracoesPage() {
                       />
                     </Field>
                     <Field label="Setor principal">
-                      <Input value={perfil.setor || "Nao informado"} disabled className="h-11 rounded-xl opacity-70" />
+                      <Input value={perfil.setor || "Não informado"} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Cargo">
                       <Input value={getCargoLabel(perfil.cargo)} disabled className="h-11 rounded-xl opacity-70" />

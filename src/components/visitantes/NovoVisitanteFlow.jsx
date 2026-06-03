@@ -77,7 +77,7 @@ function buildEmpresasOptions(registros) {
 }
 
 function getTagSelectionLabel(value, tags = []) {
-  if (!value) return "Nao selecionada";
+  if (!value) return "Não selecionada";
   if (value === CREATE_VIRTUAL_TAG_VALUE) return "Criar nova TAG virtual";
 
   const tag = tags.find((item) => item.codigoTag === value);
@@ -542,7 +542,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
         `TAG RFID: ${codigoTagFinal || "Não informada"}`,
-        `Setor responsavel: ${form.setor || "Não informado"}`,
+        `Setor responsável: ${form.setor || "Não informado"}`,
         `Setores permitidos: ${setoresPermitidos}`,
         `Observacoes: ${observacao || "Nenhuma"}`
       ].join(" | ");
@@ -597,7 +597,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     },
     { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
     { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
-    { key: "setorResponsavel", label: "Setor responsavel", completed: Boolean(form.setor) },
+    { key: "setorResponsavel", label: "Setor responsável", completed: Boolean(form.setor) },
     { key: "setoresPermitidos", label: "Setores permitidos", completed: form.setoresAcesso.length > 0 },
     { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
     { key: "emailContato", label: "E-mail de contato", completed: emailValido },
@@ -746,7 +746,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        Setor Responsavel
+                        Setor Responsável
                       </label>
                       <PrettySelect
                         value={form.setor}
@@ -914,11 +914,11 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                       </div>
                     </div>
 
-                    {/* Setor responsavel */}
+                    {/* Setor responsável */}
                     {form.setor && (
                       <div className="mb-4 pb-4 border-b border-border/60">
                         <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
-                          Setor Responsavel
+                          Setor Responsável
                         </div>
                         <div className="inline-flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-full px-3 py-1.5">
                           <div className="w-2 h-2 rounded-full bg-primary/70"></div>
@@ -1102,7 +1102,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                 { label: "Nome", value: form.nome || "—" },
                 { label: "Empresa", value: form.empresa || "—" },
                 { label: "Tipo", value: form.motivo || "—" },
-                { label: "Setor responsavel", value: form.setor || "—" },
+                { label: "Setor responsável", value: form.setor || "—" },
                 { label: "CPF", value: form.cpf || "—" },
                 { label: "Telefone", value: form.telefone || "—" },
                 { label: "E-mail", value: form.email || "—" },

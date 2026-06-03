@@ -21,7 +21,7 @@ export default function SupervisorLayout({ children }) {
     <div className="relative isolate flex min-h-screen">
       <ParticlesBackground />
       <SupervisorSidebar />
-      <main className="relative z-10 ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6">{children}</main>
+      <main className="relative z-10 ml-[0px] flex-1 overflow-x-hidden overflow-y-auto px-4 pt-5 pb-28 lg:p-6">{children}</main>
     </div>
   );
 }

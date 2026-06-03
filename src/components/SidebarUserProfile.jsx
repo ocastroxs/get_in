@@ -137,7 +137,7 @@ function AccountMenu({ isOpen, isExpanded, onClose, onLogout }) {
         className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
       >
         <Settings size={16} strokeWidth={1.75} />
-        Configuracoes
+        Configurações
       </Link>
       <button
         type="button"

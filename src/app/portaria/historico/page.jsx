@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import StatCard from "@/components/StatCard";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
@@ -299,8 +302,9 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
   if (!isOpen || !registro) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
           <h2 className="text-lg font-bold text-foreground">Detalhes do Registro</h2>
           <button
@@ -311,7 +315,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-6" data-lenis-prevent>
           <div className="bg-muted/40 rounded-xl p-4 space-y-4 border border-border/50">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
@@ -361,7 +365,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 <MapPin size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor responsavel</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor responsável</p>
                 <p className="text-sm font-semibold text-foreground">{registro.setor}</p>
               </div>
             </div>
@@ -412,6 +416,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -532,6 +537,15 @@ export default function HistoricoPage() {
     });
   }, [registros, busca, filtroStatus, filtroData]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: registrosPagina,
+  } = usePagination(registrosFiltrados);
+
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
     "Em andamento": registros.filter((r) => r.status === "em_andamento").length,
@@ -579,7 +593,7 @@ export default function HistoricoPage() {
           { header: "Telefone", weight: 1 },
           { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor responsavel", weight: 1.1 },
+          { header: "Setor responsável", weight: 1.1 },
           { header: "Setores permitidos", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Saída", weight: 1.1 },
@@ -742,7 +756,7 @@ export default function HistoricoPage() {
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Contato</th>
                 <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Setor responsavel</th>
+                <th className="px-4 py-3">Setor responsável</th>
                 <th className="px-4 py-3">Entrada</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
@@ -765,7 +779,7 @@ export default function HistoricoPage() {
                   </td>
                 </tr>
               ) : (
-                registrosFiltrados.map((r) => (
+                registrosPagina.map((r) => (
                   <LinhaHistorico
                     key={`${getRegistroIdentity(r)}-${r.status}-${r.id || r.dataEntrada || r.dataDaRequisicao}`}
                     registro={r}
@@ -776,6 +790,17 @@ export default function HistoricoPage() {
             </tbody>
           </table>
         </div>
+        {!loading && registrosFiltrados.length > 0 && (
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={registrosPagina.length}
+            onPageChange={setPage}
+            itemLabel="registro(s)"
+          />
+        )}
       </div>
 
       {/* Modal Detalhes */}

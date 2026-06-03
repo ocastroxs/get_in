@@ -6,6 +6,8 @@ import { HISTORICO_VISITAS } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import PaginationControls from "@/components/ui/PaginationControls";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function HistoricoVisitas({ 
   title = "Histórico de Visitas", 
@@ -47,6 +49,15 @@ export default function HistoricoVisitas({
     
     return matchBusca && matchStatus && matchSetor;
   });
+
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: paginaAtual,
+  } = usePagination(filtrados);
 
   const setoresUnicos = ["Todos", ...new Set(data.map(item => item.setor))];
   const statusUnicos = ["Todos", ...new Set(data.map(item => item.status))];
@@ -104,7 +115,7 @@ export default function HistoricoVisitas({
           </thead>
           <tbody className="text-sm divide-y divide-border">
             {filtrados.length > 0 ? (
-              filtrados.map((item, index) => (
+              paginaAtual.map((item, index) => (
                 <tr key={index} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4 font-bold text-foreground whitespace-nowrap">{item.visitante}</td>
                   <td className="px-6 py-4 text-muted-foreground font-medium">{item.empresa}</td>
@@ -156,6 +167,17 @@ export default function HistoricoVisitas({
           </tbody>
         </table>
       </div>
+      {filtrados.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentCount={paginaAtual.length}
+          onPageChange={setPage}
+          itemLabel="registro(s)"
+        />
+      )}
 
       <ModalFiltro
         isOpen={modalAberto}

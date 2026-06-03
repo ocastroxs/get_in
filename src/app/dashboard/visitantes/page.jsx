@@ -12,7 +12,10 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { api } from "@/services/api";
 
@@ -129,13 +132,14 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
     { label: "Empresa", value: visitante.empresa },
     { label: "Setor", value: visitante.setor },
     { label: "Entrada", value: visitante.entrada },
-    { label: "Saida", value: visitante.saida || "-" },
+    { label: "Saída", value: visitante.saida || "-" },
     { label: "Status", value: STATUS_LABEL[visitante.status] || visitante.status },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
             <h2 className="text-sm font-bold text-foreground">Detalhes do Visitante</h2>
@@ -150,7 +154,7 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
             <X size={18} />
           </button>
         </div>
-        <div className="space-y-3 px-6 py-5">
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto px-6 py-5" data-lenis-prevent>
           {detalhes.map((item) => (
             <div key={item.label} className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0 last:pb-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</span>
@@ -160,6 +164,7 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -254,6 +259,15 @@ export default function VisitantesPage() {
     });
   }, [visitantes, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: visitantesPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total:       visitantes.length,
     ativos:      visitantes.filter((v) => v.status === "ativo").length,
@@ -318,7 +332,7 @@ export default function VisitantesPage() {
       <div className="flex flex-col gap-6">
         <Topbar
           title="Visitantes"
-          subtitle="Gestao de acesso e monitoramento de visitantes"
+          subtitle="Gestão de acesso e monitoramento de visitantes"
           buttonText="Novo Visitante"
           buttonHref="/dashboard/visitantes/novo"
         />
@@ -352,7 +366,7 @@ export default function VisitantesPage() {
             value={stats.expirados}
             valueClassName="text-destructive"
             icon={<Clock3 size={17} className="text-destructive" />}
-            sub="saida pendente"
+            sub="saída pendente"
             accentVar="var(--destructive)"
           />
         </div>
@@ -474,7 +488,7 @@ export default function VisitantesPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((visitante) => (
+                  visitantesPagina.map((visitante) => (
                     <LinhaVisitante
                       key={visitante.id}
                       visitante={visitante}
@@ -485,6 +499,15 @@ export default function VisitantesPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={visitantesPagina.length}
+            onPageChange={setPage}
+            itemLabel="visitante(s)"
+          />
         </div>
       </div>
 

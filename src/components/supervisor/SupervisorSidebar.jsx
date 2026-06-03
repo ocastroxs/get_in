@@ -36,7 +36,7 @@ export default function SupervisorSidebar() {
     <>
       <aside
         className={`
-          fixed left-0 top-0 z-50 flex h-screen flex-col
+          fixed left-0 top-0 z-50 hidden h-screen flex-col lg:flex
           overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]/40 pt-8 pb-6 backdrop-blur-[2px]
           transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
           dark:border-white/10 dark:bg-[#020C17]/40
@@ -86,7 +86,36 @@ export default function SupervisorSidebar() {
         className={`hidden shrink-0 transition-all duration-500 lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
         aria-hidden="true"
       />
+      <MobileNav items={SUPERVISOR_ITEMS} isActive={isActive} />
     </>
+  );
+}
+
+function MobileNav({ items, isActive }) {
+  return (
+    <nav
+      className="fixed inset-x-3 bottom-3 z-50 flex gap-1 overflow-x-auto rounded-2xl border border-gray-200/80 bg-white/95 p-2 shadow-lg backdrop-blur lg:hidden dark:border-white/10 dark:bg-[#020C17]/95"
+      aria-label="Navegação do supervisor"
+    >
+      {items.map(({ href, icon: Icon, label }) => {
+        const active = isActive(href);
+
+        return (
+          <Link
+            key={href}
+            href={href}
+            className={`flex min-w-[94px] flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold transition-colors ${
+              active
+                ? 'bg-[#4DA8EA] text-white'
+                : 'text-gray-500 hover:bg-black/5 hover:text-black dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white'
+            }`}
+          >
+            <Icon size={17} strokeWidth={1.8} />
+            <span className="max-w-[88px] truncate">{label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 

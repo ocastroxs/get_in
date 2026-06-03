@@ -21,12 +21,15 @@ import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 
 const STATUS_LABEL = {
-  disponivel: "Disponivel",
+  disponivel: "Disponível",
   emUso: "Em uso",
   perdido: "Perdido",
   alerta: "Alerta",
@@ -78,7 +81,7 @@ function getTipoUsuario(cracha) {
   if (usuario?.funcionarios?.length > 0) return "Funcionário";
   if (usuario?.requisicoesDeVisitas?.length > 0) return "Visitante";
 
-  return "Usuario";
+  return "Usuário";
 }
 
 function getSetorResponsavelFromDescricao(descricao) {
@@ -143,7 +146,7 @@ function ModalCadastrarCracha({ onClose, onSave }) {
 
   async function handleSubmit() {
     if (!codigoTag.trim()) {
-      alert("Preencha o codigo da TAG.");
+      alert("Preencha o código da TAG.");
       return;
     }
 
@@ -159,37 +162,38 @@ function ModalCadastrarCracha({ onClose, onSave }) {
         onSave();
         onClose();
       } else {
-        alert(response.mensagem || "Erro ao cadastrar cracha.");
+        alert(response.mensagem || "Erro ao cadastrar crachá.");
       }
     } catch (error) {
       console.error(error);
-      alert("Erro de conexao com o servidor.");
+      alert("Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <CreditCard size={16} className="text-primary" />
             </div>
-            <h2 className="font-semibold text-foreground">Cadastrar Cracha</h2>
+            <h2 className="font-semibold text-foreground">Cadastrar Crachá</h2>
           </div>
           <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X size={18} />
           </button>
         </div>
 
-        <div className="space-y-4 px-6 py-5">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5" data-lenis-prevent>
           <p className="text-xs text-muted-foreground">
-            O cracha sera criado com uma TAG para identificacao no sistema.
+            O crachá será criado com uma TAG para identificação no sistema.
           </p>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Codigo da TAG *</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Código da TAG *</label>
             <input
               type="text"
               value={codigoTag}
@@ -206,11 +210,12 @@ function ModalCadastrarCracha({ onClose, onSave }) {
           </Button>
           <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
             {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-            Confirmar Cadastro
+            Confirmar cadastro
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -379,6 +384,15 @@ export default function CrachasPage() {
     });
   }, [linhasTabela, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: crachasPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total: linhasTabela.length,
     emUso: linhasTabela.filter((cracha) => cracha.status === "emUso").length,
@@ -399,22 +413,22 @@ export default function CrachasPage() {
 
   async function exportarPDF() {
     if (filtrados.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
-        title: "Crachas",
-        subtitle: "Gestao de crachas e TAGs",
+        title: "Crachás",
+        subtitle: "Gestão de crachás e TAGs",
         fileName: `crachas_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
           statusFiltro !== "Todas" ? `Status: ${STATUS_LABEL[statusFiltro] || statusFiltro}` : null,
         ].filter(Boolean),
         columns: [
-          { header: "Cracha", weight: 1 },
-          { header: "Usuario", weight: 1.3 },
+          { header: "Crachá", weight: 1 },
+          { header: "Usuário", weight: 1.3 },
           { header: "Tipo", weight: 0.9 },
           { header: "TAG", weight: 1.1 },
           { header: "Setor", weight: 1 },
@@ -431,7 +445,7 @@ export default function CrachasPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -439,29 +453,29 @@ export default function CrachasPage() {
     try {
       const response = await api.put(`/cracha/${id}`, { status });
       if (!response.sucesso) {
-        alert(response.mensagem || "Erro ao atualizar cracha.");
+        alert(response.mensagem || "Erro ao atualizar crachá.");
         return;
       }
       await carregarCrachas();
     } catch (error) {
-      console.error("Erro ao atualizar cracha:", error);
-      alert("Erro de conexao com o servidor.");
+      console.error("Erro ao atualizar crachá:", error);
+      alert("Erro de conexão com o servidor.");
     }
   };
 
   const excluirCracha = async (id) => {
-    if (!confirm("Deseja excluir este cracha do inventario?")) return;
+    if (!confirm("Deseja excluir este crachá do inventário?")) return;
 
     try {
       const response = await api.delete(`/cracha/${id}`);
       if (!response.sucesso) {
-        alert(response.mensagem || "Erro ao excluir cracha.");
+        alert(response.mensagem || "Erro ao excluir crachá.");
         return;
       }
       await carregarCrachas();
     } catch (error) {
-      console.error("Erro ao excluir cracha:", error);
-      alert("Erro de conexao com o servidor.");
+      console.error("Erro ao excluir crachá:", error);
+      alert("Erro de conexão com o servidor.");
     }
   };
 
@@ -476,8 +490,8 @@ export default function CrachasPage() {
 
       <div className="flex flex-col gap-6 animate-in fade-in duration-700">
         <Topbar
-          title="Dashboard Crachas"
-          subtitle="Gestao de crachas, usuarios e TAGs"
+          title="Dashboard Crachás"
+          subtitle="Gestão de crachás, usuários e TAGs"
         />
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
@@ -498,7 +512,7 @@ export default function CrachasPage() {
             accentVar="var(--chart-2)"
           />
           <StatCard
-            label="Disponiveis"
+            label="Disponíveis"
             value={stats.disponiveis}
             valueClassName="text-foreground"
             icon={<Check size={17} className="text-foreground" />}
@@ -510,7 +524,7 @@ export default function CrachasPage() {
             value={stats.perdidos}
             valueClassName="text-amber-600"
             icon={<Undo2 size={17} className="text-amber-600" />}
-            sub="precisam reposicao"
+            sub="precisam reposição"
             accentVar="var(--chart-3)"
           />
           <StatCard
@@ -518,7 +532,7 @@ export default function CrachasPage() {
             value={stats.visitantes}
             valueClassName="text-destructive"
             icon={<UserRound size={17} className="text-destructive" />}
-            sub="com cracha"
+            sub="com crachá"
             accentVar="var(--destructive)"
           />
         </div>
@@ -529,7 +543,7 @@ export default function CrachasPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por ID, cracha, TAG, tipo ou usuario..."
+                  placeholder="Buscar por ID, crachá, TAG, tipo ou usuário..."
                   className="h-11 rounded-xl border-border/60 bg-background/80 pl-10 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
@@ -604,21 +618,21 @@ export default function CrachasPage() {
 
         <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-md">
           <div className="border-b border-border bg-muted/20 p-4">
-            <h3 className="text-sm font-bold">Inventario de Crachas</h3>
-            <p className="text-xs text-muted-foreground">Controle de usuarios, setores e TAGs</p>
+            <h3 className="text-sm font-bold">Inventário de Crachás</h3>
+            <p className="text-xs text-muted-foreground">Controle de usuários, setores e TAGs</p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3">Cracha</th>
+                  <th className="px-4 py-3">Crachá</th>
                   <th className="px-4 py-3">Usuário</th>
                   <th className="px-4 py-3">Tipo</th>
                   <th className="px-4 py-3">TAG</th>
                   <th className="px-4 py-3">Setor</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Acoes</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -627,18 +641,18 @@ export default function CrachasPage() {
                     <td colSpan={7} className="py-12 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" size={24} />
-                        <span className="text-sm">Carregando crachas...</span>
+                        <span className="text-sm">Carregando crachás...</span>
                       </div>
                     </td>
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                      Nenhum cracha encontrado com os filtros aplicados.
+                      Nenhum crachá encontrado com os filtros aplicados.
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((cracha) => (
+                  crachasPagina.map((cracha) => (
                     <LinhaCracha
                       key={cracha.rowKey}
                       cracha={cracha}
@@ -650,6 +664,15 @@ export default function CrachasPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={crachasPagina.length}
+            onPageChange={setPage}
+            itemLabel="crachá(s)"
+          />
         </div>
       </div>
 
@@ -662,7 +685,7 @@ export default function CrachasPage() {
         <div className="space-y-4">
           <div className="space-y-2">
             <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-              Status do Cracha
+              Status do Crachá
             </label>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {STATUS_FILTER_OPTS.map((status) => (
@@ -685,7 +708,7 @@ export default function CrachasPage() {
 
           <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
             <p className="text-[10px] leading-relaxed text-primary/80">
-              Os crachas sao exibidos como TAG-1, TAG-2 e assim por diante, seguindo a ordem do ID.
+              Os crachás são exibidos como TAG-1, TAG-2 e assim por diante, seguindo a ordem do ID.
             </p>
           </div>
         </div>

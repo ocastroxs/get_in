@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }) {
       <Sidebar />
       <main
         ref={wrapperRef}
-        className="dashboard-scroll relative z-10 ml-[0px] h-screen flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 lg:p-6"
+        className="dashboard-scroll relative z-10 ml-[0px] h-screen flex-1 overflow-x-hidden overflow-y-auto px-4 pt-5 pb-28 lg:p-6"
       >
         <div ref={contentRef}>{children}</div>
       </main>

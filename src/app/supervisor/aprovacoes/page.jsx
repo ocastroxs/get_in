@@ -20,7 +20,9 @@ import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
 import ModalAprovacaoVisitante from "@/components/supervisor/ModalAprovacaoVisitante";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -227,7 +229,7 @@ export default function AprovacoesSupervisorPage() {
         setRequisicoes([]);
       }
     } catch (error) {
-      console.error("Erro ao carregar requisicoes:", error);
+      console.error("Erro ao carregar requisições:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
@@ -262,6 +264,15 @@ export default function AprovacoesSupervisorPage() {
     });
   }, [requisicoesAgrupadas, busca, filtroStatus]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: requisicoesPagina,
+  } = usePagination(requisicoesFiltradas);
+
   const countAprovadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "aprovado").length;
   const countPendentesHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "pendente").length;
   const countRecusadosHoje = requisicoesHoje.filter((requisicao) => requisicao.status === "recusado").length;
@@ -290,7 +301,7 @@ export default function AprovacoesSupervisorPage() {
       await exportTableToPdf({
         title: "Aprovações do supervisor",
         subtitle: "Solicitações de visitantes por setor",
-          fileName: `aprovações_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
+        fileName: `aprovacoes_supervisor_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           "Data: hoje",
           busca ? `Busca: ${busca}` : null,
@@ -381,7 +392,7 @@ export default function AprovacoesSupervisorPage() {
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="border-b border-border bg-muted/20 p-4">
             <h3 className="text-sm font-bold text-foreground">Listagem de Aprovações de hoje</h3>
-            <p className="text-xs text-muted-foreground">Pendentes ficam validas por ate 24h; depois aparecem como expiradas.</p>
+            <p className="text-xs text-muted-foreground">Pendentes ficam válidas por até 24h; depois aparecem como expiradas.</p>
           </div>
 
           {loading ? (
@@ -408,12 +419,23 @@ export default function AprovacoesSupervisorPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {requisicoesFiltradas.map((requisicao) => (
+                  {requisicoesPagina.map((requisicao) => (
                     <LinhaRequisicao key={requisicao.key} requisicao={requisicao} onAprovar={handleAprovar} />
                   ))}
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && requisicoesFiltradas.length > 0 && (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={requisicoesPagina.length}
+              onPageChange={setPage}
+              itemLabel="aprovação(ões)"
+            />
           )}
         </div>
       </div>

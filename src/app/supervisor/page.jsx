@@ -23,7 +23,9 @@ import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -95,7 +97,7 @@ export default function SupervisorDashboardPage() {
         setRequisicoes([]);
       }
     } catch (error) {
-      console.error("Erro ao carregar requisicoes:", error);
+      console.error("Erro ao carregar requisições:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
@@ -122,6 +124,15 @@ export default function SupervisorDashboardPage() {
       return matchBusca && matchStatus;
     });
   }, [ultimasRequisicoes, busca, filtroStatus]);
+
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: requisicoesPagina,
+  } = usePagination(requisicoesFiltradas);
 
   const countPendentes = ultimasRequisicoes.filter((r) => r.status === "pendente").length;
   const countAprovados = ultimasRequisicoes.filter((r) => r.status === "aprovado").length;
@@ -262,13 +273,13 @@ export default function SupervisorDashboardPage() {
                     <th className="px-4 py-3">Visitante</th>
                     <th className="px-4 py-3">Empresa</th>
                     <th className="px-4 py-3">Setor</th>
-                    <th className="px-4 py-3">Solicitacao</th>
+                    <th className="px-4 py-3">Solicitação</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {requisicoesFiltradas.map((requisicao) => {
+                  {requisicoesPagina.map((requisicao) => {
                     const usuario = requisicao.usuario || {};
                     const status = requisicao.status || "pendente";
                     const statusColor = {
@@ -313,6 +324,17 @@ export default function SupervisorDashboardPage() {
               </table>
             </div>
           )}
+          {!loading && requisicoesFiltradas.length > 0 && (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={requisicoesPagina.length}
+              onPageChange={setPage}
+              itemLabel="requisição(ões)"
+            />
+          )}
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -323,7 +345,7 @@ export default function SupervisorDashboardPage() {
           </InfoPanel>
 
           <InfoPanel icon={<ShieldCheck size={18} />} title="Segurança" accent="green">
-            <InfoItem icon={<Check size={12} />} text="Confira dados pessoais e empresa antes da decisao." />
+            <InfoItem icon={<Check size={12} />} text="Confira dados pessoais e empresa antes da decisão." />
             <InfoItem icon={<Check size={12} />} text="Aprove somente os setores realmente necessários." />
             <InfoItem icon={<Check size={12} />} text="Use o histórico para auditar decisões anteriores." />
           </InfoPanel>
@@ -338,7 +360,7 @@ export default function SupervisorDashboardPage() {
       >
         <div className="space-y-2">
           <label className="ml-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            Status da Requisicao
+            Status da Requisição
           </label>
           <div className="grid grid-cols-1 gap-2">
             {["Todos", "Pendente", "Aprovado", "Recusado", "Expirado"].map((status) => (

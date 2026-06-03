@@ -17,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ModalPortal from "@/components/ui/ModalPortal";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
 import { formatCPF, formatPhone } from "@/lib/utils";
@@ -168,8 +169,9 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
   const observacaoPortaria = getObservacaoPortaria(requisicao);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-200">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-5">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600">
@@ -185,7 +187,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-148px)] space-y-5 overflow-y-auto p-5">
+        <div className="max-h-[calc(90vh-148px)] space-y-5 overflow-y-auto p-5" data-lenis-prevent>
           <section className="rounded-2xl border border-border bg-muted/30 p-4">
             <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-foreground">
               <Users size={16} className="text-primary" />
@@ -253,7 +255,7 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
             <section className="rounded-2xl border border-border bg-muted/30 p-4">
               <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-foreground">
                 <FileText size={16} className="text-primary" />
-                Descricao da requisicao
+                Descrição da requisição
               </h3>
               <p className="text-sm leading-relaxed text-muted-foreground">{requisicao.descricao}</p>
             </section>
@@ -285,11 +287,12 @@ export default function ModalAprovacaoVisitante({ isOpen, onClose, requisicao, o
           </Button>
           <Button type="button" onClick={handleConfirmar} className="h-10 flex-1 rounded-xl" disabled={loading}>
             {loading ? <Loader2 size={14} className="mr-2 animate-spin" /> : <CheckCircle2 size={14} className="mr-2" />}
-            Salvar analise
+            Salvar análise
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </ModalPortal>
   );
 }
 

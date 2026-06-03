@@ -26,14 +26,17 @@ import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatPhone } from "@/lib/utils";
 
 const STATUS_LABEL = {
   ativo: "Dentro",
-  saida: "Saida",
+  saida: "Saída",
   alerta: "Alerta",
   recusado: "Recusado"
 };
@@ -55,7 +58,7 @@ const STATUS_DOT = {
 const STATUS_FILTERS = [
   { label: "Todos", value: "Todos" },
   { label: "Dentro", value: "ativo" },
-  { label: "Saida", value: "saida" }
+  { label: "Saída", value: "saida" }
 ];
 
 const EDIT_INPUT_CLASS =
@@ -456,8 +459,9 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-lg font-semibold text-foreground">Check-out</h2>
           <button
@@ -469,7 +473,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           <div className="space-y-3 rounded-lg bg-muted/40 p-3">
             <div className="flex items-start gap-2">
               <Users size={16} className="mt-0.5 text-muted-foreground" />
@@ -537,8 +541,9 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
             )}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -736,11 +741,12 @@ function ModalEditarVisitante({
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in"
-      >
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in"
+        >
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -757,7 +763,7 @@ function ModalEditarVisitante({
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
@@ -799,11 +805,11 @@ function ModalEditarVisitante({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor responsavel</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor responsável</label>
               <SelectField
                 value={form.setor}
                 onChange={(setor) => setField("setor", setor)}
-                placeholder="Selecione o setor responsavel"
+                placeholder="Selecione o setor responsável"
                 emptyLabel="Nenhum setor cadastrado"
                 options={setorOptions}
                 Icon={MapPin}
@@ -861,8 +867,9 @@ function ModalEditarVisitante({
             )}
           </Button>
         </div>
-      </form>
-    </div>
+        </form>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -897,8 +904,9 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -915,7 +923,7 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
@@ -925,7 +933,7 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
 
           <p className="text-sm text-muted-foreground">
             Tem certeza que deseja excluir <strong className="text-foreground">{visitante.nome || "este visitante"}</strong>?
-            Esta acao remove o cadastro e os registros vinculados.
+            Esta ação remove o cadastro e os registros vinculados.
           </p>
         </div>
 
@@ -958,8 +966,9 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
             )}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -1145,6 +1154,15 @@ export default function PortariaPage() {
     });
   }, [visitantes, busca, filtroStatus]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: visitantesPagina,
+  } = usePagination(visitantesFiltrados);
+
   function handleCheckout(visitante) {
     setVisitanteSelecionado(visitante);
     setModalCheckoutAberto(true);
@@ -1224,7 +1242,7 @@ export default function PortariaPage() {
         columns: [
           { header: "Nome", weight: 1.5 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor responsavel", weight: 1 },
+          { header: "Setor responsável", weight: 1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Celular", weight: 1 },
           { header: "E-mail", weight: 1.4 },
@@ -1273,11 +1291,11 @@ export default function PortariaPage() {
             sub="No local agora"
           />
           <StatCard
-            label="Saidas"
+            label="Saídas"
             value={countSaidas}
             icon={<LogOut size={20} className="text-blue-600" />}
             accentVar="#2563eb"
-            sub="Com saida registrada"
+            sub="Com saída registrada"
           />
           <StatCard
             label="Empresas Presentes"
@@ -1295,7 +1313,7 @@ export default function PortariaPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, empresa, setor responsavel, setor permitido, celular ou e-mail..."
+                  placeholder="Buscar por nome, empresa, setor responsável, setor permitido, celular ou e-mail..."
                   className={SEARCH_INPUT_CLASS}
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -1378,7 +1396,7 @@ export default function PortariaPage() {
                 <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
-                  <th className="px-4 py-3">Setor responsavel</th>
+                  <th className="px-4 py-3">Setor responsável</th>
                   <th className="px-4 py-3">Entrada</th>
                   <th className="px-4 py-3">Celular</th>
                   <th className="px-4 py-3">E-mail</th>
@@ -1406,7 +1424,7 @@ export default function PortariaPage() {
                     </td>
                   </tr>
                 ) : (
-                  visitantesFiltrados.map((v, index) => (
+                  visitantesPagina.map((v, index) => (
                     <LinhaVisitante
                       key={`${v.id || "visitante"}-${v.dataEntrada || v.status || index}`}
                       visitante={v}
@@ -1419,6 +1437,15 @@ export default function PortariaPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={visitantesPagina.length}
+            onPageChange={setPage}
+            itemLabel="visitante(s)"
+          />
         </div>
       </div>
 

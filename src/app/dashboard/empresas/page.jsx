@@ -23,7 +23,10 @@ import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { onlyDigits } from "@/lib/utils";
@@ -118,8 +121,9 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+    <ModalPortal>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl max-h-[calc(100vh-2rem)]">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -132,7 +136,7 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
           </button>
         </div>
 
-        <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+        <div className="grid max-h-[min(68vh,560px)] gap-4 overflow-y-auto px-6 py-5 md:grid-cols-2">
           {erro && (
             <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700">
               {erro}
@@ -141,7 +145,7 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
           <CampoEmpresa label="Nome *" value={form.nome} onChange={set("nome")} className="md:col-span-2" />
           <CampoEmpresa label="Categoria" value={form.categoria || ""} onChange={set("categoria")} />
           <CampoEmpresa label="CNPJ" value={form.cnpj || ""} onChange={set("cnpj")} />
-          <CampoEmpresa label="Responsavel" value={form.responsavel || ""} onChange={set("responsavel")} />
+          <CampoEmpresa label="Responsável" value={form.responsavel || ""} onChange={set("responsavel")} />
           <CampoEmpresa label="Celular" value={form.celular || ""} onChange={set("celular")} />
           <CampoEmpresa label="Contato" value={form.contato || ""} onChange={set("contato")} />
           <div>
@@ -167,6 +171,7 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -186,8 +191,9 @@ function CampoEmpresa({ label, value, onChange, className = "" }) {
 
 function ModalConfirmarExclusao({ empresa, onClose, onConfirm }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-sm rounded-2xl border border-border bg-card shadow-xl">
+    <ModalPortal>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-xl max-h-[calc(100vh-2rem)] overflow-hidden">
         <div className="flex items-center gap-3 border-b border-border px-6 py-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-destructive/10">
             <AlertTriangle size={16} className="text-destructive" />
@@ -206,6 +212,7 @@ function ModalConfirmarExclusao({ empresa, onClose, onConfirm }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -336,6 +343,14 @@ export default function EmpresasPage() {
   }, [empresas]);
 
   const maxVisitantes = useMemo(() => Math.max(...empresas.map((e) => e.visitantes || 0), 1), [empresas]);
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: empresasPagina,
+  } = usePagination(empresasFiltradas);
 
   const aplicarFiltros = () => {
     setFiltroStatus(tempFiltroStatus);
@@ -349,14 +364,14 @@ export default function EmpresasPage() {
 
   async function exportarPDF() {
     if (empresasFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
         title: "Empresas Terceirizadas",
-        subtitle: "Gestao de empresas terceirizadas e visitantes",
+        subtitle: "Gestão de empresas terceirizadas e visitantes",
         fileName: `empresas_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
@@ -365,10 +380,10 @@ export default function EmpresasPage() {
         columns: [
           { header: "Empresa", weight: 1.4 },
           { header: "CNPJ", weight: 1 },
-          { header: "Responsavel", weight: 1.1 },
+          { header: "Responsável", weight: 1.1 },
           { header: "Contato", weight: 1 },
           { header: "Visitantes", weight: 0.8 },
-          { header: "Ultima Visita", weight: 1 },
+          { header: "Última Visita", weight: 1 },
           { header: "Status", weight: 0.8 },
         ],
         rows: empresasFiltradas.map((empresa) => [
@@ -383,7 +398,7 @@ export default function EmpresasPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -591,12 +606,12 @@ export default function EmpresasPage() {
                   </td>
                 </tr>
               ) : (
-                empresasFiltradas.map((emp, i) => (
+                empresasPagina.map((emp, i) => (
                   <LinhaEmpresa
                     key={emp.id || i}
                     emp={emp}
                     maxVisitantes={maxVisitantes}
-                    index={i}
+                    index={(page - 1) * pageSize + i}
                     onEdit={(data) => setModalEmpresa({ open: true, data })}
                     onDelete={(data) => setModalExcluir({ open: true, data })}
                   />
@@ -605,6 +620,15 @@ export default function EmpresasPage() {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentCount={empresasPagina.length}
+          onPageChange={setPage}
+          itemLabel="empresa(s)"
+        />
       </div>
 
       {/* Modal de Filtro Padronizado */}

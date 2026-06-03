@@ -19,9 +19,11 @@ import {
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
@@ -187,7 +189,7 @@ function dedupeRequisicoesPorVisitante(requisicoes) {
 
 function DescricaoVisual({ requisicao }) {
   const chips = [
-    { label: "Setor responsavel", value: requisicao.setorResponsavel },
+    { label: "Setor responsável", value: requisicao.setorResponsavel },
     { label: "Setores permitidos", value: requisicao.setor },
     { label: "Motivo", value: requisicao.motivo },
   ].filter((item) => item.value && item.value !== "-");
@@ -234,7 +236,7 @@ export default function PortariaAprovacoesPage() {
         )
       );
     } catch (error) {
-      console.error("Erro ao carregar aprovacoes da portaria:", error);
+      console.error("Erro ao carregar aprovações da portaria:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
@@ -260,6 +262,15 @@ export default function PortariaAprovacoesPage() {
     });
   }, [busca, filtroData, filtroStatus, requisicoes]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: requisicoesPagina,
+  } = usePagination(requisicoesFiltradas);
+
   const stats = useMemo(() => ({
     aprovadosHoje: requisicoes.filter((requisicao) => requisicao.status === "aprovado" && isToday(requisicao.dataDaRequisicao)).length,
     recusadosHoje: requisicoes.filter((requisicao) => requisicao.status === "recusado" && isToday(requisicao.dataDaRequisicao)).length,
@@ -282,13 +293,13 @@ export default function PortariaAprovacoesPage() {
 
   async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     await exportTableToPdf({
-      title: "Aprovacoes da portaria",
-      subtitle: "Resultados de analise recebidos do supervisor",
+      title: "Aprovações da portaria",
+      subtitle: "Resultados de análise recebidos do supervisor",
       fileName: `aprovacoes_portaria_${new Date().toISOString().split("T")[0]}.pdf`,
       filters: [
         busca ? `Busca: ${busca}` : null,
@@ -299,7 +310,7 @@ export default function PortariaAprovacoesPage() {
         { header: "Visitante", weight: 1.4 },
         { header: "CPF", weight: 1 },
         { header: "Empresa", weight: 1.1 },
-        { header: "Setor responsavel", weight: 1 },
+        { header: "Setor responsável", weight: 1 },
         { header: "Setores permitidos", weight: 1 },
         { header: "Motivo", weight: 1 },
         { header: "Status", weight: 0.8 },
@@ -327,8 +338,8 @@ export default function PortariaAprovacoesPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatCard label="Aprovados hoje" value={stats.aprovadosHoje} icon={<CheckCircle2 size={18} className="text-green-600" />} accentVar="#16a34a" sub="Entram como dentro" />
           <StatCard label="Recusados hoje" value={stats.recusadosHoje} icon={<XCircle size={18} className="text-red-600" />} accentVar="#dc2626" sub="Acesso negado" />
-          <StatCard label="Setores permitidos" value={stats.setores} icon={<ShieldCheck size={18} className="text-blue-600" />} accentVar="#2563eb" sub="Com decisao hoje" />
-          <StatCard label="Com observacao" value={stats.comObservacao} icon={<Eye size={18} className="text-amber-600" />} accentVar="#d97706" sub="Registro da portaria" />
+          <StatCard label="Setores permitidos" value={stats.setores} icon={<ShieldCheck size={18} className="text-blue-600" />} accentVar="#2563eb" sub="Com decisão hoje" />
+          <StatCard label="Com observação" value={stats.comObservacao} icon={<Eye size={18} className="text-amber-600" />} accentVar="#d97706" sub="Registro da portaria" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -337,7 +348,7 @@ export default function PortariaAprovacoesPage() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por visitante, CPF, empresa, setor responsavel ou setor permitido..."
+                  placeholder="Buscar por visitante, CPF, empresa, setor responsável ou setor permitido..."
                   className="h-11 rounded-xl pl-10"
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
@@ -388,14 +399,14 @@ export default function PortariaAprovacoesPage() {
                   <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3">Visitante</th>
                     <th className="px-4 py-3">Empresa</th>
-                    <th className="px-4 py-3">Descricao</th>
-                    <th className="px-4 py-3">Solicitacao</th>
+                    <th className="px-4 py-3">Descrição</th>
+                    <th className="px-4 py-3">Solicitação</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {requisicoesFiltradas.map((requisicao) => (
+                  {requisicoesPagina.map((requisicao) => (
                     <tr key={requisicao.key} className="transition-colors hover:bg-muted/40">
                       <td className="px-4 py-3">
                         <p className="text-sm font-bold text-foreground">{requisicao.visitante}</p>
@@ -412,7 +423,7 @@ export default function PortariaAprovacoesPage() {
                       <td className="px-4 py-3 text-right">
                         <Link href="/portaria/historico">
                           <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] font-bold">
-                            Historico
+                            Histórico
                           </Button>
                         </Link>
                       </td>
@@ -421,6 +432,17 @@ export default function PortariaAprovacoesPage() {
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && requisicoesFiltradas.length > 0 && (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={requisicoesPagina.length}
+              onPageChange={setPage}
+              itemLabel="aprovação(ões)"
+            />
           )}
         </div>
       </div>

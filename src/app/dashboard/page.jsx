@@ -454,7 +454,7 @@ export default function DashboardPage() {
             value={stats.visitantes.value}
             valueClassName="text-primary"
             icon={<Users size={16} className="text-primary" strokeWidth={1.75} />}
-            sub="Visitantes unicos nas requisicoes"
+            sub="Visitantes únicos nas requisições"
             insight={`${stats.ativos.value} ativo(s) agora`}
             accentVar="var(--primary)"
           />
@@ -465,16 +465,16 @@ export default function DashboardPage() {
             valueClassName="text-secondary"
             icon={<ArrowRightLeft size={16} className="text-secondary" strokeWidth={1.75} />}
             sub="Registros validados"
-            insight="Historico acumulado"
+            insight="Histórico acumulado"
             accentVar="var(--secondary)"
           />
           <StatCard
             compact
-            label="Saidas"
+            label="Saídas"
             value={stats.saidas.value}
             valueClassName="text-red-600"
             icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
-            sub="Saidas registradas"
+            sub="Saídas registradas"
             insight={`${stats.saidas.aindaDentro} ainda dentro`}
             accentVar="#dc2626"
           />
@@ -484,8 +484,8 @@ export default function DashboardPage() {
             value={stats.ativos.value}
             valueClassName="text-blue-900"
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
-            sub="Permanencia ativa"
-            insight={`${stats.ativos.alertas} alerta(s) de permanencia`}
+            sub="Permanência ativa"
+            insight={`${stats.ativos.alertas} alerta(s) de permanência`}
             accentVar="#1e3a8a"
           />
         </section>
@@ -519,7 +519,7 @@ export default function DashboardPage() {
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
         <Topbar
           title="Dashboard Geral"
-          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentacoes e saidas."
+          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentações e saídas."
         />
 
         <section className="grid gap-6 xl:grid-cols-12">
@@ -530,8 +530,8 @@ export default function DashboardPage() {
               value={stats.visitantes.value}
               valueClassName="text-primary"
               icon={<Users size={18} className="text-primary" strokeWidth={1.75} />}
-              sub="Visitantes unicos nas requisicoes"
-              insight={`${stats.ativos.value} pessoa(s) em permanencia ativa`}
+              sub="Visitantes únicos nas requisições"
+              insight={`${stats.ativos.value} pessoa(s) em permanência ativa`}
               accentVar="var(--primary)"
             />
           </div>
@@ -543,16 +543,16 @@ export default function DashboardPage() {
               valueClassName="text-secondary"
               icon={<ArrowRightLeft size={17} className="text-secondary" strokeWidth={1.75} />}
               sub="Registros de entrada acumulados"
-              insight="Historico completo carregado"
+              insight="Histórico completo carregado"
               accentVar="var(--secondary)"
             />
             <StatCard
-              label="Saidas"
+              label="Saídas"
               value={stats.saidas.value}
               valueClassName="text-red-600"
               icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
-              sub="Saidas registradas"
-              insight={`${saidasPct}% das entradas com saida registrada`}
+              sub="Saídas registradas"
+              insight={`${saidasPct}% das entradas com saída registrada`}
               accentVar="#dc2626"
             />
             <StatCard
@@ -560,8 +560,8 @@ export default function DashboardPage() {
               value={stats.ativos.value}
               valueClassName="text-blue-900"
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
-              sub="Pessoas em permanencia ativa"
-              insight={`${stats.ativos.alertas} alerta(s) de permanencia`}
+              sub="Pessoas em permanência ativa"
+              insight={`${stats.ativos.alertas} alerta(s) de permanência`}
               accentVar="#1e3a8a"
             />
           </div>
