@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
 import { STATUS_VISITANTES } from "@/lib/mockData";
+import PeriodToggle from "@/components/ui/PeriodToggle";
 
 function renderActiveSector(props) {
   const outerRadius = Number(props.outerRadius) || 0;
@@ -71,7 +72,7 @@ export default function StatusVisitantesChart({
   weekData = STATUS_VISITANTES,
   monthData = STATUS_VISITANTES,
   title = "Status dos Visitantes",
-  subtitle = "Situacao atual com leitura imediata de risco e permanencia.",
+  subtitle = "Situação atual com leitura imediata de risco e permanência.",
   showPeriodToggle = true
 }) {
   const [view, setView] = useState("hoje");
@@ -95,8 +96,11 @@ export default function StatusVisitantesChart({
   }, [chartData]);
 
   const compactMobile = mobileLayout === "list";
-  const chartSize = 176;
-  const mobileChartSize = 132;
+  const chartSize = 220;
+  const mobileChartSize = 168;
+  const currentChartSize = compactMobile ? mobileChartSize : chartSize;
+  const innerRadius = compactMobile ? 54 : 72;
+  const outerRadius = compactMobile ? 78 : 102;
 
   return (
     <div className={`bg-card text-card-foreground rounded-[24px] border border-border flex flex-col shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500 ${compactMobile ? "gap-4 p-5" : "gap-4 p-5 min-h-[320px]"}`}>
@@ -108,138 +112,71 @@ export default function StatusVisitantesChart({
             <p className="max-w-[280px] text-sm text-muted-foreground">{subtitle}</p>
           </div>
 
-          {showPeriodToggle ? (
-          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
-            {["hoje", "semana", "mes"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setView(item)}
-                className={[
-                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
-                  view === item
-                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
-                    : "hover:bg-white/80 hover:text-foreground",
-                ].join(" ")}
-              >
-                {item === "mes" ? "mês" : item}
-              </button>
-            ))}
-          </div>
-          ) : null}
+          {showPeriodToggle ? <PeriodToggle value={view} onChange={setView} /> : null}
         </div>
       </div>
 
-      {compactMobile ? (
-        <div className="flex flex-col gap-3">
-          <div className="relative mx-auto shrink-0">
-            <ResponsiveContainer width={mobileChartSize} height={mobileChartSize}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={58}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                  strokeWidth={3}
-                  stroke="var(--card)"
-                  paddingAngle={2}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                  activeShape={renderActiveSector}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={<StatusPieTooltip total={total} peakItem={peakItem} />}
-                  wrapperStyle={{ outline: "none", zIndex: 20 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-2xl font-semibold text-foreground">{total}</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">total</span>
-            </div>
+      <div
+        className={`rounded-2xl border border-border/70 bg-muted/35 p-4 ${
+          compactMobile
+            ? "flex flex-col gap-4"
+            : "grid flex-1 grid-cols-[minmax(220px,260px)_minmax(0,1fr)] items-center gap-5"
+        }`}
+      >
+        <div className="relative mx-auto shrink-0">
+          <ResponsiveContainer width={currentChartSize} height={currentChartSize}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                innerRadius={innerRadius}
+                outerRadius={outerRadius}
+                dataKey="value"
+                startAngle={90}
+                endAngle={-270}
+                strokeWidth={3}
+                stroke="var(--card)"
+                paddingAngle={2}
+                animationDuration={1500}
+                animationEasing="ease-out"
+                activeShape={renderActiveSector}
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={index} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={<StatusPieTooltip total={total} peakItem={peakItem} />}
+                wrapperStyle={{ outline: "none", zIndex: 20 }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className={`${compactMobile ? "text-2xl" : "text-3xl"} font-mono font-semibold text-foreground`}>{total}</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">total</span>
           </div>
+        </div>
 
+        <div className={`grid min-w-0 content-center gap-2.5 ${compactMobile ? "grid-cols-1" : "grid-cols-[repeat(auto-fit,minmax(170px,1fr))]"}`}>
           {chartData.map((item, index) => (
             <div
               key={item.name}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3 py-3 animate-in fade-in slide-in-from-right-2 duration-700"
+              className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 px-3 py-3 hover:bg-background transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
               style={{ animationDelay: `${600 + index * 50}ms` }}
             >
-              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="truncate text-sm text-foreground">{item.name}</span>
+                <span className="min-w-0 truncate text-sm text-muted-foreground">{item.name}</span>
               </div>
-              <span className="shrink-0 text-base font-semibold text-foreground">{item.value}</span>
+              <span className="ml-2 min-w-7 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center text-xs font-bold text-foreground">{item.value}</span>
             </div>
           ))}
         </div>
-      ) : (
-        <div className="flex flex-1 items-center gap-8">
-          <div className="relative shrink-0">
-            <ResponsiveContainer width={chartSize} height={chartSize}>
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={56}
-                  outerRadius={80}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                  strokeWidth={3}
-                  stroke="var(--card)"
-                  paddingAngle={2}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                  activeShape={renderActiveSector}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={<StatusPieTooltip total={total} peakItem={peakItem} />}
-                  wrapperStyle={{ outline: "none", zIndex: 20 }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-mono text-3xl font-semibold text-foreground">{total}</span>
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">total</span>
-            </div>
-          </div>
-
-          <div className="flex flex-1 flex-col justify-center gap-3 max-w-[280px]">
-            {chartData.map((item, index) => (
-              <div
-                key={item.name}
-                className="flex w-fit max-w-full items-center gap-3 rounded-xl p-2.5 hover:bg-muted/50 transition-all hover:translate-x-0.5 animate-in fade-in slide-in-from-right-2 duration-700"
-                style={{ animationDelay: `${600 + index * 50}ms` }}
-              >
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="truncate text-sm text-muted-foreground">{item.name}</span>
-                </div>
-                <span className="min-w-6 shrink-0 text-right text-sm font-semibold text-foreground">{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

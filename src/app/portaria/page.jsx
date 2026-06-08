@@ -1,6 +1,5 @@
 "use client";
 
-import { getActiveLanguage } from "@/lib/i18n-core";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -26,267 +25,41 @@ import { Input } from "@/components/ui/input";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
-import { formatPhone } from "@/lib/utils";
-
-const STATUS_LABEL = {
-  ativo: "Dentro",
-  saida: "Saida",
-  alerta: "Alerta",
-  recusado: "Recusado"
-};
-
-const STATUS_STYLE = {
-  ativo: "bg-green-100 text-green-700",
-  saida: "bg-blue-100 text-blue-700",
-  alerta: "bg-red-100 text-red-600",
-  recusado: "bg-red-100 text-red-600"
-};
-
-const STATUS_DOT = {
-  ativo: "bg-green-500",
-  saida: "bg-blue-500",
-  alerta: "bg-red-500",
-  recusado: "bg-red-500"
-};
-
-const STATUS_FILTERS = [
-  { label: "Todos", value: "Todos" },
-  { label: "Dentro", value: "ativo" },
-  { label: "Saida", value: "saida" }
-];
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  buildSelectOptions,
+  dedupeVisitantesPorIdentidade,
+  formatPhone,
+  formatPortariaDateTime,
+  getEmpresaNome,
+  getResponseArray,
+  getSetorLabel,
+  getSetoresPermitidosLabel,
+  getSetorNome,
+  isToday,
+  isValidEmail,
+  maskCPF,
+  maskPhone,
+  normalizePortariaVisitante,
+  onlyDigits,
+  pickFirst,
+  PORTARIA_STATUS_DOT,
+  PORTARIA_STATUS_FILTERS,
+  PORTARIA_STATUS_LABEL,
+  PORTARIA_STATUS_STYLE,
+} from "@/lib/portaria-data";
 
 const EDIT_INPUT_CLASS =
   "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none";
 
 const SEARCH_INPUT_CLASS =
   "h-11 rounded-xl border-border/60 bg-card text-sm shadow-xs transition-all duration-200 hover:border-primary/30 hover:bg-accent/50 focus:border-primary/50 focus:ring-0 focus:ring-offset-0 outline-none pl-10";
-
-const BACKEND_STATUS_TO_PORTARIA = {
-  aprovado: "ativo",
-  aprovada: "ativo",
-  ativo: "ativo",
-  dentro: "ativo",
-  liberado: "ativo",
-  pendente: "pendente",
-  recusado: "recusado",
-  rejeitado: "recusado",
-  negado: "recusado",
-  saida: "saida",
-  saiu: "saida",
-  finalizado: "saida",
-  concluido: "saida",
-  alerta: "alerta"
-};
-
-function pickFirst(...values) {
-  return (
-    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
-    ""
-  );
-}
-
-function getDescricaoValue(descricao, label) {
-  if (typeof descricao !== "string") return "";
-
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
-
-  return match?.[1]?.trim() || "";
-}
-
-function isToday(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-
-  const today = new Date();
-  return date.toDateString() === today.toDateString();
-}
-
-function splitSetores(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item && item.toLowerCase() !== "nenhum");
-}
-
-function getSetorResponsavelFromDescricao(descricao, fallback = "") {
-  return pickFirst(
-    getDescricaoValue(descricao, "Setor responsavel"),
-    getDescricaoValue(descricao, "Area responsavel"),
-    getDescricaoValue(descricao, "Setor"),
-    fallback
-  );
-}
-
-function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
-  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
-
-  if (setoresPermitidos.length > 0) {
-    return setoresPermitidos;
-  }
-
-  return splitSetores(fallback);
-}
-
-function normalizeStatus(value) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  if (normalized.includes("aguard")) {
-    return "pendente";
-  }
-
-  return BACKEND_STATUS_TO_PORTARIA[normalized] || normalized || "pendente";
-}
-
-function getResponseArray(response, keys = []) {
-  if (!response || typeof response !== "object" || !response.sucesso) {
-    return [];
-  }
-
-  if (Array.isArray(response.data)) {
-    return response.data;
-  }
-
-  for (const key of keys) {
-    if (Array.isArray(response.data?.[key])) {
-      return response.data[key];
-    }
-
-    if (Array.isArray(response[key])) {
-      return response[key];
-    }
-  }
-
-  return [];
-}
-
-function getEmpresaNome(registro) {
-  return String(
-    registro?.nome ||
-      registro?.empresa ||
-      registro?.empresa_visitante ||
-      registro?.nomeFantasia ||
-      registro?.razaoSocial ||
-      registro?.razao_social ||
-      ""
-  ).trim();
-}
-
-function getSetorNome(registro) {
-  return String(
-    registro?.nome ||
-      registro?.setor ||
-      registro?.setores?.nome ||
-      registro?.departamento?.nome ||
-      ""
-  ).trim();
-}
-
-function buildSelectOptions(registros, getLabel) {
-  const options = new Map();
-
-  registros.forEach((registro) => {
-    const label = getLabel(registro);
-
-    if (label) {
-      options.set(label.toLowerCase(), {
-        id: pickFirst(registro?.id, registro?.idSetor, registro?.idDepartamento),
-        value: label,
-        label
-      });
-    }
-  });
-
-  return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label, getActiveLanguage()));
-}
-
-function normalizeVisitante(visitante) {
-  const usuario = visitante?.usuario || {};
-  const departamento = visitante?.departamento || visitante?.setores || {};
-  const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
-  const descricao = visitante?.descricao || "";
-  const setorBackend = pickFirst(visitante?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"));
-  const setorResponsavel = getSetorResponsavelFromDescricao(descricao, setorBackend);
-  const setoresPermitidos = getSetoresPermitidosFromDescricao(descricao, setorBackend);
-  const dataEntradaLog = pickFirst(
-    visitante?.dataEntrada,
-    visitante?.entrada,
-    visitante?.dataDeEntrada,
-    visitante?.dataDaEntrada
-  );
-  const dataEntrada = pickFirst(dataEntradaLog, visitante?.dataDaRequisicao);
-  const dataSaida = pickFirst(
-    visitante?.dataSaida,
-    visitante?.saida,
-    visitante?.dataDeSaida,
-    visitante?.dataDaSaida
-  );
-  const status = !visitante?.status && dataEntrada && !dataSaida
-    ? "ativo"
-    : normalizeStatus(visitante?.status);
-
-  return {
-    ...visitante,
-    id: pickFirst(visitante?.id, visitante?.idLog, visitante?.idRegistro, visitante?.idRequisicao),
-    idUsuario: pickFirst(visitante?.idUsuario, usuario?.id, visitante?.id),
-    nome: pickFirst(visitante?.nome, visitante?.visitante, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
-    cpf: pickFirst(visitante?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
-    telefone: pickFirst(
-      visitante?.telefone,
-      visitante?.celular,
-      visitante?.cel,
-      usuario?.celular,
-      usuario?.telefone,
-      getDescricaoValue(descricao, "Telefone")
-    ),
-    email: pickFirst(
-      visitante?.email,
-      usuario?.email,
-      getDescricaoValue(descricao, "Email"),
-      getDescricaoValue(descricao, "E-mail")
-    ),
-    empresa: pickFirst(
-      visitante?.empresa,
-      visitante?.empresa_visitante,
-      usuario?.empresa,
-      getDescricaoValue(descricao, "Empresa")
-    ),
-    setor: setorResponsavel,
-    setorResponsavel,
-    setoresPermitidos,
-    setoresAcesso: setoresPermitidos,
-    dataEntrada,
-    dataSaida,
-    dataDaRequisicao: pickFirst(visitante?.dataDaRequisicao, visitante?.createdAt),
-    status,
-    statusOriginal: visitante?.status,
-    podeCheckout: Boolean(
-      visitante?.podeCheckout ||
-        (!dataSaida && status === "ativo")
-    )
-  };
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(getActiveLanguage(), {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(date);
-}
 
 function formatDuration(startDate) {
   if (!startDate) return "—";
@@ -305,97 +78,6 @@ function formatDuration(startDate) {
   }
 
   return `${hours}h ${minutes.toString().padStart(2, "0")}min`;
-}
-
-function getVisitanteIdentity(registro) {
-  const usuario = registro?.usuario || {};
-  const idUsuario = pickFirst(registro?.idUsuario, usuario?.id);
-  const cpf = onlyDigits(pickFirst(registro?.cpf, usuario?.cpf));
-  const email = String(pickFirst(registro?.email, usuario?.email)).trim().toLowerCase();
-  const nome = String(pickFirst(registro?.nome, registro?.visitante, usuario?.nome)).trim().toLowerCase();
-  const id = pickFirst(registro?.id, registro?.idVisitante);
-
-  if (idUsuario) return `usuario:${idUsuario}`;
-  if (cpf) return `cpf:${cpf}`;
-  if (email) return `email:${email}`;
-  if (nome) return `nome:${nome}`;
-
-  return `registro:${id || ""}`;
-}
-
-function getVisitanteTimestamp(registro) {
-  const datas = [
-    registro?.dataSaida,
-    registro?.saida,
-    registro?.dataEntrada,
-    registro?.entrada,
-    registro?.dataDaRequisicao,
-    registro?.validade
-  ];
-
-  for (const data of datas) {
-    const timestamp = new Date(data).getTime();
-
-    if (!Number.isNaN(timestamp)) {
-      return timestamp;
-    }
-  }
-
-  return Number(registro?.id || registro?.idRequisicao || 0);
-}
-
-function dedupeVisitantesPorIdentidade(registros) {
-  const porVisitante = new Map();
-
-  registros.forEach((registro) => {
-    const key = getVisitanteIdentity(registro);
-    const atual = porVisitante.get(key);
-
-    if (!atual || getVisitanteTimestamp(registro) >= getVisitanteTimestamp(atual)) {
-      porVisitante.set(key, registro);
-    }
-  });
-
-  return Array.from(porVisitante.values());
-}
-
-function getSetorLabel(visitante) {
-  return visitante?.setorResponsavel || visitante?.setor || "—";
-}
-
-function getSetoresPermitidosLabel(visitante) {
-  if (Array.isArray(visitante?.setoresPermitidos) && visitante.setoresPermitidos.length > 0) {
-    return visitante.setoresPermitidos.join(", ");
-  }
-
-  if (Array.isArray(visitante?.setoresAcesso) && visitante.setoresAcesso.length > 0) {
-    return visitante.setoresAcesso.join(", ");
-  }
-
-  return "—";
-}
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function maskCPF(value) {
-  return onlyDigits(value)
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-function maskPhone(value) {
-  return onlyDigits(value)
-    .slice(0, 11)
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{4,5})(\d{4})$/, "$1-$2");
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
 function getVisitanteForm(visitante) {
@@ -426,6 +108,7 @@ function buildVisitanteDescricao(form) {
 
 function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   async function handleCheckout() {
     setLoading(true);
@@ -439,15 +122,27 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
       const response = await api.post("/portaria/checkout", payload);
 
       if (response.sucesso) {
-        alert("Check-out realizado com sucesso!");
+        showToast({
+          type: "success",
+          title: "Check-out realizado",
+          description: `${visitante?.nome || "Visitante"} teve a saída registrada.`,
+        });
         onConfirm();
         onClose();
       } else {
-        alert(response.mensagem || "Erro ao realizar check-out.");
+        showToast({
+          type: "error",
+          title: "Não foi possível realizar o check-out",
+          description: response.mensagem || "Revise o visitante selecionado e tente novamente.",
+        });
       }
     } catch (error) {
       console.error(error);
-      alert("Erro de conexão com o servidor.");
+      showToast({
+        type: "error",
+        title: "Erro de conexão",
+        description: "Não foi possível conectar à API.",
+      });
     } finally {
       setLoading(false);
     }
@@ -456,8 +151,9 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
         <div className="flex items-center justify-between border-b border-border p-4">
           <h2 className="text-lg font-semibold text-foreground">Check-out</h2>
           <button
@@ -469,7 +165,7 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           <div className="space-y-3 rounded-lg bg-muted/40 p-3">
             <div className="flex items-start gap-2">
               <Users size={16} className="mt-0.5 text-muted-foreground" />
@@ -537,8 +233,9 @@ function ModalCheckout({ isOpen, onClose, visitante, onConfirm }) {
             )}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
@@ -736,11 +433,12 @@ function ModalEditarVisitante({
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in"
-      >
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <form
+          onSubmit={handleSubmit}
+          className="max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in"
+        >
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -757,7 +455,7 @@ function ModalEditarVisitante({
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
@@ -799,11 +497,11 @@ function ModalEditarVisitante({
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor responsavel</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Setor responsável</label>
               <SelectField
                 value={form.setor}
                 onChange={(setor) => setField("setor", setor)}
-                placeholder="Selecione o setor responsavel"
+                placeholder="Selecione o setor responsável"
                 emptyLabel="Nenhum setor cadastrado"
                 options={setorOptions}
                 Icon={MapPin}
@@ -861,8 +559,9 @@ function ModalEditarVisitante({
             )}
           </Button>
         </div>
-      </form>
-    </div>
+        </form>
+      </div>
+    </ModalPortal>
   );
 }
 
@@ -897,8 +596,9 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
   if (!isOpen || !visitante) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="w-full max-w-md animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden animate-in zoom-in-95 rounded-xl border border-border bg-card shadow-lg duration-300 fade-in">
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -915,7 +615,7 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
           </button>
         </div>
 
-        <div className="space-y-4 p-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-800">
               <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-500" />
@@ -925,7 +625,7 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
 
           <p className="text-sm text-muted-foreground">
             Tem certeza que deseja excluir <strong className="text-foreground">{visitante.nome || "este visitante"}</strong>?
-            Esta acao remove o cadastro e os registros vinculados.
+            Esta ação remove o cadastro e os registros vinculados.
           </p>
         </div>
 
@@ -958,15 +658,16 @@ function ModalExcluirVisitante({ isOpen, onClose, visitante, onConfirm }) {
             )}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 }
 
 function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
   const status = visitante.status || "ativo";
-  const statusClass = STATUS_STYLE[status] || STATUS_STYLE.ativo;
-  const dotClass = STATUS_DOT[status] || STATUS_DOT.ativo;
+  const statusClass = PORTARIA_STATUS_STYLE[status] || PORTARIA_STATUS_STYLE.ativo;
+  const dotClass = PORTARIA_STATUS_DOT[status] || PORTARIA_STATUS_DOT.ativo;
 
   return (
     <tr className="border-b border-border transition-colors hover:bg-muted/50">
@@ -976,7 +677,7 @@ function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
       <td className="px-4 py-3 text-sm text-foreground">{visitante.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{getSetorLabel(visitante)}</td>
       <td className="px-4 py-3 whitespace-nowrap text-[11px] font-mono text-muted-foreground">
-        {formatDateTime(visitante.dataEntrada)}
+        {formatPortariaDateTime(visitante.dataEntrada)}
       </td>
       <td className="px-4 py-3">
         <p className="flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
@@ -993,7 +694,7 @@ function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
       <td className="px-4 py-3">
         <span className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${statusClass}`}>
           <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-          {STATUS_LABEL[status] || STATUS_LABEL.ativo}
+          {PORTARIA_STATUS_LABEL[status] || PORTARIA_STATUS_LABEL.ativo}
         </span>
       </td>
       <td className="px-4 py-3">
@@ -1040,6 +741,7 @@ function LinhaVisitante({ visitante, onCheckout, onEdit, onDelete }) {
 }
 
 export default function PortariaPage() {
+  const { showToast } = useToast();
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -1071,7 +773,7 @@ export default function PortariaPage() {
         setVisitantes(
           dedupeVisitantesPorIdentidade(
             visitantesPortaria
-              .map(normalizeVisitante)
+              .map(normalizePortariaVisitante)
               .filter((visitante) => {
                 if (visitante.status === "saida") {
                   return isToday(visitante.dataSaida);
@@ -1145,6 +847,15 @@ export default function PortariaPage() {
     });
   }, [visitantes, busca, filtroStatus]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: visitantesPagina,
+  } = usePagination(visitantesFiltrados);
+
   function handleCheckout(visitante) {
     setVisitanteSelecionado(visitante);
     setModalCheckoutAberto(true);
@@ -1177,6 +888,11 @@ export default function PortariaPage() {
 
     if (response.sucesso) {
       await fetchVisitantes();
+      showToast({
+        type: "success",
+        title: "Visitante atualizado",
+        description: "Os dados da visita foram salvos.",
+      });
     }
 
     return response;
@@ -1191,6 +907,11 @@ export default function PortariaPage() {
 
     if (response.sucesso) {
       await fetchVisitantes();
+      showToast({
+        type: "success",
+        title: "Visitante excluído",
+        description: "O cadastro e os registros vinculados foram removidos.",
+      });
     }
 
     return response;
@@ -1208,7 +929,11 @@ export default function PortariaPage() {
 
   const exportarPDF = async () => {
     if (visitantesFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast({
+        type: "info",
+        title: "Nada para exportar",
+        description: "A lista atual não tem visitantes para gerar PDF.",
+      });
       return;
     }
 
@@ -1219,12 +944,12 @@ export default function PortariaPage() {
         fileName: `visitantes_presentes_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: [
           busca ? `Busca: ${busca}` : null,
-          filtroStatus !== "Todos" ? `Status: ${STATUS_LABEL[filtroStatus] || filtroStatus}` : null,
+          filtroStatus !== "Todos" ? `Status: ${PORTARIA_STATUS_LABEL[filtroStatus] || filtroStatus}` : null,
         ].filter(Boolean),
         columns: [
           { header: "Nome", weight: 1.5 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor responsavel", weight: 1 },
+          { header: "Setor responsável", weight: 1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Celular", weight: 1 },
           { header: "E-mail", weight: 1.4 },
@@ -1234,15 +959,19 @@ export default function PortariaPage() {
           v.nome,
           v.empresa,
           getSetorLabel(v),
-          formatDateTime(v.dataEntrada),
+          formatPortariaDateTime(v.dataEntrada),
           formatPhone(v.telefone),
           v.email,
-          STATUS_LABEL[v.status] || "Dentro",
+          PORTARIA_STATUS_LABEL[v.status] || "Dentro",
         ]),
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Não foi possível exportar o PDF.");
+      showToast({
+        type: "error",
+        title: "Erro ao exportar PDF",
+        description: "Não foi possível gerar o arquivo agora.",
+      });
     }
   };
 
@@ -1273,11 +1002,11 @@ export default function PortariaPage() {
             sub="No local agora"
           />
           <StatCard
-            label="Saidas"
+            label="Saídas"
             value={countSaidas}
             icon={<LogOut size={20} className="text-blue-600" />}
             accentVar="#2563eb"
-            sub="Com saida registrada"
+            sub="Com saída registrada"
           />
           <StatCard
             label="Empresas Presentes"
@@ -1291,11 +1020,11 @@ export default function PortariaPage() {
         {/* Barra de Filtros Padronizada */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-1 items-center gap-3 w-full">
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por nome, empresa, setor responsavel, setor permitido, celular ou e-mail..."
+                  placeholder="Buscar por nome, empresa, setor responsável, setor permitido, celular ou e-mail..."
                   className={SEARCH_INPUT_CLASS}
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -1327,7 +1056,7 @@ export default function PortariaPage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 onClick={exportarPDF}
                 variant="outline"
@@ -1352,7 +1081,7 @@ export default function PortariaPage() {
               )}
               {filtroStatus !== "Todos" && (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
-                  Status: {STATUS_LABEL[filtroStatus] || filtroStatus}
+                  Status: {PORTARIA_STATUS_LABEL[filtroStatus] || filtroStatus}
                 </span>
               )}
               <Button
@@ -1373,12 +1102,12 @@ export default function PortariaPage() {
           </div>
           
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full min-w-[920px] text-left border-collapse">
               <thead>
                 <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-4 py-3">Visitante</th>
                   <th className="px-4 py-3">Empresa</th>
-                  <th className="px-4 py-3">Setor responsavel</th>
+                  <th className="px-4 py-3">Setor responsável</th>
                   <th className="px-4 py-3">Entrada</th>
                   <th className="px-4 py-3">Celular</th>
                   <th className="px-4 py-3">E-mail</th>
@@ -1406,7 +1135,7 @@ export default function PortariaPage() {
                     </td>
                   </tr>
                 ) : (
-                  visitantesFiltrados.map((v, index) => (
+                  visitantesPagina.map((v, index) => (
                     <LinhaVisitante
                       key={`${v.id || "visitante"}-${v.dataEntrada || v.status || index}`}
                       visitante={v}
@@ -1419,6 +1148,15 @@ export default function PortariaPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={visitantesPagina.length}
+            onPageChange={setPage}
+            itemLabel="visitante(s)"
+          />
         </div>
       </div>
 
@@ -1459,7 +1197,7 @@ export default function PortariaPage() {
               Status de Permanência
             </label>
             <div className="grid grid-cols-1 gap-2">
-              {STATUS_FILTERS.map((f) => (
+              {PORTARIA_STATUS_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   type="button"

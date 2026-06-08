@@ -3,18 +3,22 @@
 import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useMemo } from "react";
 import {
-  Layers, CheckSquare, TrendingDown, TrendingUp,
+  Layers, UserCheck, TrendingDown, TrendingUp,
   Filter, Search, X,
   Plus, Pencil, Trash2,
-  AlertTriangle, Check, Loader2,
+  AlertTriangle, Check, Download, Loader2,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
+import { exportTableToPdf } from "@/lib/exportPdf";
 
 // ─── CONSTANTES DE DOMÍNIO ───────────────────────────────────────────────────
 
@@ -137,27 +141,13 @@ function enriquecerSetoresComVisitas(setores, requisicoes) {
   });
 }
 
-function toCSV(rows) {
-  const cols = ["Nome", "Responsavel", "Visitantes", "Ultima Visita", "Status"];
-  const lines = rows.map((r) =>
-    [r.nome, r.responsavel || "-", r.visitantes || 0, formatarData(r.ultimaVisita) || "-", STATUS_LABEL[statusKey(r.status)] || "-"].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
-}
-
-function downloadCSV(rows) {
-  const blob = new Blob([toCSV(rows)], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a"); a.href = url; a.download = "setores.csv"; a.click();
-  URL.revokeObjectURL(url);
-}
-
 // ─── MODAL CONFIRMAÇÃO DE EXCLUSÃO ───────────────────────────────────────────
 
 function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-sm mx-4">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
@@ -169,7 +159,7 @@ function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
             <X size={18} />
           </button>
         </div>
-        <div className="px-6 py-5">
+        <div className="max-h-[70vh] overflow-y-auto px-6 py-5" data-lenis-prevent>
           <p className="text-sm text-muted-foreground">
             Tem certeza que deseja excluir o setor{" "}
             <strong className="text-foreground">{setor.nome}</strong>?
@@ -188,6 +178,7 @@ function ModalConfirmarExclusao({ setor, onConfirm, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -244,8 +235,9 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -258,7 +250,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
           </button>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto px-6 py-5" data-lenis-prevent>
           {erro && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
               <AlertTriangle size={13} className="text-red-500 mt-0.5 shrink-0" />
@@ -276,7 +268,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsavel</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Responsável</label>
             <select
               value={form.idGestor}
               onChange={set("idGestor")}
@@ -325,6 +317,7 @@ function ModalSetor({ setor, gestores, onClose, onSave }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -421,9 +414,18 @@ export default function SetoresPage() {
     });
   }, [setores, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: setoresPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total: setores.length,
-    ativos: setores.filter(s => statusKey(s.status) === "ativo").length,
+    comResponsavel: setores.filter(s => Number(s.idGestor) > 0 || Boolean(String(s.responsavel || "").trim())).length,
     maisVisitado: setores.reduce((a, b) => (b.visitantes || 0) > (a.visitantes || 0) ? b : a, setores[0]) || {},
     menosVisitado: setores.reduce((a, b) => (b.visitantes || 0) < (a.visitantes || 0) ? b : a, setores[0]) || {},
   }), [setores]);
@@ -465,20 +467,54 @@ export default function SetoresPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (filtrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Setores",
+        subtitle: "Controle de setores integrado ao backend",
+        fileName: `setores_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          statusFiltro !== "Todos" ? `Status: ${STATUS_LABEL[statusKey(statusFiltro)] || statusFiltro}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Setor", weight: 1.4 },
+          { header: "Visitantes", weight: 0.8 },
+          { header: "Última Visita", weight: 1 },
+          { header: "Responsável", weight: 1.2 },
+          { header: "Status", weight: 0.8 },
+        ],
+        rows: filtrados.map((setor) => [
+          setor.nome || "-",
+          setor.visitantes || 0,
+          formatarData(setor.ultimaVisita) || "-",
+          setor.responsavel || "-",
+          STATUS_LABEL[statusKey(setor.status)] || setor.status || "-",
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <Topbar
         title="Gestão de Setores"
         subtitle="Controle de setores integrado ao backend."
-        secondaryButtonText="Exportar CSV"
-        onSecondaryButtonClick={() => downloadCSV(filtrados)}
         buttonText="Novo Setor"
         onButtonClick={() => setModalSetor({ open: true, data: null })}
       />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <StatCard label="Total" value={stats.total} valueClassName="text-primary" icon={<Layers size={17} className="text-primary" />} sub="setores" accentVar="var(--primary)" />
-        <StatCard label="Operacionais" value={stats.ativos} valueClassName="text-green-600" icon={<CheckSquare size={17} className="text-green-600" />} sub="status ativo" accentVar="#16a34a" />
+        <StatCard label="Com Responsável" value={stats.comResponsavel} valueClassName="text-blue-600" icon={<UserCheck size={17} className="text-blue-600" />} sub="gestor definido" accentVar="#2563eb" />
         <StatCard label="Mais Visitado" value={stats.maisVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingUp size={17} className="text-foreground" />} sub={`${stats.maisVisitado?.visitantes || 0} visitas`} accentVar="var(--chart-4)" />
         <StatCard label="Menos Visitado" value={stats.menosVisitado?.nome || "—"} valueClassName="text-foreground font-bold text-sm" icon={<TrendingDown size={17} className="text-muted-foreground" />} sub={`${stats.menosVisitado?.visitantes || 0} visitas`} accentVar="var(--border)" />
       </div>
@@ -522,8 +558,20 @@ export default function SetoresPage() {
             </Button>
           </div>
 
-          <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-            {filtrados.length} resultado(s)
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+            <Button
+              type="button"
+              onClick={exportarPDF}
+              variant="outline"
+              disabled={loading || filtrados.length === 0}
+              className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+            >
+              <Download size={16} />
+              <span className="hidden sm:inline">Exportar PDF</span>
+            </Button>
+            <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+              {filtrados.length} resultado(s)
+            </div>
           </div>
         </div>
 
@@ -563,8 +611,8 @@ export default function SetoresPage() {
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Visitantes</th>
-                <th className="px-4 py-3">Ultima Visita</th>
-                <th className="px-4 py-3">Responsavel</th>
+                <th className="px-4 py-3">Última Visita</th>
+                <th className="px-4 py-3">Responsável</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
@@ -586,7 +634,7 @@ export default function SetoresPage() {
                   </td>
                 </tr>
               ) : (
-                filtrados.map(s => (
+                setoresPagina.map(s => (
                   <LinhaSetor
                     key={s.id}
                     setor={s}
@@ -598,6 +646,15 @@ export default function SetoresPage() {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          currentCount={setoresPagina.length}
+          onPageChange={setPage}
+          itemLabel="setor(es)"
+        />
       </div>
 
       {modalSetor.open && (

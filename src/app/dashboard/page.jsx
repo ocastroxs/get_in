@@ -13,6 +13,8 @@ import { api } from "@/services/api";
 import { ArrowRightLeft, Clock3, LogOut, Users } from "lucide-react";
 
 const CORES_GRAFICO = ["#0f3a7d", "#34a853", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
+const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
 const PRAZO_REQUISICAO_HORAS = 24;
 
@@ -20,14 +22,13 @@ const STATS_VAZIAS = {
   visitantes: { value: 0 },
   entradas: { value: 0 },
   saidas: { value: 0, aindaDentro: 0 },
-  ativos: { value: 0, expirados: 0 },
+  ativos: { value: 0, alertas: 0 },
 };
 
-function formatarDataEntrada(data) {
+function formatarDiaMes(data) {
   return new Intl.DateTimeFormat(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
-    year: "2-digit",
     timeZone: "America/Sao_Paulo",
   }).format(data);
 }
@@ -118,7 +119,46 @@ function getSaidaVisitante(item) {
 }
 
 function getDataRequisicao(item) {
-  return parseDataCampos(item, ["dataDaRequisicao"]);
+  return parseDataCampos(item, [
+    "dataDaRequisicao",
+    "solicitacao",
+    "dataDeEntrada",
+    "entrada",
+    "createdAt",
+    "created_at",
+    "dataCriacao",
+    "createdAtRequisicao",
+  ]);
+}
+
+function inicioDoDia(data) {
+  return new Date(data.getFullYear(), data.getMonth(), data.getDate());
+}
+
+function diferencaEmDias(dataReferencia, dataComparada) {
+  if (!dataReferencia || !dataComparada) return Number.POSITIVE_INFINITY;
+
+  return Math.round((inicioDoDia(dataReferencia) - inicioDoDia(dataComparada)) / (1000 * 60 * 60 * 24));
+}
+
+function estaNoPeriodo(data, periodo, referencia = new Date()) {
+  if (!data) return false;
+
+  if (periodo === "hoje") {
+    return diferencaEmDias(referencia, data) === 0;
+  }
+
+  if (periodo === "semana") {
+    const diferenca = diferencaEmDias(referencia, data);
+    return diferenca >= 0 && diferenca <= 6;
+  }
+
+  if (periodo === "mes") {
+    const diferenca = diferencaEmDias(referencia, data);
+    return diferenca >= 0 && diferenca <= 29;
+  }
+
+  return false;
 }
 
 function normalizarStatusRequisicao(status) {
@@ -152,7 +192,7 @@ function isDentro(item) {
   return status === "dentro" || status === "ativo" || (!!getEntradaVisitante(item) && !getSaidaVisitante(item));
 }
 
-function isPermanenciaExpirada(item, agora = new Date()) {
+function isAlertaPermanencia(item, agora = new Date()) {
   if (!isDentro(item)) return false;
 
   const entrada = getEntradaVisitante(item);
@@ -162,10 +202,13 @@ function isPermanenciaExpirada(item, agora = new Date()) {
   return horas >= LIMITE_ALERTA_HORAS;
 }
 
-function agruparMotivosGeral(requisicoes) {
+function agruparMotivosPeriodo(requisicoes, periodo) {
   const mapa = new Map();
+  const referencia = new Date();
 
   requisicoes.forEach((req) => {
+    if (!estaNoPeriodo(getDataRequisicao(req), periodo, referencia)) return;
+
     const motivo = obterMotivo(req);
     if (!motivo) return;
 
@@ -205,33 +248,88 @@ function agruparPicoPorSetor(requisicoes) {
     }));
 }
 
-function entradasGerais(logs) {
-  const mapa = new Map();
+function entradasPorHoraHoje(logs) {
+  const mapa = new Map(HORAS_DIA.map((hora) => [`${String(hora).padStart(2, "0")}h`, 0]));
+  const referencia = new Date();
 
   logs.forEach((log) => {
     const data = getEntradaVisitante(log);
-    if (!data) return;
+    if (!estaNoPeriodo(data, "hoje", referencia)) return;
 
-    const chave = formatarDataEntrada(data);
-    const atual = mapa.get(chave) || { data, hora: chave, value: 0 };
-    atual.value += 1;
-    mapa.set(chave, atual);
+    const chave = `${String(data.getHours()).padStart(2, "0")}h`;
+    mapa.set(chave, (mapa.get(chave) || 0) + 1);
   });
 
-  return [...mapa.values()]
-    .sort((a, b) => a.data - b.data)
-    .map(({ hora, value }) => ({
-      hora,
-      value,
-    }));
+  return [...mapa.entries()].map(([hora, value]) => ({
+    hora,
+    value,
+  }));
 }
 
-function processarStatusGeral(requisicoes, logs = []) {
+function entradasPorSemana(logs) {
+  const referencia = new Date();
+  const dias = Array.from({ length: 7 }, (_, index) => {
+    const data = new Date(referencia);
+    data.setDate(referencia.getDate() - (6 - index));
+
+    return {
+      data,
+      hora: formatarDiaMes(data),
+      diaSemana: DIAS_SEMANA[data.getDay()],
+      value: 0,
+    };
+  });
+
+  logs.forEach((log) => {
+    const entrada = getEntradaVisitante(log);
+    if (!estaNoPeriodo(entrada, "semana", referencia)) return;
+
+    const item = dias.find((dia) => diferencaEmDias(dia.data, entrada) === 0);
+    if (item) item.value += 1;
+  });
+
+  return dias.map(({ hora, diaSemana, value }) => ({
+    hora,
+    diaSemana,
+    value,
+  }));
+}
+
+function entradasPorMes(logs) {
+  const referencia = new Date();
+  const dias = Array.from({ length: 30 }, (_, index) => {
+    const data = new Date(referencia);
+    data.setDate(referencia.getDate() - (29 - index));
+
+    return {
+      data,
+      hora: formatarDiaMes(data),
+      value: 0,
+    };
+  });
+
+  logs.forEach((log) => {
+    const entrada = getEntradaVisitante(log);
+    if (!estaNoPeriodo(entrada, "mes", referencia)) return;
+
+    const item = dias[entrada.getDate() - 1];
+    if (item) item.value += 1;
+  });
+
+  return dias.map(({ hora, value }) => ({
+    hora,
+    value,
+  }));
+}
+
+function processarStatusPeriodo(requisicoes, logs = [], periodo) {
   const agora = new Date();
+  const requisicoesNoPeriodo = requisicoes.filter((req) => estaNoPeriodo(getDataRequisicao(req), periodo, agora));
+
   const counts = {
-    finalizado: logs.filter((log) => getSaidaVisitante(log)).length,
-    recusado: requisicoes.filter((req) => isStatusRecusado(req?.status)).length,
-    expirado: requisicoes.filter((req) => isRequisicaoExpirada(req, agora)).length,
+    finalizado: logs.filter((log) => estaNoPeriodo(getSaidaVisitante(log), periodo, agora)).length,
+    recusado: requisicoesNoPeriodo.filter((req) => isStatusRecusado(req?.status)).length,
+    expirado: requisicoesNoPeriodo.filter((req) => isRequisicaoExpirada(req, agora)).length,
   };
 
   return [
@@ -245,7 +343,7 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
   const entradas = logs.filter((item) => getEntradaVisitante(item));
   const saidas = logs.filter((item) => getSaidaVisitante(item));
   const ativosAgora = visitantesLocal.filter(isDentro);
-  const expirados = ativosAgora.filter((item) => isPermanenciaExpirada(item)).length;
+  const alertas = ativosAgora.filter((item) => isAlertaPermanencia(item)).length;
 
   return {
     visitantes: {
@@ -260,16 +358,22 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
     },
     ativos: {
       value: ativosAgora.length,
-      expirados,
+      alertas,
     },
   };
 }
 
 export default function DashboardPage() {
-  const [motivosGeral, setMotivosGeral] = useState([]);
+  const [motivosHoje, setMotivosHoje] = useState([]);
+  const [motivosSemana, setMotivosSemana] = useState([]);
+  const [motivosMes, setMotivosMes] = useState([]);
   const [picoSetores, setPicoSetores] = useState([]);
-  const [statusGeral, setStatusGeral] = useState([]);
-  const [entradasGeral, setEntradasGeral] = useState([]);
+  const [statusHoje, setStatusHoje] = useState([]);
+  const [statusSemana, setStatusSemana] = useState([]);
+  const [statusMes, setStatusMes] = useState([]);
+  const [entradasHoje, setEntradasHoje] = useState([]);
+  const [entradasSemana, setEntradasSemana] = useState([]);
+  const [entradasMes, setEntradasMes] = useState([]);
   const [statsDashboard, setStatsDashboard] = useState(STATS_VAZIAS);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
@@ -288,18 +392,30 @@ export default function DashboardPage() {
         const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
         const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
 
-        setMotivosGeral(agruparMotivosGeral(requisicoes));
+        setMotivosHoje(agruparMotivosPeriodo(requisicoes, "hoje"));
+        setMotivosSemana(agruparMotivosPeriodo(requisicoes, "semana"));
+        setMotivosMes(agruparMotivosPeriodo(requisicoes, "mes"));
         setPicoSetores(agruparPicoPorSetor(requisicoes));
-        setEntradasGeral(entradasGerais(logs));
-        setStatusGeral(processarStatusGeral(requisicoes, logs));
+        setEntradasHoje(entradasPorHoraHoje(logs));
+        setEntradasSemana(entradasPorSemana(logs));
+        setEntradasMes(entradasPorMes(logs));
+        setStatusHoje(processarStatusPeriodo(requisicoes, logs, "hoje"));
+        setStatusSemana(processarStatusPeriodo(requisicoes, logs, "semana"));
+        setStatusMes(processarStatusPeriodo(requisicoes, logs, "mes"));
         setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
       }
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);
-      setMotivosGeral([]);
+      setMotivosHoje([]);
+      setMotivosSemana([]);
+      setMotivosMes([]);
       setPicoSetores([]);
-      setStatusGeral([]);
-      setEntradasGeral([]);
+      setStatusHoje([]);
+      setStatusSemana([]);
+      setStatusMes([]);
+      setEntradasHoje([]);
+      setEntradasSemana([]);
+      setEntradasMes([]);
       setStatsDashboard(STATS_VAZIAS);
     } finally {
       setIsDataLoading(false);
@@ -338,7 +454,7 @@ export default function DashboardPage() {
             value={stats.visitantes.value}
             valueClassName="text-primary"
             icon={<Users size={16} className="text-primary" strokeWidth={1.75} />}
-            sub="Visitantes unicos nas requisicoes"
+            sub="Visitantes únicos nas requisições"
             insight={`${stats.ativos.value} ativo(s) agora`}
             accentVar="var(--primary)"
           />
@@ -349,16 +465,16 @@ export default function DashboardPage() {
             valueClassName="text-secondary"
             icon={<ArrowRightLeft size={16} className="text-secondary" strokeWidth={1.75} />}
             sub="Registros validados"
-            insight="Historico acumulado"
+            insight="Histórico acumulado"
             accentVar="var(--secondary)"
           />
           <StatCard
             compact
-            label="Saidas"
+            label="Saídas"
             value={stats.saidas.value}
             valueClassName="text-red-600"
             icon={<LogOut size={16} className="text-red-600" strokeWidth={1.75} />}
-            sub="Saidas registradas"
+            sub="Saídas registradas"
             insight={`${stats.saidas.aindaDentro} ainda dentro`}
             accentVar="#dc2626"
           />
@@ -368,41 +484,42 @@ export default function DashboardPage() {
             value={stats.ativos.value}
             valueClassName="text-blue-900"
             icon={<Clock3 size={16} className="text-blue-900" strokeWidth={1.75} />}
-            sub="Permanencia ativa"
-            insight={`${stats.ativos.expirados} expirado(s)`}
+            sub="Permanência ativa"
+            insight={`${stats.ativos.alertas} alerta(s) de permanência`}
             accentVar="#1e3a8a"
           />
         </section>
 
         <EntradasChart
           mobileLayout
-          title="Entradas Acumuladas"
-          subtitle="Fluxo geral agrupado por data"
-          data={entradasGeral}
-          showPeriodToggle={false}
-          emptyMessage="Nenhuma entrada registrada no historico."
+          title="Entradas"
+          subtitle="Fluxo de visitantes por dia, semana ou mês."
+          data={entradasHoje}
+          weekData={entradasSemana}
+          monthData={entradasMes}
         />
         <PicoMovimentoChart mobileLayout data={picoSetores} />
         <TiposVisitanteChart
           mobileLayout
           title="Motivos"
-          subtitle="Distribuicao geral das requisicoes"
-          data={motivosGeral}
-          showPeriodToggle={false}
-          emptyMessage="Nenhum motivo registrado no historico."
+          data={motivosHoje}
+          weekData={motivosSemana}
+          monthData={motivosMes}
+          emptyMessage="Nenhum motivo registrado no dia."
         />
         <StatusVisitantesChart
           mobileLayout="list"
-          data={statusGeral}
-          showPeriodToggle={false}
-          subtitle="Finalizados, recusados e expirados no historico."
+          data={statusHoje}
+          weekData={statusSemana}
+          monthData={statusMes}
+          subtitle="Finalizados, recusados e expirados por período."
         />
       </div>
 
       <div className="hidden lg:flex lg:flex-col lg:gap-6">
         <Topbar
           title="Dashboard Geral"
-          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentacoes e saidas."
+          subtitle="Monitoramento acumulado de visitantes cadastrados, movimentações e saídas."
         />
 
         <section className="grid gap-6 xl:grid-cols-12">
@@ -413,8 +530,8 @@ export default function DashboardPage() {
               value={stats.visitantes.value}
               valueClassName="text-primary"
               icon={<Users size={18} className="text-primary" strokeWidth={1.75} />}
-              sub="Visitantes unicos nas requisicoes"
-              insight={`${stats.ativos.value} pessoa(s) em permanencia ativa`}
+              sub="Visitantes únicos nas requisições"
+              insight={`${stats.ativos.value} pessoa(s) em permanência ativa`}
               accentVar="var(--primary)"
             />
           </div>
@@ -426,16 +543,16 @@ export default function DashboardPage() {
               valueClassName="text-secondary"
               icon={<ArrowRightLeft size={17} className="text-secondary" strokeWidth={1.75} />}
               sub="Registros de entrada acumulados"
-              insight="Historico completo carregado"
+              insight="Histórico completo carregado"
               accentVar="var(--secondary)"
             />
             <StatCard
-              label="Saidas"
+              label="Saídas"
               value={stats.saidas.value}
               valueClassName="text-red-600"
               icon={<LogOut size={17} className="text-red-600" strokeWidth={1.75} />}
-              sub="Saidas registradas"
-              insight={`${saidasPct}% das entradas com saida registrada`}
+              sub="Saídas registradas"
+              insight={`${saidasPct}% das entradas com saída registrada`}
               accentVar="#dc2626"
             />
             <StatCard
@@ -443,8 +560,8 @@ export default function DashboardPage() {
               value={stats.ativos.value}
               valueClassName="text-blue-900"
               icon={<Clock3 size={17} className="text-blue-900" strokeWidth={1.75} />}
-              sub="Pessoas em permanencia ativa"
-              insight={`${stats.ativos.expirados} expirado(s)`}
+              sub="Pessoas em permanência ativa"
+              insight={`${stats.ativos.alertas} alerta(s) de permanência`}
               accentVar="#1e3a8a"
             />
           </div>
@@ -452,11 +569,11 @@ export default function DashboardPage() {
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.85fr)]">
           <EntradasChart
-            title="Entradas Acumuladas"
-            subtitle="Fluxo geral agrupado por data"
-            data={entradasGeral}
-            showPeriodToggle={false}
-            emptyMessage="Nenhuma entrada registrada no historico."
+            title="Entradas"
+            subtitle="Fluxo de visitantes por dia, semana ou mês."
+            data={entradasHoje}
+            weekData={entradasSemana}
+            monthData={entradasMes}
           />
           <PicoMovimentoChart data={picoSetores} />
         </section>
@@ -464,16 +581,17 @@ export default function DashboardPage() {
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
           <TiposVisitanteChart
             title="Motivos"
-            subtitle="Distribuicao geral das requisicoes"
-            data={motivosGeral}
-            showPeriodToggle={false}
-            emptyMessage="Nenhum motivo registrado no historico."
+            data={motivosHoje}
+            weekData={motivosSemana}
+            monthData={motivosMes}
+            emptyMessage="Nenhum motivo registrado no dia."
           />
           <div className="space-y-6">
             <StatusVisitantesChart
-              data={statusGeral}
-              showPeriodToggle={false}
-              subtitle="Finalizados, recusados e expirados no historico."
+              data={statusHoje}
+              weekData={statusSemana}
+              monthData={statusMes}
+              subtitle="Finalizados, recusados e expirados por período."
             />
           </div>
         </section>

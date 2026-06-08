@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, LogOut, Settings } from "lucide-react";
 import UserAvatar from "@/components/ui/UserAvatar";
+import ModalPortal from "@/components/ui/ModalPortal";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
+const MENU_WIDTH = 224;
+const MENU_ESTIMATED_HEIGHT = 112;
+const MENU_GAP = 8;
+const VIEWPORT_PADDING = 12;
+
 function pickFirst(...values) {
   return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
+}
+
+function clamp(value, min, max) {
+  if (max < min) {
+    return min;
+  }
+
+  return Math.min(Math.max(value, min), max);
 }
 
 export default function SidebarUserProfile({
@@ -19,19 +33,50 @@ export default function SidebarUserProfile({
 }) {
   const { user, funcionario, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ left: VIEWPORT_PADDING, top: VIEWPORT_PADDING });
   const rootRef = useRef(null);
+  const menuRef = useRef(null);
   const name = pickFirst(user?.nome, funcionario?.nome, fallbackName);
   const email = pickFirst(user?.email, funcionario?.email, fallbackEmail);
   const avatarSrc = pickFirst(user?.avatarUrl, user?.imagem, funcionario?.avatarUrl, funcionario?.imagem);
   const tooltip = email ? `${name} - ${email}` : name;
+
+  const updateMenuPosition = useCallback(() => {
+    if (!rootRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    const rect = rootRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current?.offsetHeight || MENU_ESTIMATED_HEIGHT;
+    const maxLeft = window.innerWidth - MENU_WIDTH - VIEWPORT_PADDING;
+    const maxTop = window.innerHeight - menuHeight - VIEWPORT_PADDING;
+    const topAbove = rect.top - menuHeight - MENU_GAP;
+    const topBelow = rect.bottom + MENU_GAP;
+
+    const left = isExpanded
+      ? clamp(rect.left, VIEWPORT_PADDING, maxLeft)
+      : clamp(rect.right + MENU_GAP, VIEWPORT_PADDING, maxLeft);
+    const top = isExpanded
+      ? topAbove >= VIEWPORT_PADDING
+        ? topAbove
+        : clamp(topBelow, VIEWPORT_PADDING, maxTop)
+      : clamp(rect.bottom - menuHeight, VIEWPORT_PADDING, maxTop);
+
+    setMenuPosition({ left, top });
+  }, [isExpanded]);
 
   useEffect(() => {
     if (!isOpen) {
       return undefined;
     }
 
+    const frameId = window.requestAnimationFrame(updateMenuPosition);
+
     const handlePointerDown = (event) => {
-      if (rootRef.current && !rootRef.current.contains(event.target)) {
+      const clickedProfile = rootRef.current?.contains(event.target);
+      const clickedMenu = menuRef.current?.contains(event.target);
+
+      if (!clickedProfile && !clickedMenu) {
         setIsOpen(false);
       }
     };
@@ -42,14 +87,27 @@ export default function SidebarUserProfile({
       }
     };
 
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
     document.addEventListener("mousedown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
       document.removeEventListener("mousedown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, updateMenuPosition]);
+
+  const toggleMenu = () => {
+    if (!isOpen) {
+      updateMenuPosition();
+    }
+
+    setIsOpen((current) => !current);
+  };
 
   const handleLogout = () => {
     setIsOpen(false);
@@ -61,7 +119,7 @@ export default function SidebarUserProfile({
       <div ref={rootRef} className={cn("relative flex justify-center py-1", className)}>
         <button
           type="button"
-          onClick={() => setIsOpen((current) => !current)}
+          onClick={toggleMenu}
           title={tooltip}
           aria-label={`${tooltip}. Abrir menu da conta`}
           aria-haspopup="menu"
@@ -75,7 +133,13 @@ export default function SidebarUserProfile({
             className="h-10 w-10 text-[12px] shadow-sm"
           />
         </button>
-        <AccountMenu isOpen={isOpen} isExpanded={isExpanded} onClose={() => setIsOpen(false)} onLogout={handleLogout} />
+        <AccountMenu
+          isOpen={isOpen}
+          menuRef={menuRef}
+          position={menuPosition}
+          onClose={() => setIsOpen(false)}
+          onLogout={handleLogout}
+        />
       </div>
     );
   }
@@ -84,7 +148,7 @@ export default function SidebarUserProfile({
     <div ref={rootRef} className={cn("relative", className)}>
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={toggleMenu}
         aria-label={`${tooltip}. Abrir menu da conta`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -110,44 +174,49 @@ export default function SidebarUserProfile({
           )}
         />
       </button>
-      <AccountMenu isOpen={isOpen} isExpanded={isExpanded} onClose={() => setIsOpen(false)} onLogout={handleLogout} />
+      <AccountMenu
+        isOpen={isOpen}
+        menuRef={menuRef}
+        position={menuPosition}
+        onClose={() => setIsOpen(false)}
+        onLogout={handleLogout}
+      />
     </div>
   );
 }
 
-function AccountMenu({ isOpen, isExpanded, onClose, onLogout }) {
+function AccountMenu({ isOpen, menuRef, position, onClose, onLogout }) {
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div
-      role="menu"
-      className={cn(
-        "z-[80] w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-2xl shadow-slate-900/10 animate-in fade-in slide-in-from-bottom-4 dark:border-white/10 dark:bg-[#07121f] dark:shadow-black/30",
-        isExpanded
-          ? "absolute bottom-full left-0 right-0 mb-2"
-          : "fixed bottom-6 left-[72px]"
-      )}
-    >
-      <Link
-        href="/configuracoes"
-        role="menuitem"
-        onClick={onClose}
-        className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+    <ModalPortal>
+      <div
+        ref={menuRef}
+        role="menu"
+        style={{ left: position.left, top: position.top }}
+        className="fixed z-[120] w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white p-1.5 shadow-2xl shadow-slate-900/10 animate-in fade-in slide-in-from-bottom-4 dark:border-white/10 dark:bg-[#07121f] dark:shadow-black/30"
       >
-        <Settings size={16} strokeWidth={1.75} />
-        Configuracoes
-      </Link>
-      <button
-        type="button"
-        role="menuitem"
-        onClick={onLogout}
-        className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
-      >
-        <LogOut size={16} strokeWidth={1.75} />
-        Sair da conta
-      </button>
-    </div>
+        <Link
+          href="/configuracoes"
+          role="menuitem"
+          onClick={onClose}
+          className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-950 dark:text-gray-200 dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          <Settings size={16} strokeWidth={1.75} />
+          Configurações
+        </Link>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onLogout}
+          className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+        >
+          <LogOut size={16} strokeWidth={1.75} />
+          Sair da conta
+        </button>
+      </div>
+    </ModalPortal>
   );
 }

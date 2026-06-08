@@ -9,57 +9,17 @@ import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { MOTIVO_OPTIONS, normalizeMotivoVisita } from "@/lib/visitanteMotivos";
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  getEmpresaNome,
+  getEmpresaNomeFromRegistro,
+  getSetorNome,
+  isValidEmail,
+  onlyDigits,
+} from "@/lib/portaria-data";
 
 const EMPRESA_NENHUMA = "Nenhuma";
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-}
-
-function getEmpresaNome(registro) {
-  return String(
-    registro?.empresa ||
-      registro?.empresa_visitante ||
-      registro?.usuario?.empresa ||
-      registro?.usuario?.empresas?.nome ||
-      registro?.empresas?.nome ||
-      registro?.empresa_nome ||
-      registro?.nomeFantasia ||
-      registro?.razaoSocial ||
-      registro?.razao_social ||
-      registro?.nome ||
-      ""
-  ).trim();
-}
-
-function getEmpresaNomeFromRegistro(registro) {
-  return String(
-    registro?.empresa ||
-      registro?.empresa_visitante ||
-      registro?.usuario?.empresa ||
-      registro?.usuario?.empresas?.nome ||
-      registro?.empresas?.nome ||
-      registro?.empresa_nome ||
-      registro?.nomeFantasia ||
-      registro?.razaoSocial ||
-      registro?.razao_social ||
-      ""
-  ).trim();
-}
-
-function getSetorNome(registro) {
-  return String(
-    registro?.nome ||
-      registro?.setor ||
-      registro?.setores?.nome ||
-      registro?.departamento?.nome ||
-      ""
-  ).trim();
-}
+const CREATE_VIRTUAL_TAG_VALUE = "__CREATE_VIRTUAL_TAG__";
 
 function buildEmpresasOptions(registros) {
   const empresasUnicas = new Map();
@@ -73,6 +33,16 @@ function buildEmpresasOptions(registros) {
   });
 
   return Array.from(empresasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+function getTagSelectionLabel(value, tags = []) {
+  if (!value) return "Não selecionada";
+  if (value === CREATE_VIRTUAL_TAG_VALUE) return "Criar nova TAG virtual";
+
+  const tag = tags.find((item) => item.codigoTag === value);
+  if (!tag) return value;
+
+  return `TAG - ${tag.codigoTag}`;
 }
 
 function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
@@ -178,13 +148,16 @@ function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
 
 export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRoot = "Portaria" }) {
   const { user, funcionario } = useAuth();
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
   const [tempoEspera, setTempoEspera] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const [loadingSetores, setLoadingSetores] = useState(true);
+  const [loadingTags, setLoadingTags] = useState(true);
   const [empresas, setEmpresas] = useState([]);
   const [setores, setSetores] = useState([]);
+  const [tagsDisponiveis, setTagsDisponiveis] = useState([]);
   const [form, setForm] = useState({
     nome: "",
     cpf: "",
@@ -216,6 +189,17 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     .sort((a, b) => a.label.localeCompare(b.label, getActiveLanguage()));
 
   const setoresDisponiveis = setorOptions;
+
+  const tagOptions = [
+    ...tagsDisponiveis.map((tag) => ({
+      value: tag.codigoTag,
+      label: `TAG - ${tag.codigoTag}`,
+    })),
+    {
+      value: CREATE_VIRTUAL_TAG_VALUE,
+      label: "Criar nova TAG virtual",
+    },
+  ];
 
   const empresaOptions = [
     { value: EMPRESA_NENHUMA, label: EMPRESA_NENHUMA },
@@ -289,28 +273,27 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
   }, []);
 
   useEffect(() => {
-    let ativo = true;
+    async function fetchTagsDisponiveis() {
+      setLoadingTags(true);
 
-    async function fetchLatestTag() {
       try {
-        const response = await api.get("/tags/latest");
-        const codigoTag = response?.data?.codigoTag;
+        const response = await api.get("/tags/disponiveis");
 
-        if (ativo && codigoTag) {
-          setForm((current) => current.rfidTag === codigoTag ? current : { ...current, rfidTag: codigoTag });
+        if (response.sucesso && Array.isArray(response.data)) {
+          setTagsDisponiveis(response.data);
+          return;
         }
+
+        setTagsDisponiveis([]);
       } catch (error) {
-        console.warn("Não foi possível carregar a tag RFID:", error);
+        console.error("Erro ao carregar TAGs disponiveis:", error);
+        setTagsDisponiveis([]);
+      } finally {
+        setLoadingTags(false);
       }
     }
 
-    fetchLatestTag();
-    const interval = setInterval(fetchLatestTag, 3000);
-
-    return () => {
-      ativo = false;
-      clearInterval(interval);
-    };
+    fetchTagsDisponiveis();
   }, []);
 
   useEffect(() => {
@@ -451,6 +434,14 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     throw new Error(createResponse.mensagem || "Erro ao cadastrar dados do visitante.");
   };
 
+  const showCadastroError = (description) => {
+    showToast({
+      type: "error",
+      title: "Revise o cadastro",
+      description,
+    });
+  };
+
   const handleProximoStep = async () => {
     const cpfCompletoForm = onlyDigits(form.cpf).length === 11;
     const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
@@ -459,37 +450,57 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     const observacao = form.observacao.trim();
 
     if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !form.setor || !form.motivo || !telefoneCompletoForm || !emailValidoForm) {
-      alert("Preencha nome, CPF, empresa, setor responsável, motivo, telefone e e-mail válidos.");
+      showCadastroError("Preencha nome, CPF, empresa, setor responsável, motivo, telefone e e-mail válidos.");
       return;
     }
 
     if (form.setoresAcesso.length === 0) {
-      alert("Selecione ao menos um setor permitido.");
+      showCadastroError("Selecione ao menos um setor permitido.");
+      return;
+    }
+
+    if (!form.rfidTag) {
+      showCadastroError("Selecione uma TAG ou escolha criar uma nova TAG virtual.");
       return;
     }
 
     if (loadingSetores || setorOptions.length === 0 || setoresSelecionados.length === 0) {
-      alert("Não foi possível carregar os setores. Atualize a página e tente novamente.");
+      showCadastroError("Não foi possível carregar os setores. Atualize a página e tente novamente.");
       return;
     }
     
     if (!user || !user.id) {
-      alert("Erro: Usuário não autenticado");
+      showCadastroError("Usuário não autenticado. Faça login novamente.");
       return;
     }
     
     setLoading(true);
     try {
       const visitanteUsuario = await getOrCreateVisitanteUsuario();
-      if (form.rfidTag) {
-        const tagResponse = await api.put(`/tags/code/${encodeURIComponent(form.rfidTag)}/assign`, {
-          idUsuario: visitanteUsuario.id
+      let codigoTagFinal = form.rfidTag;
+
+      if (form.rfidTag === CREATE_VIRTUAL_TAG_VALUE) {
+        const tagResponse = await api.put("/tags/virtual/assign", {
+          idUsuario: visitanteUsuario.id,
         });
 
-        if (!tagResponse.sucesso) {
-          console.warn("Não foi possível vincular a TAG RFID:", tagResponse.mensagem || tagResponse.erro);
+        if (!tagResponse.sucesso || !tagResponse.data?.codigoTag) {
+          throw new Error(tagResponse.mensagem || tagResponse.erro || "Erro ao criar TAG virtual.");
         }
+
+        codigoTagFinal = tagResponse.data.codigoTag;
+      } else {
+        const tagResponse = await api.put(`/tags/code/${encodeURIComponent(form.rfidTag)}/assign`, {
+          idUsuario: visitanteUsuario.id,
+        });
+
+        if (!tagResponse.sucesso || !tagResponse.data?.codigoTag) {
+          throw new Error(tagResponse.mensagem || tagResponse.erro || "Erro ao vincular TAG.");
+        }
+
+        codigoTagFinal = tagResponse.data.codigoTag;
       }
+
       const idDepartamento = getDepartamentoId();
       const setoresPermitidos = form.setoresAcesso.length > 0 ? form.setoresAcesso.join(", ") : "Nenhum";
       const descricao = [
@@ -498,8 +509,8 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         `Telefone: ${form.telefone}`,
         `Email: ${form.email.trim().toLowerCase()}`,
         `Empresa: ${form.empresa}`,
-        `TAG RFID: ${form.rfidTag || "Não informada"}`,
-        `Setor responsavel: ${form.setor || "Não informado"}`,
+        `TAG RFID: ${codigoTagFinal || "Não informada"}`,
+        `Setor responsável: ${form.setor || "Não informado"}`,
         `Setores permitidos: ${setoresPermitidos}`,
         `Observacoes: ${observacao || "Nenhuma"}`
       ].join(" | ");
@@ -517,21 +528,27 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         setorResponsavel: form.setor,
         telefone: form.telefone,
         email: form.email.trim().toLowerCase(),
-        codigoTag: form.rfidTag,
+        codigoTag: codigoTagFinal,
         setoresAcesso: form.setoresAcesso
       };
       
       const response = await api.post('/requisicao-visitante', payload);
       
       if (response.sucesso) {
+        setForm((current) => ({ ...current, rfidTag: codigoTagFinal }));
         setStep(2);
         setTempoEspera(0);
+        showToast({
+          type: "success",
+          title: "Solicitação enviada",
+          description: "O supervisor já pode analisar o acesso do visitante.",
+        });
       } else {
-        alert(response.mensagem || "Erro ao registrar visitante");
+        showCadastroError(response.mensagem || "Erro ao registrar visitante.");
       }
     } catch (error) {
       console.error(error);
-      alert(error.message || "Erro ao conectar com o servidor");
+      showCadastroError(error.message || "Erro ao conectar com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -553,10 +570,11 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     },
     { key: "documentoCPFRG", label: "Documento CPF/RG", completed: cpfCompleto },
     { key: "empresaAcessivel", label: "Empresa acessível", completed: Boolean(form.empresa) },
-    { key: "setorResponsavel", label: "Setor responsavel", completed: Boolean(form.setor) },
+    { key: "setorResponsavel", label: "Setor responsável", completed: Boolean(form.setor) },
     { key: "setoresPermitidos", label: "Setores permitidos", completed: form.setoresAcesso.length > 0 },
     { key: "telefoneContato", label: "Telefone de contato", completed: telefoneCompleto },
-    { key: "emailContato", label: "E-mail de contato", completed: emailValido }
+    { key: "emailContato", label: "E-mail de contato", completed: emailValido },
+    { key: "tagSelecionada", label: "TAG selecionada", completed: Boolean(form.rfidTag) }
   ];
 
   return (
@@ -701,7 +719,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
-                        Setor Responsavel
+                        Setor Responsável
                       </label>
                       <PrettySelect
                         value={form.setor}
@@ -769,16 +787,13 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2.5">
                       TAG RFID
                     </label>
-                    <div className="relative">
-                      <ScanLine className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        placeholder="Aguardando leitura RFID"
-                        value={form.rfidTag}
-                        readOnly
-                        className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 font-mono text-sm shadow-xs"
-                      />
-                    </div>
+                    <PrettySelect
+                      value={form.rfidTag}
+                      onChange={(value) => setForm({ ...form, rfidTag: value })}
+                      placeholder={loadingTags ? "Carregando TAGs..." : "Selecione uma TAG"}
+                      options={tagOptions}
+                      Icon={ScanLine}
+                    />
                   </div>
                 </div>
               </div>
@@ -872,11 +887,11 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                       </div>
                     </div>
 
-                    {/* Setor responsavel */}
+                    {/* Setor responsável */}
                     {form.setor && (
                       <div className="mb-4 pb-4 border-b border-border/60">
                         <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground mb-2">
-                          Setor Responsavel
+                          Setor Responsável
                         </div>
                         <div className="inline-flex items-center gap-2 bg-primary/5 border border-primary/15 rounded-full px-3 py-1.5">
                           <div className="w-2 h-2 rounded-full bg-primary/70"></div>
@@ -908,7 +923,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                         { label: "Telefone", value: form.telefone || "—" },
                         { label: "E-mail", value: form.email || "—" },
                         { label: "Motivo", value: form.motivo || "—" },
-                        { label: "TAG", value: form.rfidTag || "Nao informada" },
+                        { label: "TAG", value: getTagSelectionLabel(form.rfidTag, tagsDisponiveis) },
                       ].map((item) => (
                         <div key={item.label} className="flex items-center justify-between gap-3 text-[10px]">
                           <span className="font-bold uppercase tracking-[0.14em] text-muted-foreground">{item.label}</span>
@@ -962,25 +977,25 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
               </div>
 
               {/* Dicas de Cadastro */}
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-3xl p-5 shadow-sm">
+              <div className="rounded-3xl border border-primary/15 bg-card p-5 shadow-sm">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
-                    <Lightbulb size={18} className="text-amber-600" />
+                  <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                    <Lightbulb size={18} className="text-primary" />
                   </div>
-                  <h3 className="font-bold text-amber-900 text-sm">Dicas de Cadastro</h3>
+                  <h3 className="font-bold text-foreground text-sm">Dicas de Cadastro</h3>
                 </div>
 
-                <ul className="space-y-2.5 text-xs text-amber-900/80">
+                <ul className="space-y-2.5 text-xs text-muted-foreground">
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Verifique se o visitante possui documento de identificação válido</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Confirme os setores permitidos antes de enviar a solicitação</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Confira empresa, telefone e motivo antes de avançar</span>
                   </li>
                 </ul>
@@ -1060,7 +1075,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                 { label: "Nome", value: form.nome || "—" },
                 { label: "Empresa", value: form.empresa || "—" },
                 { label: "Tipo", value: form.motivo || "—" },
-                { label: "Setor responsavel", value: form.setor || "—" },
+                { label: "Setor responsável", value: form.setor || "—" },
                 { label: "CPF", value: form.cpf || "—" },
                 { label: "Telefone", value: form.telefone || "—" },
                 { label: "E-mail", value: form.email || "—" },

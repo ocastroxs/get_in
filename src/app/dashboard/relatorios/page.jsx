@@ -3,8 +3,6 @@
 import { getActiveLanguage } from "@/lib/i18n-core";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
   ArrowRightLeft,
   Building2,
   Check,
@@ -23,9 +21,11 @@ import StatCard from "@/components/StatCard";
 import TiposVisitantesChart from "@/components/TiposVisitantesChart";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { exportTableToPdf } from "@/lib/exportPdf";
 import { formatCPF } from "@/lib/utils";
 import { api } from "@/services/api";
@@ -77,8 +77,6 @@ const EMPTY_RELATORIO = {
   },
 };
 
-const PAGE_SIZE = 12;
-
 function toDateInputValue(date) {
   const normalized = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   return normalized.toISOString().slice(0, 10);
@@ -125,6 +123,8 @@ function formatDate(value) {
 }
 
 function normalizePayload(payload) {
+  const rankings = payload?.rankings || {};
+
   return {
     ...EMPTY_RELATORIO,
     ...(payload || {}),
@@ -138,7 +138,10 @@ function normalizePayload(payload) {
     },
     rankings: {
       ...EMPTY_RELATORIO.rankings,
-      ...(payload?.rankings || {}),
+      setores: Array.isArray(rankings.setores) ? rankings.setores : [],
+      empresas: Array.isArray(rankings.empresas) ? rankings.empresas : [],
+      status: Array.isArray(rankings.status) ? rankings.status : [],
+      tipos: Array.isArray(rankings.tipos) ? rankings.tipos : [],
     },
     filtrosDisponiveis: {
       ...EMPTY_RELATORIO.filtrosDisponiveis,
@@ -173,7 +176,6 @@ export default function RelatoriosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
-  const [page, setPage] = useState(1);
 
   const carregarRelatorios = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -184,13 +186,13 @@ export default function RelatoriosPage() {
       const response = await api.get(`/relatorios/acessos${query ? `?${query}` : ""}`);
 
       if (!response.sucesso) {
-        throw new Error(response.mensagem || "Nao foi possivel carregar os relatorios.");
+        throw new Error(response.mensagem || "Não foi possível carregar os relatórios.");
       }
 
       setRelatorio(normalizePayload(response.data));
     } catch (err) {
       setRelatorio(EMPTY_RELATORIO);
-      setError(err.message || "Nao foi possivel carregar os relatorios.");
+      setError(err.message || "Não foi possível carregar os relatórios.");
     } finally {
       setLoading(false);
     }
@@ -213,15 +215,14 @@ export default function RelatoriosPage() {
     return () => window.clearTimeout(timeout);
   }, [buscaInput]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [relatorio.registros]);
-
-  const totalPages = Math.max(1, Math.ceil(relatorio.registros.length / PAGE_SIZE));
-  const registrosPagina = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return relatorio.registros.slice(start, start + PAGE_SIZE);
-  }, [page, relatorio.registros]);
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: registrosPagina,
+  } = usePagination(relatorio.registros);
 
   const filtrosAtivos = useMemo(() => {
     const labels = [
@@ -270,13 +271,13 @@ export default function RelatoriosPage() {
 
   async function exportarPDF() {
     if (relatorio.registros.length === 0) {
-      alert("Nao ha dados para exportar.");
+      alert("Não há dados para exportar.");
       return;
     }
 
     try {
       await exportTableToPdf({
-        title: "Relatorio de acessos",
+        title: "Relatório de acessos",
         subtitle: "Acessos filtrados no painel administrativo",
         fileName: `relatorio_acessos_${new Date().toISOString().split("T")[0]}.pdf`,
         filters: filtrosAtivos,
@@ -287,8 +288,8 @@ export default function RelatoriosPage() {
           { header: "Empresa", weight: 1.1 },
           { header: "Setor", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
-          { header: "Saida", weight: 1.1 },
-          { header: "Permanencia", weight: 0.8 },
+          { header: "Saída", weight: 1.1 },
+          { header: "Permanência", weight: 0.8 },
           { header: "Status", weight: 0.9 },
         ],
         rows: relatorio.registros.map((registro) => [
@@ -305,7 +306,7 @@ export default function RelatoriosPage() {
       });
     } catch (err) {
       console.error("Erro ao exportar PDF:", err);
-      alert("Nao foi possivel exportar o PDF.");
+      alert("Não foi possível exportar o PDF.");
     }
   }
 
@@ -397,8 +398,8 @@ export default function RelatoriosPage() {
   return (
     <div className="flex w-full flex-col gap-6 overflow-x-hidden pb-10 animate-in fade-in duration-700">
       <Topbar
-        title="Relatorios de Acessos"
-        subtitle="Analise administrativa de entradas, saidas, permanencia, setores e empresas."
+        title="Relatórios de Acessos"
+        subtitle="Análise administrativa de entradas, saídas, permanência, setores e empresas."
       />
 
       {error && (
@@ -480,7 +481,7 @@ export default function RelatoriosPage() {
                 <p className="text-xs text-muted-foreground">Acessos retornados pelo backend com os filtros atuais.</p>
               </div>
               <div className="text-xs font-semibold text-muted-foreground">
-                Pagina {page} de {totalPages}
+                Página {page} de {totalPages}
               </div>
             </div>
 
@@ -493,8 +494,8 @@ export default function RelatoriosPage() {
                     <th className="px-4 py-3">Empresa</th>
                     <th className="px-4 py-3">Setor</th>
                     <th className="px-4 py-3">Entrada</th>
-                    <th className="px-4 py-3">Saida</th>
-                    <th className="px-4 py-3">Permanencia</th>
+                    <th className="px-4 py-3">Saída</th>
+                    <th className="px-4 py-3">Permanência</th>
                     <th className="px-4 py-3 text-right">Status</th>
                   </tr>
                 </thead>
@@ -538,35 +539,15 @@ export default function RelatoriosPage() {
               </table>
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-border bg-muted/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                Mostrando {registrosPagina.length} de {relatorio.registros.length} registro(s).
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  disabled={page <= 1}
-                  className="gap-1.5 rounded-xl"
-                >
-                  <ArrowLeft size={14} />
-                  Anterior
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-                  disabled={page >= totalPages}
-                  className="gap-1.5 rounded-xl"
-                >
-                  Proxima
-                  <ArrowRight size={14} />
-                </Button>
-              </div>
-            </div>
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={registrosPagina.length}
+              onPageChange={setPage}
+              itemLabel="registro(s)"
+            />
           </section>
         </>
       )}

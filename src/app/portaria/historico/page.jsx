@@ -1,5 +1,4 @@
 "use client";
-import { getActiveLanguage } from "@/lib/i18n-core";
 import { useState, useMemo } from "react";
 import {
   AlertTriangle, Calendar, Download, Loader2, Search, X, Filter, LogOut, LogIn, User, Building2, MapPin, Check, Mail, Phone
@@ -8,299 +7,38 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Topbar from "@/components/Topbar";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import StatCard from "@/components/StatCard";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
-import { formatPhone } from "@/lib/utils";
-
-const STATUS_OPTIONS = ["Todos", "Finalizado", "Em andamento", "Expirado"];
-
-const STATUS_FILTER_VALUE = {
-  Finalizado: "finalizado",
-  "Em andamento": "em_andamento",
-  Expirado: "expirado"
-};
-
-const STATUS_LABEL = {
-  finalizado: "Finalizado",
-  em_andamento: "Em andamento",
-  expirado: "Expirado"
-};
-
-const STATUS_STYLE = {
-  finalizado: "bg-green-100 text-green-700",
-  em_andamento: "bg-amber-100 text-amber-700",
-  expirado: "bg-slate-100 text-slate-700"
-};
-
-function pickFirst(...values) {
-  return (
-    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
-    ""
-  );
-}
-
-function getDescricaoValue(descricao, label) {
-  if (typeof descricao !== "string") return "";
-
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
-
-  return match?.[1]?.trim() || "";
-}
-
-function getResponseArray(response, keys = []) {
-  if (!response || typeof response !== "object" || !response.sucesso) {
-    return [];
-  }
-
-  if (Array.isArray(response.data)) {
-    return response.data;
-  }
-
-  for (const key of keys) {
-    if (Array.isArray(response.data?.[key])) {
-      return response.data[key];
-    }
-
-    if (Array.isArray(response[key])) {
-      return response[key];
-    }
-  }
-
-  return [];
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(getActiveLanguage(), {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(date);
-}
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function splitSetores(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item && item.toLowerCase() !== "nenhum");
-}
-
-function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
-  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
-
-  if (setoresPermitidos.length > 0) {
-    return setoresPermitidos;
-  }
-
-  return splitSetores(fallback);
-}
-
-function normalizeHistoricoStatus(value, dataSaida, dataEntrada) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  if (normalized === "expirado" || normalized === "expirada") return "expirado";
-  if (["pendente", "aguardando", "em andamento", "em_andamento"].includes(normalized)) return "em_andamento";
-  if (
-    [
-      "aprovado",
-      "aprovada",
-      "recusado",
-      "recusada",
-      "rejeitado",
-      "negado",
-      "saida",
-      "saiu",
-      "dentro",
-      "ativo",
-      "liberado",
-      "finalizado",
-      "concluido"
-    ].includes(normalized)
-  ) {
-    return "finalizado";
-  }
-  if (dataSaida || dataEntrada) return "finalizado";
-  return "em_andamento";
-}
-
-function pickBestCapitalization(current, next) {
-  if (!current) return next || "";
-  if (!next) return current;
-
-  const currentHasUpper = /[A-ZÀ-Ý]/.test(current.slice(1));
-  const nextHasUpper = /[A-ZÀ-Ý]/.test(next.slice(1));
-
-  if (!currentHasUpper && nextHasUpper) return next;
-  return current;
-}
-
-function maskCPF(value) {
-  return onlyDigits(value)
-    .slice(0, 11)
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d)/, "$1.$2")
-    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-function normalizeRegistro(registro) {
-  const usuario = registro?.usuario || {};
-  const departamento = registro?.departamento || registro?.setores || {};
-  const departamentoNome = typeof departamento === "string" ? departamento : departamento?.nome;
-  const descricao = registro?.descricao || "";
-  const setorBackend = pickFirst(registro?.setoresPermitidos, registro?.setor, departamentoNome, getDescricaoValue(descricao, "Setor"));
-  const setoresPermitidos = getSetoresPermitidosFromDescricao(descricao, setorBackend);
-  const setorResponsavel = pickFirst(
-    getDescricaoValue(descricao, "Setor responsavel"),
-    getDescricaoValue(descricao, "Area responsavel"),
-    getDescricaoValue(descricao, "Setor"),
-    setorBackend
-  );
-  const dataEntrada = pickFirst(registro?.dataEntrada, registro?.entrada, registro?.dataDaRequisicao, registro?.dataDeEntrada);
-  const dataSaida = pickFirst(registro?.dataSaida, registro?.dataDeSaida);
-
-  return {
-    ...registro,
-    visitante: pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(descricao, "Visitante")),
-    cpf: pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
-    telefone: pickFirst(
-      registro?.telefone,
-      registro?.celular,
-      usuario?.celular,
-      usuario?.telefone,
-      getDescricaoValue(descricao, "Telefone")
-    ),
-    email: pickFirst(registro?.email, usuario?.email, getDescricaoValue(descricao, "Email"), getDescricaoValue(descricao, "E-mail")),
-    empresa: pickFirst(registro?.empresa, registro?.empresa_visitante, usuario?.empresa, getDescricaoValue(descricao, "Empresa")),
-    setor: setorResponsavel,
-    setorResponsavel,
-    setoresPermitidos,
-    setoresLista: setoresPermitidos,
-    dataEntrada,
-    dataSaida,
-    status: normalizeHistoricoStatus(registro?.status, dataSaida, dataEntrada),
-    observacoes: pickFirst(registro?.observacoes, descricao)
-  };
-}
-
-function isFuncionarioRegistro(registro) {
-  const usuario = registro?.usuario || {};
-  const tipo = String(
-    pickFirst(
-      registro?.tipo,
-      registro?.cargo,
-      usuario?.tipo,
-      usuario?.cargo,
-      usuario?.funcionario?.tipo,
-      usuario?.funcionario?.cargo
-    )
-  )
-    .trim()
-    .toLowerCase();
-
-  return Boolean(
-    usuario?.funcionario ||
-      ["func", "funcionario", "funcionário", "port", "portaria", "sup", "supervisor", "ger", "gerente"].includes(tipo)
-  );
-}
-
-// Helpers do historico
-function getRegistroIdentity(registro) {
-  const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
-  const cpf = onlyDigits(registro?.cpf);
-  const email = String(registro?.email || "").trim().toLowerCase();
-  const nome = String(registro?.visitante || "").trim().toLowerCase();
-  const idRegistro = pickFirst(registro?.id, registro?.idRequisicao);
-
-  if (idUsuario) return `usuario:${idUsuario}`;
-  if (cpf) return `cpf:${cpf}`;
-  if (email) return `email:${email}`;
-  if (nome) return `nome:${nome}`;
-
-  return `registro:${idRegistro || registro?.dataEntrada || ""}`;
-}
-
-function getRegistroTimestamp(registro) {
-  const datas = [
-    registro?.dataSaida,
-    registro?.dataEntrada,
-    registro?.dataDaRequisicao,
-    registro?.validade
-  ];
-
-  for (const data of datas) {
-    const timestamp = new Date(data).getTime();
-
-    if (!Number.isNaN(timestamp)) {
-      return timestamp;
-    }
-  }
-
-  return 0;
-}
-
-function compareRegistroRecency(a, b) {
-  const timestampA = getRegistroTimestamp(a);
-  const timestampB = getRegistroTimestamp(b);
-
-  if (timestampA !== timestampB) {
-    return timestampA - timestampB;
-  }
-
-  return Number(a?.id || a?.idRequisicao || 0) - Number(b?.id || b?.idRequisicao || 0);
-}
-
-function dedupeRegistrosPorVisitante(registros) {
-  const registrosPorVisitante = new Map();
-
-  registros.forEach((registro) => {
-    const key = `${getRegistroIdentity(registro)}|${registro.status || "em_andamento"}`;
-    const registroAtual = registrosPorVisitante.get(key);
-
-    if (!registroAtual) {
-      registrosPorVisitante.set(key, registro);
-      return;
-    }
-
-    const principal = compareRegistroRecency(registro, registroAtual) >= 0 ? registro : registroAtual;
-    const setoresLista = Array.from(
-      new Set([...(registroAtual.setoresLista || []), ...(registro.setoresLista || [])])
-    );
-
-    registrosPorVisitante.set(key, {
-      ...principal,
-      empresa: pickBestCapitalization(registroAtual.empresa, registro.empresa),
-      setoresLista,
-      setoresPermitidos: setoresLista,
-      setor: principal.setor || registroAtual.setor || registro.setor
-    });
-  });
-
-  return Array.from(registrosPorVisitante.values()).sort((a, b) => compareRegistroRecency(b, a));
-}
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  dedupeRegistrosPorVisitante,
+  formatPhone,
+  formatPortariaDateTime,
+  getRegistroIdentity,
+  getResponseArray,
+  HISTORICO_STATUS_FILTER_VALUE,
+  HISTORICO_STATUS_LABEL,
+  HISTORICO_STATUS_OPTIONS,
+  HISTORICO_STATUS_STYLE,
+  isFuncionarioRegistro,
+  maskCPF,
+  normalizeHistoricoRegistro,
+  onlyDigits,
+} from "@/lib/portaria-data";
 
 // Modal de detalhes
 function ModalDetalhes({ isOpen, onClose, registro }) {
   if (!isOpen || !registro) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
           <h2 className="text-lg font-bold text-foreground">Detalhes do Registro</h2>
           <button
@@ -311,7 +49,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto p-6" data-lenis-prevent>
           <div className="bg-muted/40 rounded-xl p-4 space-y-4 border border-border/50">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-background border border-border text-muted-foreground">
@@ -361,7 +99,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 <MapPin size={16} />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor responsavel</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Setor responsável</p>
                 <p className="text-sm font-semibold text-foreground">{registro.setor}</p>
               </div>
             </div>
@@ -383,7 +121,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                 </div>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Entrada</p>
-                  <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataEntrada)}</p>
+                  <p className="text-xs font-semibold text-foreground">{formatPortariaDateTime(registro.dataEntrada)}</p>
                 </div>
               </div>
 
@@ -394,7 +132,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
                   </div>
                   <div className="flex-1">
                     <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saída</p>
-                    <p className="text-xs font-semibold text-foreground">{formatDateTime(registro.dataSaida)}</p>
+                    <p className="text-xs font-semibold text-foreground">{formatPortariaDateTime(registro.dataSaida)}</p>
                   </div>
                 </div>
               )}
@@ -412,6 +150,7 @@ function ModalDetalhes({ isOpen, onClose, registro }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -439,10 +178,10 @@ function LinhaHistorico({ registro, onDetalhes }) {
       </td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.empresa || "—"}</td>
       <td className="px-4 py-3 text-sm text-foreground">{registro.setor || "—"}</td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateTime(registro.dataEntrada)}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground">{formatPortariaDateTime(registro.dataEntrada)}</td>
       <td className="px-4 py-3">
-        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[registro.status] || STATUS_STYLE.em_andamento}`}>
-          {STATUS_LABEL[registro.status] || registro.status || "Em andamento"}
+        <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${HISTORICO_STATUS_STYLE[registro.status] || HISTORICO_STATUS_STYLE.em_andamento}`}>
+          {HISTORICO_STATUS_LABEL[registro.status] || registro.status || "Em andamento"}
         </span>
       </td>
       <td className="px-4 py-3 text-right">
@@ -461,6 +200,7 @@ function LinhaHistorico({ registro, onDetalhes }) {
 
 // ─── PÁGINA PRINCIPAL ────────────────────────────────────────────────────────
 export default function HistoricoPage() {
+  const { showToast } = useToast();
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -490,7 +230,7 @@ export default function HistoricoPage() {
         dedupeRegistrosPorVisitante(
           dados
             .filter((registro) => !isFuncionarioRegistro(registro))
-            .map(normalizeRegistro)
+            .map(normalizeHistoricoRegistro)
         )
       );
     } catch (error) {
@@ -523,7 +263,7 @@ export default function HistoricoPage() {
         (termoBuscaDigitos !== "" && telefoneDigitos.includes(termoBuscaDigitos)) ||
         (r.email || "").toLowerCase().includes(termoBusca);
 
-      const matchStatus = filtroStatus === "Todos" || r.status === STATUS_FILTER_VALUE[filtroStatus];
+      const matchStatus = filtroStatus === "Todos" || r.status === HISTORICO_STATUS_FILTER_VALUE[filtroStatus];
 
       const matchData = filtroData === "" ||
         String(r.dataEntrada || "").includes(filtroData);
@@ -531,6 +271,15 @@ export default function HistoricoPage() {
       return matchBusca && matchStatus && matchData;
     });
   }, [registros, busca, filtroStatus, filtroData]);
+
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: registrosPagina,
+  } = usePagination(registrosFiltrados);
 
   const resumoStatus = useMemo(() => ({
     Todos: registros.length,
@@ -559,7 +308,11 @@ export default function HistoricoPage() {
 
   async function downloadPDF() {
     if (registrosFiltrados.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast({
+        type: "info",
+        title: "Nada para exportar",
+        description: "Não há registros com os filtros atuais.",
+      });
       return;
     }
 
@@ -579,7 +332,7 @@ export default function HistoricoPage() {
           { header: "Telefone", weight: 1 },
           { header: "E-mail", weight: 1.4 },
           { header: "Empresa", weight: 1.2 },
-          { header: "Setor responsavel", weight: 1.1 },
+          { header: "Setor responsável", weight: 1.1 },
           { header: "Setores permitidos", weight: 1.1 },
           { header: "Entrada", weight: 1.1 },
           { header: "Saída", weight: 1.1 },
@@ -593,14 +346,18 @@ export default function HistoricoPage() {
           r.empresa,
           r.setor,
           r.setoresPermitidos?.join(", ") || "-",
-          formatDateTime(r.dataEntrada),
-          formatDateTime(r.dataSaida),
-          STATUS_LABEL[r.status] || r.status,
+          formatPortariaDateTime(r.dataEntrada),
+          formatPortariaDateTime(r.dataSaida),
+          HISTORICO_STATUS_LABEL[r.status] || r.status,
         ]),
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Não foi possível exportar o PDF.");
+      showToast({
+        type: "error",
+        title: "Erro ao exportar PDF",
+        description: "Não foi possível gerar o arquivo agora.",
+      });
     }
   }
 
@@ -647,7 +404,7 @@ export default function HistoricoPage() {
       {/* Barra de Filtros Padronizada */}
       <div className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm animate-in fade-in duration-500">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 items-center gap-3 w-full">
+          <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
@@ -683,7 +440,7 @@ export default function HistoricoPage() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <Button
               type="button"
               onClick={downloadPDF}
@@ -736,13 +493,13 @@ export default function HistoricoPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[900px] text-left border-collapse">
             <thead>
               <tr className="bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Contato</th>
                 <th className="px-4 py-3">Empresa</th>
-                <th className="px-4 py-3">Setor responsavel</th>
+                <th className="px-4 py-3">Setor responsável</th>
                 <th className="px-4 py-3">Entrada</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Ações</th>
@@ -765,7 +522,7 @@ export default function HistoricoPage() {
                   </td>
                 </tr>
               ) : (
-                registrosFiltrados.map((r) => (
+                registrosPagina.map((r) => (
                   <LinhaHistorico
                     key={`${getRegistroIdentity(r)}-${r.status}-${r.id || r.dataEntrada || r.dataDaRequisicao}`}
                     registro={r}
@@ -776,6 +533,17 @@ export default function HistoricoPage() {
             </tbody>
           </table>
         </div>
+        {!loading && registrosFiltrados.length > 0 && (
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={registrosPagina.length}
+            onPageChange={setPage}
+            itemLabel="registro(s)"
+          />
+        )}
       </div>
 
       {/* Modal Detalhes */}
@@ -814,7 +582,7 @@ export default function HistoricoPage() {
               </label>
             </div>
             <div className="grid grid-cols-1 gap-2">
-              {STATUS_OPTIONS.map((status) => {
+              {HISTORICO_STATUS_OPTIONS.map((status) => {
                 const isActive = tempFiltroStatus === status;
                 return (
                   <button

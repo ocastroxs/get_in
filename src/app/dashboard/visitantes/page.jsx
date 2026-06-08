@@ -5,14 +5,18 @@ import { useMemo, useState } from "react";
 import {
   Users, ArrowRightLeft, Clock3,
   Search, X, Check, Loader2, Filter,
-  Eye
+  Download, Eye
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
+import { exportTableToPdf } from "@/lib/exportPdf";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
@@ -128,13 +132,14 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
     { label: "Empresa", value: visitante.empresa },
     { label: "Setor", value: visitante.setor },
     { label: "Entrada", value: visitante.entrada },
-    { label: "Saida", value: visitante.saida || "-" },
+    { label: "Saída", value: visitante.saida || "-" },
     { label: "Status", value: STATUS_LABEL[visitante.status] || visitante.status },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
             <h2 className="text-sm font-bold text-foreground">Detalhes do Visitante</h2>
@@ -149,7 +154,7 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
             <X size={18} />
           </button>
         </div>
-        <div className="space-y-3 px-6 py-5">
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto px-6 py-5" data-lenis-prevent>
           {detalhes.map((item) => (
             <div key={item.label} className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0 last:pb-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</span>
@@ -159,6 +164,7 @@ function ModalDetalhesVisitante({ visitante, onClose }) {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
@@ -253,6 +259,15 @@ export default function VisitantesPage() {
     });
   }, [visitantes, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: visitantesPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total:       visitantes.length,
     ativos:      visitantes.filter((v) => v.status === "ativo").length,
@@ -270,6 +285,46 @@ export default function VisitantesPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (filtrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Visitantes",
+        subtitle: "Gestão de acesso e monitoramento de visitantes",
+        fileName: `visitantes_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          statusFiltro !== "Todos" ? `Status: ${STATUS_LABEL[statusFiltro] || statusFiltro}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.3 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.1 },
+          { header: "Setor", weight: 1.2 },
+          { header: "Entrada", weight: 1 },
+          { header: "Saída", weight: 1 },
+          { header: "Status", weight: 0.9 },
+        ],
+        rows: filtrados.map((visitante) => [
+          visitante.nome,
+          visitante.cpf,
+          visitante.empresa,
+          visitante.setor,
+          visitante.entrada,
+          visitante.saida,
+          STATUS_LABEL[visitante.status] || visitante.status,
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
+  }
+
   return (
     <>
       <ModalDetalhesVisitante visitante={visitanteDetalhes} onClose={() => setVisitanteDetalhes(null)} />
@@ -277,7 +332,7 @@ export default function VisitantesPage() {
       <div className="flex flex-col gap-6">
         <Topbar
           title="Visitantes"
-          subtitle="Gestao de acesso e monitoramento de visitantes"
+          subtitle="Gestão de acesso e monitoramento de visitantes"
           buttonText="Novo Visitante"
           buttonHref="/dashboard/visitantes/novo"
         />
@@ -311,7 +366,7 @@ export default function VisitantesPage() {
             value={stats.expirados}
             valueClassName="text-destructive"
             icon={<Clock3 size={17} className="text-destructive" />}
-            sub="saida pendente"
+            sub="saída pendente"
             accentVar="var(--destructive)"
           />
         </div>
@@ -357,8 +412,20 @@ export default function VisitantesPage() {
               </Button>
             </div>
 
-            <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
-              {filtrados.length} resultado(s)
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+              <Button
+                type="button"
+                onClick={exportarPDF}
+                variant="outline"
+                disabled={loading || filtrados.length === 0}
+                className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Exportar PDF</span>
+              </Button>
+              <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+                {filtrados.length} resultado(s)
+              </div>
             </div>
           </div>
 
@@ -421,7 +488,7 @@ export default function VisitantesPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((visitante) => (
+                  visitantesPagina.map((visitante) => (
                     <LinhaVisitante
                       key={visitante.id}
                       visitante={visitante}
@@ -432,6 +499,15 @@ export default function VisitantesPage() {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={visitantesPagina.length}
+            onPageChange={setPage}
+            itemLabel="visitante(s)"
+          />
         </div>
       </div>
 

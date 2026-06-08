@@ -1,6 +1,5 @@
 "use client";
 
-import { getActiveLanguage } from "@/lib/i18n-core";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -19,175 +18,27 @@ import {
 import Topbar from "@/components/Topbar";
 import StatCard from "@/components/StatCard";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
-import { formatCPF } from "@/lib/utils";
-
-const STATUS_LABEL = {
-  aprovado: "Aprovado",
-  recusado: "Recusado",
-};
-
-const STATUS_STYLE = {
-  aprovado: "bg-green-100 text-green-700",
-  recusado: "bg-red-100 text-red-700",
-};
-
-function pickFirst(...values) {
-  return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
-}
-
-function getDescricaoValue(descricao, label) {
-  if (typeof descricao !== "string") return "";
-
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
-
-  return match?.[1]?.trim() || "";
-}
-
-function normalizeStatus(value) {
-  const status = String(value || "").trim().toLowerCase();
-  if (["aprovada", "aprovado"].includes(status)) return "aprovado";
-  if (["recusada", "recusado", "rejeitado", "negado"].includes(status)) return "recusado";
-  return status || "pendente";
-}
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function splitSetores(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item && item.toLowerCase() !== "nenhum");
-}
-
-function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
-  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
-
-  if (setoresPermitidos.length > 0) {
-    return setoresPermitidos;
-  }
-
-  return splitSetores(fallback);
-}
-
-function formatDateTime(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(getActiveLanguage(), {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function isToday(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
-
-  const today = new Date();
-  return date.toDateString() === today.toDateString();
-}
-
-function normalizeRequisicao(registro) {
-  const usuario = registro?.usuario || {};
-  const descricao = registro?.descricao || "";
-  const setorBackend = pickFirst(registro?.setores?.nome, registro?.setor, getDescricaoValue(descricao, "Setor"));
-  const setoresPermitidos = getSetoresPermitidosFromDescricao(descricao, setorBackend);
-  const setorResponsavel = pickFirst(
-    getDescricaoValue(descricao, "Setor responsavel"),
-    getDescricaoValue(descricao, "Area responsavel"),
-    getDescricaoValue(descricao, "Setor"),
-    setorBackend,
-    "-"
-  );
-  const observacao = pickFirst(
-    getDescricaoValue(descricao, "Observacao da Portaria"),
-    getDescricaoValue(descricao, "Observacao"),
-    getDescricaoValue(descricao, "Observacoes"),
-    getDescricaoValue(descricao, "Observações")
-  );
-
-  return {
-    id: pickFirst(registro?.id, registro?.idRequisicao),
-    key: getRequisicaoIdentity(registro),
-    visitante: pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(descricao, "Visitante"), "-"),
-    cpf: pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF")),
-    empresa: pickFirst(registro?.empresa, usuario?.empresas?.nome, usuario?.empresa, getDescricaoValue(descricao, "Empresa"), "-"),
-    setorResponsavel,
-    areaResponsavel: setorResponsavel,
-    setor: setoresPermitidos.length > 0 ? setoresPermitidos.join(", ") : "-",
-    setoresPermitidos,
-    motivo: pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "-"),
-    status: normalizeStatus(registro?.status),
-    dataDaRequisicao: pickFirst(registro?.dataDaRequisicao, registro?.createdAt),
-    descricao,
-    observacao,
-  };
-}
-
-function getRequisicaoIdentity(registro) {
-  const usuario = registro?.usuario || {};
-  const idUsuario = pickFirst(registro?.idUsuario, usuario?.id);
-  const cpf = onlyDigits(pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(registro?.descricao, "CPF")));
-  const email = String(pickFirst(registro?.email, usuario?.email, getDescricaoValue(registro?.descricao, "Email"))).trim().toLowerCase();
-  const nome = String(pickFirst(registro?.visitante, registro?.nome, usuario?.nome, getDescricaoValue(registro?.descricao, "Visitante"))).trim().toLowerCase();
-
-  if (idUsuario) return `usuario:${idUsuario}`;
-  if (cpf) return `cpf:${cpf}`;
-  if (email) return `email:${email}`;
-  if (nome) return `nome:${nome}`;
-
-  return `registro:${pickFirst(registro?.id, registro?.idRequisicao, registro?.dataDaRequisicao)}`;
-}
-
-function getRequisicaoTimestamp(requisicao) {
-  const timestamp = new Date(requisicao?.dataDaRequisicao).getTime();
-  if (!Number.isNaN(timestamp)) return timestamp;
-  return Number(requisicao?.id || 0);
-}
-
-function mergeRequisicoesPorVisitante(atual, nova) {
-  const setoresPermitidos = Array.from(
-    new Set([...(atual.setoresPermitidos || []), ...(nova.setoresPermitidos || [])].filter(Boolean))
-  );
-  const principal = getRequisicaoTimestamp(nova) >= getRequisicaoTimestamp(atual) ? nova : atual;
-
-  return {
-    ...principal,
-    id: pickFirst(principal.id, atual.id, nova.id),
-    setoresPermitidos,
-    setor: setoresPermitidos.length > 0 ? setoresPermitidos.join(", ") : pickFirst(principal.setor, atual.setor, nova.setor),
-    observacao: pickFirst(principal.observacao, atual.observacao, nova.observacao),
-  };
-}
-
-function dedupeRequisicoesPorVisitante(requisicoes) {
-  const porVisitante = new Map();
-
-  requisicoes.forEach((requisicao) => {
-    const atual = porVisitante.get(requisicao.key);
-    porVisitante.set(requisicao.key, atual ? mergeRequisicoesPorVisitante(atual, requisicao) : requisicao);
-  });
-
-  return Array.from(porVisitante.values()).sort(
-    (a, b) => getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a)
-  );
-}
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  APROVACAO_STATUS_STYLE,
+  dedupeRequisicoesPorVisitante,
+  formatCPF,
+  formatPortariaDateTime,
+  isToday,
+  normalizeAprovacao,
+  REQUISICAO_STATUS_LABEL,
+} from "@/lib/portaria-data";
 
 function DescricaoVisual({ requisicao }) {
   const chips = [
-    { label: "Setor responsavel", value: requisicao.setorResponsavel },
+    { label: "Setor responsável", value: requisicao.setorResponsavel },
     { label: "Setores permitidos", value: requisicao.setor },
     { label: "Motivo", value: requisicao.motivo },
   ].filter((item) => item.value && item.value !== "-");
@@ -209,6 +60,7 @@ function DescricaoVisual({ requisicao }) {
 }
 
 export default function PortariaAprovacoesPage() {
+  const { showToast } = useToast();
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -229,12 +81,12 @@ export default function PortariaAprovacoesPage() {
       setRequisicoes(
         dedupeRequisicoesPorVisitante(
           data
-            .map(normalizeRequisicao)
+            .map(normalizeAprovacao)
             .filter((requisicao) => ["aprovado", "recusado"].includes(requisicao.status) && isToday(requisicao.dataDaRequisicao))
         )
       );
     } catch (error) {
-      console.error("Erro ao carregar aprovacoes da portaria:", error);
+      console.error("Erro ao carregar aprovações da portaria:", error);
       setRequisicoes([]);
     } finally {
       setLoading(false);
@@ -260,6 +112,15 @@ export default function PortariaAprovacoesPage() {
     });
   }, [busca, filtroData, filtroStatus, requisicoes]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: requisicoesPagina,
+  } = usePagination(requisicoesFiltradas);
+
   const stats = useMemo(() => ({
     aprovadosHoje: requisicoes.filter((requisicao) => requisicao.status === "aprovado" && isToday(requisicao.dataDaRequisicao)).length,
     recusadosHoje: requisicoes.filter((requisicao) => requisicao.status === "recusado" && isToday(requisicao.dataDaRequisicao)).length,
@@ -282,24 +143,28 @@ export default function PortariaAprovacoesPage() {
 
   async function exportarPDF() {
     if (requisicoesFiltradas.length === 0) {
-      alert("Nao ha dados para exportar.");
+      showToast({
+        type: "info",
+        title: "Nada para exportar",
+        description: "Não há aprovações com os filtros atuais.",
+      });
       return;
     }
 
     await exportTableToPdf({
-      title: "Aprovacoes da portaria",
-      subtitle: "Resultados de analise recebidos do supervisor",
+      title: "Aprovações da portaria",
+      subtitle: "Resultados de análise recebidos do supervisor",
       fileName: `aprovacoes_portaria_${new Date().toISOString().split("T")[0]}.pdf`,
       filters: [
         busca ? `Busca: ${busca}` : null,
-        filtroStatus !== "todos" ? `Status: ${STATUS_LABEL[filtroStatus]}` : null,
+        filtroStatus !== "todos" ? `Status: ${REQUISICAO_STATUS_LABEL[filtroStatus]}` : null,
         filtroData ? `Data: ${filtroData}` : null,
       ].filter(Boolean),
       columns: [
         { header: "Visitante", weight: 1.4 },
         { header: "CPF", weight: 1 },
         { header: "Empresa", weight: 1.1 },
-        { header: "Setor responsavel", weight: 1 },
+        { header: "Setor responsável", weight: 1 },
         { header: "Setores permitidos", weight: 1 },
         { header: "Motivo", weight: 1 },
         { header: "Status", weight: 0.8 },
@@ -311,7 +176,7 @@ export default function PortariaAprovacoesPage() {
         requisicao.setorResponsavel,
         requisicao.setor,
         requisicao.motivo,
-        STATUS_LABEL[requisicao.status] || requisicao.status,
+        REQUISICAO_STATUS_LABEL[requisicao.status] || requisicao.status,
       ]),
     });
   }
@@ -327,17 +192,17 @@ export default function PortariaAprovacoesPage() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <StatCard label="Aprovados hoje" value={stats.aprovadosHoje} icon={<CheckCircle2 size={18} className="text-green-600" />} accentVar="#16a34a" sub="Entram como dentro" />
           <StatCard label="Recusados hoje" value={stats.recusadosHoje} icon={<XCircle size={18} className="text-red-600" />} accentVar="#dc2626" sub="Acesso negado" />
-          <StatCard label="Setores permitidos" value={stats.setores} icon={<ShieldCheck size={18} className="text-blue-600" />} accentVar="#2563eb" sub="Com decisao hoje" />
-          <StatCard label="Com observacao" value={stats.comObservacao} icon={<Eye size={18} className="text-amber-600" />} accentVar="#d97706" sub="Registro da portaria" />
+          <StatCard label="Setores permitidos" value={stats.setores} icon={<ShieldCheck size={18} className="text-blue-600" />} accentVar="#2563eb" sub="Com decisão hoje" />
+          <StatCard label="Com observação" value={stats.comObservacao} icon={<Eye size={18} className="text-amber-600" />} accentVar="#d97706" sub="Registro da portaria" />
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex w-full flex-1 items-center gap-3">
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
-                  placeholder="Buscar por visitante, CPF, empresa, setor responsavel ou setor permitido..."
+                  placeholder="Buscar por visitante, CPF, empresa, setor responsável ou setor permitido..."
                   className="h-11 rounded-xl pl-10"
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
@@ -354,7 +219,7 @@ export default function PortariaAprovacoesPage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button type="button" onClick={exportarPDF} variant="outline" className="h-11 gap-2 rounded-xl">
                 <Download size={16} />
                 Exportar PDF
@@ -383,19 +248,19 @@ export default function PortariaAprovacoesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
+              <table className="w-full min-w-[900px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3">Visitante</th>
                     <th className="px-4 py-3">Empresa</th>
-                    <th className="px-4 py-3">Descricao</th>
-                    <th className="px-4 py-3">Solicitacao</th>
+                    <th className="px-4 py-3">Descrição</th>
+                    <th className="px-4 py-3">Solicitação</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3 text-right">Acoes</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {requisicoesFiltradas.map((requisicao) => (
+                  {requisicoesPagina.map((requisicao) => (
                     <tr key={requisicao.key} className="transition-colors hover:bg-muted/40">
                       <td className="px-4 py-3">
                         <p className="text-sm font-bold text-foreground">{requisicao.visitante}</p>
@@ -403,16 +268,16 @@ export default function PortariaAprovacoesPage() {
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground">{requisicao.empresa}</td>
                       <td className="px-4 py-3"><DescricaoVisual requisicao={requisicao} /></td>
-                      <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatDateTime(requisicao.dataDaRequisicao)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-muted-foreground">{formatPortariaDateTime(requisicao.dataDaRequisicao, "-")}</td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLE[requisicao.status]}`}>
-                          {STATUS_LABEL[requisicao.status]}
+                        <span className={`inline-flex rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${APROVACAO_STATUS_STYLE[requisicao.status]}`}>
+                          {REQUISICAO_STATUS_LABEL[requisicao.status]}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href="/portaria/historico">
                           <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] font-bold">
-                            Historico
+                            Histórico
                           </Button>
                         </Link>
                       </td>
@@ -421,6 +286,17 @@ export default function PortariaAprovacoesPage() {
                 </tbody>
               </table>
             </div>
+          )}
+          {!loading && requisicoesFiltradas.length > 0 && (
+            <PaginationControls
+              page={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              currentCount={requisicoesPagina.length}
+              onPageChange={setPage}
+              itemLabel="aprovação(ões)"
+            />
           )}
         </div>
       </div>
@@ -446,7 +322,7 @@ export default function PortariaAprovacoesPage() {
                       : "border-border/60 bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
-                  {status === "todos" ? "Todos os status" : STATUS_LABEL[status]}
+                  {status === "todos" ? "Todos os status" : REQUISICAO_STATUS_LABEL[status]}
                   {tempFiltroStatus === status && <Check size={14} />}
                 </button>
               ))}
