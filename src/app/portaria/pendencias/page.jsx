@@ -26,304 +26,16 @@ import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { usePagination } from "@/hooks/usePagination";
 import { api } from "@/services/api";
 import { exportTableToPdf } from "@/lib/exportPdf";
-import { formatCPF, formatPhone } from "@/lib/utils";
-import { normalizeMotivoVisita } from "@/lib/visitanteMotivos";
-
-const STATUS_LABEL = {
-  pendente: "Pendente",
-  aprovado: "Aprovado",
-  recusado: "Recusado"
-};
-
-function pickFirst(...values) {
-  return (
-    values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") ||
-    ""
-  );
-}
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function getDescricaoValue(descricao, label) {
-  if (typeof descricao !== "string") return "";
-
-  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = descricao.match(new RegExp(`${escapedLabel}:\\s*([^|]+)`, "i"));
-
-  return match?.[1]?.trim() || "";
-}
-
-function normalizeStatus(value) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  if (normalized.includes("aguard")) {
-    return "pendente";
-  }
-
-  if (["aprovada", "aprovado"].includes(normalized)) return "aprovado";
-  if (["recusada", "recusado", "rejeitado", "negado"].includes(normalized)) return "recusado";
-
-  return normalized || "pendente";
-}
-
-function getResponseArray(response, keys = []) {
-  if (!response || typeof response !== "object" || !response.sucesso) {
-    return [];
-  }
-
-  if (Array.isArray(response.data)) {
-    return response.data;
-  }
-
-  for (const key of keys) {
-    if (Array.isArray(response.data?.[key])) {
-      return response.data[key];
-    }
-
-    if (Array.isArray(response[key])) {
-      return response[key];
-    }
-  }
-
-  return [];
-}
-
-function formatDateTime(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(getActiveLanguage(), {
-    dateStyle: "short",
-    timeStyle: "short"
-  }).format(date);
-}
-
-function getEmpresaNome(registro) {
-  if (typeof registro?.empresas === "string") return registro.empresas;
-
-  return pickFirst(
-    registro?.empresa,
-    registro?.empresa_visitante,
-    registro?.usuario?.empresas?.nome,
-    registro?.usuario?.empresa,
-    registro?.empresas?.nome
-  );
-}
-
-function getSetorNome(registro) {
-  if (typeof registro?.setores === "string") return registro.setores;
-  if (typeof registro?.departamento === "string") return registro.departamento;
-
-  return pickFirst(
-    registro?.setor,
-    registro?.setores?.nome,
-    registro?.departamento?.nome
-  );
-}
-
-function splitSetores(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter((item) => item && item.toLowerCase() !== "nenhum");
-}
-
-function getSetoresPermitidosFromDescricao(descricao, fallback = "") {
-  const setoresPermitidos = splitSetores(getDescricaoValue(descricao, "Setores permitidos"));
-
-  if (setoresPermitidos.length > 0) {
-    return setoresPermitidos;
-  }
-
-  return splitSetores(fallback);
-}
-
-function hasObservacaoRelevante(value) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
-
-  return Boolean(normalized && !normalized.includes("nenhuma observacao") && normalized !== "nenhuma");
-}
-
-function looksLikeDescricaoCompleta(value) {
-  return /(^|\|)\s*(visitante|cpf|telefone|email|e-mail|empresa|tag rfid|setor|setores permitidos|observa[^:]*):/i.test(String(value || ""));
-}
-
-const OBSERVACAO_DESCRICAO_LABELS = [
-  "Observacao da Portaria",
-  "Observacao",
-  "Observacoes",
-  "Observação da Portaria",
-  "Observação",
-  "Observações",
-  "Observa\u00c3\u00a7\u00c3\u00b5es"
-];
-
-function getObservacaoFromDescricao(descricao) {
-  return pickFirst(
-    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label))
-  );
-}
-
-function sanitizeObservacao(...values) {
-  for (const value of values) {
-    const observacaoExtraida = getObservacaoFromDescricao(value);
-
-    if (hasObservacaoRelevante(observacaoExtraida)) {
-      return observacaoExtraida;
-    }
-  }
-
-  for (const value of values) {
-    const observacao = String(value || "").trim();
-
-    if (!looksLikeDescricaoCompleta(observacao) && hasObservacaoRelevante(observacao)) {
-      return observacao;
-    }
-  }
-
-  return "Nenhuma observação cadastrada.";
-}
-
-function getObservacoes(registro, descricao) {
-  return sanitizeObservacao(
-    registro?.observacoes,
-    ...OBSERVACAO_DESCRICAO_LABELS.map((label) => getDescricaoValue(descricao, label)),
-    "Nenhuma observação cadastrada."
-  );
-}
-
-function normalizeRequisicao(registro) {
-  const usuario = registro?.usuario || {};
-  const descricao = registro?.descricao || "";
-  const status = normalizeStatus(pickFirst(registro?.status, registro?.solicitacao));
-  const dataDaRequisicao = pickFirst(
-    registro?.dataDaRequisicao,
-    registro?.dataRequisicao,
-    registro?.createdAt
-  );
-  const setorBackend = pickFirst(getSetorNome(registro), getDescricaoValue(descricao, "Setor"));
-  const setoresLista = getSetoresPermitidosFromDescricao(descricao, setorBackend);
-  const setoresPermitidos = setoresLista.join(", ");
-  const areaResponsavel = pickFirst(
-    registro?.setorResponsavel,
-    registro?.setor_responsavel,
-    getDescricaoValue(descricao, "Setor responsavel"),
-    registro?.areaResponsavel,
-    registro?.area_responsavel,
-    getDescricaoValue(descricao, "Area responsavel"),
-    getDescricaoValue(descricao, "Setor"),
-    setorBackend
-  );
-  const visitante = pickFirst(
-    registro?.visitante,
-    registro?.nome,
-    usuario?.nome,
-    getDescricaoValue(descricao, "Visitante")
-  );
-  const cpf = pickFirst(registro?.cpf, usuario?.cpf, getDescricaoValue(descricao, "CPF"));
-  const email = pickFirst(
-    registro?.email,
-    usuario?.email,
-    getDescricaoValue(descricao, "Email"),
-    getDescricaoValue(descricao, "E-mail")
-  );
-  const empresa = pickFirst(getEmpresaNome(registro), getDescricaoValue(descricao, "Empresa"));
-  const motivo = normalizeMotivoVisita(pickFirst(registro?.motivo, getDescricaoValue(descricao, "Motivo"), "Outro"));
-  const key = getRequisicaoIdentity({ ...registro, visitante, cpf, email });
-
-  return {
-    ...registro,
-    id: pickFirst(registro?.id, registro?.idRequisicao, key),
-    key,
-    idUsuario: pickFirst(registro?.idUsuario, usuario?.id),
-    visitante: visitante || "-",
-    cpf,
-    email,
-    empresa: empresa || "-",
-    setor: setoresPermitidos || "-",
-    setoresLista,
-    areaResponsavel: areaResponsavel || "-",
-    motivo,
-    status,
-    solicitacao: dataDaRequisicao ? formatDateTime(dataDaRequisicao) : STATUS_LABEL[status] || status,
-    dataDaRequisicao,
-    telefone: pickFirst(registro?.telefone, registro?.celular, usuario?.celular, getDescricaoValue(descricao, "Telefone")),
-    observacoes: getObservacoes(registro, descricao)
-  };
-}
-
-function getRequisicaoIdentity(registro) {
-  const idUsuario = pickFirst(registro?.idUsuario, registro?.usuario?.id);
-  const cpf = onlyDigits(registro?.cpf);
-  const email = String(registro?.email || registro?.usuario?.email || "").trim().toLowerCase();
-  const visitante = String(registro?.visitante || registro?.nome || registro?.usuario?.nome || "")
-    .trim()
-    .toLowerCase();
-
-  if (idUsuario) return `usuario:${idUsuario}`;
-  if (cpf) return `cpf:${cpf}`;
-  if (email) return `email:${email}`;
-  if (visitante) return `nome:${visitante}`;
-
-  return `requisicao:${pickFirst(registro?.id, registro?.idRequisicao, registro?.dataDaRequisicao, registro?.motivo)}`;
-}
-
-function getRequisicaoTimestamp(registro) {
-  const datas = [registro?.dataDaRequisicao, registro?.validade];
-
-  for (const data of datas) {
-    const timestamp = new Date(data).getTime();
-
-    if (!Number.isNaN(timestamp)) {
-      return timestamp;
-    }
-  }
-
-  return Number(registro?.id || 0);
-}
-
-function mergeRequisicoes(atual, nova) {
-  const setoresLista = Array.from(
-    new Set([...(atual.setoresLista || []), ...(nova.setoresLista || [])])
-  );
-  const principal = getRequisicaoTimestamp(nova) >= getRequisicaoTimestamp(atual) ? nova : atual;
-
-  return {
-    ...principal,
-    ids: Array.from(new Set([...(atual.ids || [atual.id]), ...(nova.ids || [nova.id])].filter(Boolean))),
-    setoresLista,
-    setor: setoresLista.length > 0 ? setoresLista.join(", ") : pickFirst(principal.setor, atual.setor, nova.setor),
-    motivo: pickFirst(principal.motivo, atual.motivo, nova.motivo),
-    observacoes: pickFirst(principal.observacoes, atual.observacoes, nova.observacoes)
-  };
-}
-
-function dedupeRequisicoesPorVisitante(registros) {
-  const porVisitante = new Map();
-
-  registros.forEach((registro) => {
-    const atual = porVisitante.get(registro.key);
-    porVisitante.set(registro.key, atual ? mergeRequisicoes(atual, registro) : registro);
-  });
-
-  return Array.from(porVisitante.values()).sort(
-    (a, b) => getRequisicaoTimestamp(b) - getRequisicaoTimestamp(a)
-  );
-}
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  dedupeRequisicoesPorVisitante as dedupePortariaRequisicoes,
+  formatCPF,
+  formatPhone,
+  getResponseArray as getPortariaResponseArray,
+  hasObservacaoRelevante as hasPortariaObservacaoRelevante,
+  normalizePendencia,
+  onlyDigits as onlyPortariaDigits,
+} from "@/lib/portaria-data";
 
 function ModalObservacoes({ isOpen, onClose, requisicao }) {
   if (!isOpen || !requisicao) return null;
@@ -409,6 +121,7 @@ function LinhaRequisicao({ requisicao, onAnalise }) {
 }
 
 export default function PendenciasPage() {
+  const { showToast } = useToast();
   const [requisicoes, setRequisicoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
@@ -424,11 +137,11 @@ export default function PendenciasPage() {
     try {
       if (!silent) setLoading(true);
       const response = await api.get("/portaria/pendencias");
-      const pendencias = getResponseArray(response, ["dados", "requisicoes"])
-        .map(normalizeRequisicao)
+      const pendencias = getPortariaResponseArray(response, ["dados", "requisicoes"])
+        .map(normalizePendencia)
         .filter((requisicao) => requisicao.status === "pendente");
 
-      setRequisicoes(dedupeRequisicoesPorVisitante(pendencias));
+      setRequisicoes(dedupePortariaRequisicoes(pendencias));
     } catch (error) {
       console.error("Erro ao carregar pendencias:", error);
       setRequisicoes([]);
@@ -439,11 +152,11 @@ export default function PendenciasPage() {
 
   const requisicoesFiltradas = useMemo(() => {
     const termoBusca = busca.toLowerCase();
-    const termoBuscaDigitos = onlyDigits(busca);
+    const termoBuscaDigitos = onlyPortariaDigits(busca);
 
     return requisicoes.filter((requisicao) => {
-      const cpfDigitos = onlyDigits(requisicao.cpf);
-      const telefoneDigitos = onlyDigits(requisicao.telefone);
+      const cpfDigitos = onlyPortariaDigits(requisicao.cpf);
+      const telefoneDigitos = onlyPortariaDigits(requisicao.telefone);
       const matchBusca =
         busca === "" ||
         requisicao.visitante.toLowerCase().includes(termoBusca) ||
@@ -503,7 +216,11 @@ export default function PendenciasPage() {
 
   const exportarPDF = async () => {
     if (requisicoesFiltradas.length === 0) {
-      alert("Não há dados para exportar.");
+      showToast({
+        type: "info",
+        title: "Nada para exportar",
+        description: "Não há pendências com os filtros atuais.",
+      });
       return;
     }
 
@@ -539,7 +256,11 @@ export default function PendenciasPage() {
       });
     } catch (error) {
       console.error("Erro ao exportar PDF:", error);
-      alert("Não foi possível exportar o PDF.");
+      showToast({
+        type: "error",
+        title: "Erro ao exportar PDF",
+        description: "Não foi possível gerar o arquivo agora.",
+      });
     }
   };
 
@@ -549,7 +270,7 @@ export default function PendenciasPage() {
         .flatMap((requisicao) => requisicao.setoresLista || [])
         .filter((setor) => setor && setor !== "-")
     );
-    const comObservacao = requisicoes.filter((requisicao) => hasObservacaoRelevante(requisicao.observacoes)).length;
+    const comObservacao = requisicoes.filter((requisicao) => hasPortariaObservacaoRelevante(requisicao.observacoes)).length;
     return {
       totalPendentes: requisicoes.length,
       setoresPermitidos: setoresPermitidos.size,
@@ -603,7 +324,7 @@ export default function PendenciasPage() {
 
         <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex w-full flex-1 items-center gap-3">
+            <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-1">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <Input
@@ -639,7 +360,7 @@ export default function PendenciasPage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <Button
                 onClick={exportarPDF}
                 variant="outline"
@@ -687,7 +408,7 @@ export default function PendenciasPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
+            <table className="w-full min-w-[980px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-border bg-muted/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Visitante</th>

@@ -9,58 +9,17 @@ import { useAuth } from "@/lib/AuthContext";
 import { api } from "@/services/api";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { MOTIVO_OPTIONS, normalizeMotivoVisita } from "@/lib/visitanteMotivos";
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  getEmpresaNome,
+  getEmpresaNomeFromRegistro,
+  getSetorNome,
+  isValidEmail,
+  onlyDigits,
+} from "@/lib/portaria-data";
 
 const EMPRESA_NENHUMA = "Nenhuma";
 const CREATE_VIRTUAL_TAG_VALUE = "__CREATE_VIRTUAL_TAG__";
-
-function onlyDigits(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-}
-
-function getEmpresaNome(registro) {
-  return String(
-    registro?.empresa ||
-      registro?.empresa_visitante ||
-      registro?.usuario?.empresa ||
-      registro?.usuario?.empresas?.nome ||
-      registro?.empresas?.nome ||
-      registro?.empresa_nome ||
-      registro?.nomeFantasia ||
-      registro?.razaoSocial ||
-      registro?.razao_social ||
-      registro?.nome ||
-      ""
-  ).trim();
-}
-
-function getEmpresaNomeFromRegistro(registro) {
-  return String(
-    registro?.empresa ||
-      registro?.empresa_visitante ||
-      registro?.usuario?.empresa ||
-      registro?.usuario?.empresas?.nome ||
-      registro?.empresas?.nome ||
-      registro?.empresa_nome ||
-      registro?.nomeFantasia ||
-      registro?.razaoSocial ||
-      registro?.razao_social ||
-      ""
-  ).trim();
-}
-
-function getSetorNome(registro) {
-  return String(
-    registro?.nome ||
-      registro?.setor ||
-      registro?.setores?.nome ||
-      registro?.departamento?.nome ||
-      ""
-  ).trim();
-}
 
 function buildEmpresasOptions(registros) {
   const empresasUnicas = new Map();
@@ -189,6 +148,7 @@ function PrettySelect({ value, onChange, placeholder, options, Icon = Info }) {
 
 export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRoot = "Portaria" }) {
   const { user, funcionario } = useAuth();
+  const { showToast } = useToast();
   const [step, setStep] = useState(1);
   const [tempoEspera, setTempoEspera] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -474,6 +434,14 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     throw new Error(createResponse.mensagem || "Erro ao cadastrar dados do visitante.");
   };
 
+  const showCadastroError = (description) => {
+    showToast({
+      type: "error",
+      title: "Revise o cadastro",
+      description,
+    });
+  };
+
   const handleProximoStep = async () => {
     const cpfCompletoForm = onlyDigits(form.cpf).length === 11;
     const telefoneCompletoForm = onlyDigits(form.telefone).length >= 10;
@@ -482,27 +450,27 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     const observacao = form.observacao.trim();
 
     if (!form.nome.trim() || !cpfCompletoForm || !form.empresa || !form.setor || !form.motivo || !telefoneCompletoForm || !emailValidoForm) {
-      alert("Preencha nome, CPF, empresa, setor responsável, motivo, telefone e e-mail válidos.");
+      showCadastroError("Preencha nome, CPF, empresa, setor responsável, motivo, telefone e e-mail válidos.");
       return;
     }
 
     if (form.setoresAcesso.length === 0) {
-      alert("Selecione ao menos um setor permitido.");
+      showCadastroError("Selecione ao menos um setor permitido.");
       return;
     }
 
     if (!form.rfidTag) {
-      alert("Selecione uma TAG ou escolha criar uma nova TAG virtual.");
+      showCadastroError("Selecione uma TAG ou escolha criar uma nova TAG virtual.");
       return;
     }
 
     if (loadingSetores || setorOptions.length === 0 || setoresSelecionados.length === 0) {
-      alert("Não foi possível carregar os setores. Atualize a página e tente novamente.");
+      showCadastroError("Não foi possível carregar os setores. Atualize a página e tente novamente.");
       return;
     }
     
     if (!user || !user.id) {
-      alert("Erro: Usuário não autenticado");
+      showCadastroError("Usuário não autenticado. Faça login novamente.");
       return;
     }
     
@@ -570,12 +538,17 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
         setForm((current) => ({ ...current, rfidTag: codigoTagFinal }));
         setStep(2);
         setTempoEspera(0);
+        showToast({
+          type: "success",
+          title: "Solicitação enviada",
+          description: "O supervisor já pode analisar o acesso do visitante.",
+        });
       } else {
-        alert(response.mensagem || "Erro ao registrar visitante");
+        showCadastroError(response.mensagem || "Erro ao registrar visitante.");
       }
     } catch (error) {
       console.error(error);
-      alert(error.message || "Erro ao conectar com o servidor");
+      showCadastroError(error.message || "Erro ao conectar com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -1004,25 +977,25 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
               </div>
 
               {/* Dicas de Cadastro */}
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100/50 border border-amber-200 rounded-3xl p-5 shadow-sm">
+              <div className="rounded-3xl border border-primary/15 bg-card p-5 shadow-sm">
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="p-2 bg-amber-100 rounded-lg flex-shrink-0">
-                    <Lightbulb size={18} className="text-amber-600" />
+                  <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                    <Lightbulb size={18} className="text-primary" />
                   </div>
-                  <h3 className="font-bold text-amber-900 text-sm">Dicas de Cadastro</h3>
+                  <h3 className="font-bold text-foreground text-sm">Dicas de Cadastro</h3>
                 </div>
 
-                <ul className="space-y-2.5 text-xs text-amber-900/80">
+                <ul className="space-y-2.5 text-xs text-muted-foreground">
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Verifique se o visitante possui documento de identificação válido</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Confirme os setores permitidos antes de enviar a solicitação</span>
                   </li>
                   <li className="flex gap-2">
-                    <span className="text-amber-600 font-bold">•</span>
+                    <span className="text-primary font-bold">•</span>
                     <span>Confira empresa, telefone e motivo antes de avançar</span>
                   </li>
                 </ul>
