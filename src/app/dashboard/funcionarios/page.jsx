@@ -18,6 +18,7 @@ import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { usePagination } from "@/hooks/usePagination";
 import { exportTableToPdf } from "@/lib/exportPdf";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { api } from "@/services/api";
 
 // ─── HELPERS & CONFIG ────────────────────────────────────────────────────────
@@ -41,6 +42,32 @@ const TIPO_ICON = {
 };
 
 const CARGOS_VISIVEIS = new Set(["port", "sup", "adm"]);
+
+const getFuncionarioAvatarValue = (funcionario) =>
+  funcionario?.foto_perfil ||
+  funcionario?.avatarUrl ||
+  funcionario?.avatar_url ||
+  funcionario?.imagem ||
+  funcionario?.imagemPath ||
+  funcionario?.usuario?.foto_perfil ||
+  funcionario?.usuario?.avatarUrl ||
+  funcionario?.usuario?.avatar_url ||
+  funcionario?.usuario?.imagem ||
+  funcionario?.funcionario?.foto_perfil ||
+  funcionario?.funcionario?.avatarUrl ||
+  funcionario?.funcionario?.imagem ||
+  "";
+
+function FuncionarioAvatar({ funcionario, name, email, className = "h-8 w-8 text-xs" }) {
+  return (
+    <UserAvatar
+      name={name}
+      email={email}
+      src={getFuncionarioAvatarValue(funcionario)}
+      className={`shrink-0 bg-primary/10 text-primary shadow-none ${className}`}
+    />
+  );
+}
 
 const formatarTelefone = (tel) => {
   if (!tel) return "";
@@ -112,7 +139,6 @@ function ModalEditarFuncionario({ funcionario, onClose, onSave }) {
   if (!funcionario) return null;
 
   const nomeExibicao = form.nome.trim() || funcionario.usuario_nome || funcionario.nome || "Funcionário";
-  const primeiraLetra = nomeExibicao.charAt(0).toUpperCase();
   const departamento = funcionario.departamento_nome || funcionario.departamentos?.nome || "Geral";
 
   const setCampo = (campo) => (event) => {
@@ -211,9 +237,12 @@ function ModalEditarFuncionario({ funcionario, onClose, onSave }) {
             <div className="mb-5 rounded-2xl border border-border/60 bg-muted/25 p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                    {primeiraLetra}
-                  </div>
+                  <FuncionarioAvatar
+                    funcionario={funcionario}
+                    name={nomeExibicao}
+                    email={form.email || funcionario.email}
+                    className="h-11 w-11 text-sm"
+                  />
                   <div>
                     <p className="text-sm font-semibold text-foreground">{nomeExibicao}</p>
                     <p className="font-mono text-xs text-muted-foreground">{formatarCPF(funcionario.cpf)}</p>
@@ -319,15 +348,12 @@ function LinhaFuncionario({ f, onEdit, onDelete }) {
   
   // Se o nome não existir, usamos um placeholder para não quebrar o .charAt(0)
   const nomeExibicao = f.usuario_nome || "Usuário sem Nome";
-  const primeiraLetra = nomeExibicao.charAt(0).toUpperCase();
 
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="py-3 px-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-            {primeiraLetra}
-          </div>
+          <FuncionarioAvatar funcionario={f} name={nomeExibicao} email={f.email} />
           <div>
             <div className="font-medium text-sm text-foreground whitespace-nowrap">
               {nomeExibicao}
