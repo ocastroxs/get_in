@@ -2,7 +2,11 @@
 
 import { Activity } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { PICO_MOVIMENTO } from "@/lib/mockData";
+import PeriodToggle from "@/components/ui/PeriodToggle";
+import { useMemo, useState } from "react";
+
+const PEAK_BAR_FILL = "var(--primary)";
+const DEFAULT_BAR_FILL = "rgba(52, 152, 219, 0.42)";
 
 const MOBILE_LABELS = {
   Financeiro: "Financ.",
@@ -38,7 +42,7 @@ function PicoSetorTooltip({ active, payload, total, peak }) {
 
   const value = Number(item.value) || 0;
   const percent = total > 0 ? Math.round((value / total) * 100) : 0;
-  const isPeak = item.setor === peak?.setor && value === peak?.value;
+  const isPeak = value > 0 && value === peak?.value;
 
   return (
     <div className="min-w-[180px] rounded-xl border border-border bg-card/95 px-3 py-2.5 text-card-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm">
@@ -69,12 +73,27 @@ function PicoSetorTooltip({ active, payload, total, peak }) {
   );
 }
 
-export default function PicoMovimentoChart({ mobileLayout = false, data }) {
-  const fallbackData = PICO_MOVIMENTO.map((item) => ({ setor: item.hora, value: item.value }));
-  const sourceData = Array.isArray(data) ? data : fallbackData;
+export default function PicoMovimentoChart({
+  mobileLayout = false,
+  data,
+  weekData = data,
+  monthData = weekData,
+  showPeriodToggle = true,
+}) {
+  const [view, setView] = useState("hoje");
+  const sourceData = useMemo(() => {
+    if (!showPeriodToggle) return Array.isArray(data) ? data : [];
+    if (view === "mes") return Array.isArray(monthData) ? monthData : [];
+    if (view === "semana") return Array.isArray(weekData) ? weekData : [];
+    return Array.isArray(data) ? data : [];
+  }, [data, monthData, showPeriodToggle, view, weekData]);
   const chartData = mobileLayout ? sourceData.slice(0, 6) : sourceData;
   const height = mobileLayout ? 240 : 280;
-  const peak = chartData.reduce((current, item) => (item.value > current.value ? item : current), chartData[0] || { setor: "-", value: 0 });
+  const peakValue = Math.max(...chartData.map((item) => Number(item.value) || 0), 0);
+  const peakItems = chartData.filter((item) => (Number(item.value) || 0) === peakValue && peakValue > 0);
+  const peak = peakItems[0] || { setor: "-", value: 0 };
+  const peakLabel = peakItems.length > 1 ? `${peak.setor} +${peakItems.length - 1}` : peak.setor;
+  const peakText = peakItems.length > 1 ? peakItems.map((item) => item.setor).join(", ") : peak.setor;
   const chartTotal = chartData.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   const hasData = chartData.some((item) => item.value > 0);
 
@@ -90,12 +109,16 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
           <p className="max-w-[220px] text-sm leading-relaxed text-muted-foreground">Requisições de visita agrupadas por setor.</p>
         </div>
 
-        <div className="w-fit min-w-[124px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30">
-          <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Maior fluxo</p>
-          <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
-            {peak.value}
-            <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peak.setor}</span>
-          </p>
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {showPeriodToggle ? <PeriodToggle value={view} onChange={setView} /> : null}
+
+          <div className="w-fit min-w-[124px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30">
+            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Maior fluxo</p>
+            <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
+              {peak.value}
+              <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
+            </p>
+          </div>
         </div>
       </div>
 
@@ -104,8 +127,8 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={mobileLayout ? { top: 8, right: 8, bottom: 30, left: -10 } : { top: 8, right: 8, bottom: 6, left: -12 }}
-              barCategoryGap={mobileLayout ? "28%" : "18%"}
+              margin={mobileLayout ? { top: 8, right: 8, bottom: 30, left: -10 } : { top: 8, right: 8, bottom: 34, left: -12 }}
+              barCategoryGap={mobileLayout ? "28%" : "22%"}
             >
               <CartesianGrid vertical={false} stroke="rgba(15,58,125,0.08)" />
               <XAxis
@@ -116,11 +139,11 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
                   fill: "var(--muted-foreground)",
                   fontWeight: 600,
                 }}
-                tickFormatter={mobileLayout ? formatMobileLabel : undefined}
-                tickMargin={mobileLayout ? 12 : 8}
-                angle={mobileLayout ? -32 : 0}
-                textAnchor={mobileLayout ? "end" : "middle"}
-                height={mobileLayout ? 54 : 30}
+                tickFormatter={formatMobileLabel}
+                tickMargin={12}
+                angle={-32}
+                textAnchor="end"
+                height={54}
                 axisLine={false}
                 tickLine={false}
               />
@@ -150,7 +173,7 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
                 {chartData.map((entry) => (
                   <Cell
                     key={entry.setor}
-                    fill={entry.setor === peak.setor ? "var(--primary)" : "rgba(15, 58, 125, 0.14)"}
+                    fill={(Number(entry.value) || 0) === peakValue && peakValue > 0 ? PEAK_BAR_FILL : DEFAULT_BAR_FILL}
                   />
                 ))}
               </Bar>
@@ -166,7 +189,8 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
       <div className="mt-5 border-t border-border pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Leitura rápida</p>
         <p className="mt-2 text-sm leading-relaxed text-foreground">
-          O setor com maior volume foi <span className="font-semibold">{peak.setor}</span>, com{" "}
+          {peakItems.length > 1 ? "Os setores com maior volume foram " : "O setor com maior volume foi "}
+          <span className="font-semibold">{peakText}</span>, com{" "}
           <span className="font-semibold">{peak.value} {pluralizeRequisicao(peak.value)}</span> no período carregado.
         </p>
       </div>

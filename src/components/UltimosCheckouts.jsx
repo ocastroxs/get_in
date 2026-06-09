@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ULTIMOS_CHECKOUTS } from "@/lib/mockData";
 
-export default function UltimosCheckouts() {
+export default function UltimosCheckouts({ data = [] }) {
   return (
     <div className="bg-card text-card-foreground rounded-xl border border-border p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-all hover:scale-105 hover:-translate-y-1 duration-300 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-700">
       <div className="flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-700 delay-800">
@@ -18,7 +17,7 @@ export default function UltimosCheckouts() {
           <span className="text-right">Saída</span>
         </div>
 
-        {ULTIMOS_CHECKOUTS.map((item, i) => (
+        {data.map((item, i) => (
           <div
             key={i}
             className="grid grid-cols-3 py-2.5 items-center border-t border-border/50 hover:bg-accent/50 -mx-5 px-5 transition-all hover:translate-x-1 animate-in fade-in slide-in-from-left-2 duration-700" style={{ animationDelay: `${800 + i * 50}ms` }}

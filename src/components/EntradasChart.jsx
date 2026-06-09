@@ -14,7 +14,6 @@ import {
   YAxis,
 } from "recharts";
 import { BarChart3 } from "lucide-react";
-import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 import PeriodToggle from "@/components/ui/PeriodToggle";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
@@ -99,7 +98,7 @@ function EntradasTooltip({ active, payload, dataKey, nameKey, total, peakItem, v
 export default function EntradasChart({
   title = "Entradas por Período",
   subtitle = "Fluxo registrado ao longo do dia",
-  data = ENTRADAS_POR_HORA,
+  data = [],
   weekData = data,
   monthData = weekData,
   dataKey = "value",

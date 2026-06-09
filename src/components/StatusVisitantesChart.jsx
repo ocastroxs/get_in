@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
-import { STATUS_VISITANTES } from "@/lib/mockData";
 import PeriodToggle from "@/components/ui/PeriodToggle";
 
 function renderActiveSector(props) {
@@ -68,9 +67,9 @@ function StatusPieTooltip({ active, payload, total, peakItem }) {
 
 export default function StatusVisitantesChart({ 
   mobileLayout = "default",
-  data = STATUS_VISITANTES,
-  weekData = STATUS_VISITANTES,
-  monthData = STATUS_VISITANTES,
+  data = [],
+  weekData = data,
+  monthData = weekData,
   title = "Status dos Visitantes",
   subtitle = "Situação atual com leitura imediata de risco e permanência.",
   showPeriodToggle = true

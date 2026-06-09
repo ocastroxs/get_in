@@ -17,6 +17,7 @@ const HORAS_DIA = Array.from({ length: 24 }, (_, index) => index);
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const LIMITE_ALERTA_HORAS = 8;
 const PRAZO_REQUISICAO_HORAS = 24;
+const DATA_BR_REGEX = /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2})(?::(\d{2}))?)?$/;
 
 const STATS_VAZIAS = {
   visitantes: { value: 0 },
@@ -37,6 +38,14 @@ function parseDataValor(valor) {
   if (!valor) return null;
 
   let dateStr = String(valor);
+  const dataBrasileira = dateStr.trim().match(DATA_BR_REGEX);
+
+  if (dataBrasileira) {
+    const [, dia, mes, ano, hora = "00", minuto = "00", segundo = "00"] = dataBrasileira;
+    const data = new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(minuto), Number(segundo));
+    return Number.isNaN(data.getTime()) ? null : data;
+  }
+
   if (dateStr.includes(" ") && !dateStr.includes("T")) {
     dateStr = dateStr.replace(" ", "T");
   }
@@ -111,7 +120,15 @@ function contarUnicos(items, getKey) {
 }
 
 function getEntradaVisitante(item) {
-  return parseDataCampos(item, ["dataEntrada", "entrada", "dataDeEntrada", "horario_entrada"]);
+  return parseDataCampos(item, [
+    "dataEntrada",
+    "dataDeEntrada",
+    "dataDaEntrada",
+    "entrada",
+    "horario_entrada",
+    "createdAt",
+    "created_at",
+  ]);
 }
 
 function getSaidaVisitante(item) {
@@ -227,10 +244,13 @@ function agruparMotivosPeriodo(requisicoes, periodo) {
     .sort((a, b) => b.value - a.value);
 }
 
-function agruparPicoPorSetor(requisicoes) {
+function agruparPicoPorSetor(requisicoes, periodo) {
   const mapa = new Map();
+  const referencia = new Date();
 
   requisicoes.forEach((req) => {
+    if (periodo && !estaNoPeriodo(getDataRequisicao(req), periodo, referencia)) return;
+
     const setor = obterSetor(req);
     if (!setor) return;
 
@@ -312,7 +332,7 @@ function entradasPorMes(logs) {
     const entrada = getEntradaVisitante(log);
     if (!estaNoPeriodo(entrada, "mes", referencia)) return;
 
-    const item = dias[entrada.getDate() - 1];
+    const item = dias.find((dia) => diferencaEmDias(dia.data, entrada) === 0);
     if (item) item.value += 1;
   });
 
@@ -367,7 +387,9 @@ export default function DashboardPage() {
   const [motivosHoje, setMotivosHoje] = useState([]);
   const [motivosSemana, setMotivosSemana] = useState([]);
   const [motivosMes, setMotivosMes] = useState([]);
-  const [picoSetores, setPicoSetores] = useState([]);
+  const [picoSetoresHoje, setPicoSetoresHoje] = useState([]);
+  const [picoSetoresSemana, setPicoSetoresSemana] = useState([]);
+  const [picoSetoresMes, setPicoSetoresMes] = useState([]);
   const [statusHoje, setStatusHoje] = useState([]);
   const [statusSemana, setStatusSemana] = useState([]);
   const [statusMes, setStatusMes] = useState([]);
@@ -395,7 +417,9 @@ export default function DashboardPage() {
         setMotivosHoje(agruparMotivosPeriodo(requisicoes, "hoje"));
         setMotivosSemana(agruparMotivosPeriodo(requisicoes, "semana"));
         setMotivosMes(agruparMotivosPeriodo(requisicoes, "mes"));
-        setPicoSetores(agruparPicoPorSetor(requisicoes));
+        setPicoSetoresHoje(agruparPicoPorSetor(requisicoes, "hoje"));
+        setPicoSetoresSemana(agruparPicoPorSetor(requisicoes, "semana"));
+        setPicoSetoresMes(agruparPicoPorSetor(requisicoes, "mes"));
         setEntradasHoje(entradasPorHoraHoje(logs));
         setEntradasSemana(entradasPorSemana(logs));
         setEntradasMes(entradasPorMes(logs));
@@ -409,7 +433,9 @@ export default function DashboardPage() {
       setMotivosHoje([]);
       setMotivosSemana([]);
       setMotivosMes([]);
-      setPicoSetores([]);
+      setPicoSetoresHoje([]);
+      setPicoSetoresSemana([]);
+      setPicoSetoresMes([]);
       setStatusHoje([]);
       setStatusSemana([]);
       setStatusMes([]);
@@ -498,7 +524,12 @@ export default function DashboardPage() {
           weekData={entradasSemana}
           monthData={entradasMes}
         />
-        <PicoMovimentoChart mobileLayout data={picoSetores} />
+        <PicoMovimentoChart
+          mobileLayout
+          data={picoSetoresHoje}
+          weekData={picoSetoresSemana}
+          monthData={picoSetoresMes}
+        />
         <TiposVisitanteChart
           mobileLayout
           title="Motivos"
@@ -575,7 +606,11 @@ export default function DashboardPage() {
             weekData={entradasSemana}
             monthData={entradasMes}
           />
-          <PicoMovimentoChart data={picoSetores} />
+          <PicoMovimentoChart
+            data={picoSetoresHoje}
+            weekData={picoSetoresSemana}
+            monthData={picoSetoresMes}
+          />
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
