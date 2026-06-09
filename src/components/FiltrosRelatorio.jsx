@@ -185,12 +185,6 @@ export default function FiltrosRelatorio() {
               <option>Visitante Geral</option>
             </select>
           </div>
-          
-          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
-            <p className="text-[10px] text-amber-600 leading-relaxed">
-              <strong>Nota:</strong> A filtragem avançada permite cruzar dados para gerar relatórios mais precisos sobre o fluxo de pessoas na unidade.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </div>

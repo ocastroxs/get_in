@@ -3,6 +3,7 @@
 import React from "react";
 import { X, Filter, RotateCcw, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ModalPortal from "@/components/ui/ModalPortal";
 
 /**
  * ModalFiltro Padronizado
@@ -19,14 +20,15 @@ export default function ModalFiltro({
   onApply, 
   onClear, 
   children,
-  title = "Filtros Avançados"
+  title = "Filtros"
 }) {
   if (!isOpen) return null;
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
       <div 
-        className="bg-card rounded-2xl border border-border w-full max-w-md shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 overflow-hidden"
+        className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -37,7 +39,7 @@ export default function ModalFiltro({
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">{title}</h2>
-              <p className="text-xs text-muted-foreground">Refine sua busca com múltiplos critérios</p>
+              <p className="text-xs text-muted-foreground">Refine sua busca</p>
             </div>
           </div>
           <button
@@ -49,7 +51,7 @@ export default function ModalFiltro({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div className="max-h-[min(70vh,520px)] space-y-5 overflow-y-auto p-6" data-lenis-prevent>
           {children}
         </div>
 
@@ -79,5 +81,6 @@ export default function ModalFiltro({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

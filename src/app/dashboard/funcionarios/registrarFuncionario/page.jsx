@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, ArrowLeft, Check, Calendar, Shield, Eye, User, Star, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Check, Shield, Eye, Briefcase, Loader2, AlertCircle } from 'lucide-react';
 import Topbar from "@/components/Topbar";
+import { api } from "@/services/api";
 
 const CadastroFuncionario = () => {
   // ==========================================
@@ -79,11 +80,8 @@ const CadastroFuncionario = () => {
   useEffect(() => {
     const fetchDepartamentos = async () => {
       try {
-        const response = await fetch(`https://get-in-ilp5.onrender.com/dep`,{
-        method: 'GET', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }
-        } );
-        const data = await response.json();
-        if (data.sucesso) setDepartamentos(data.data);
+        const data = await api.get('/setores');
+        if (data.sucesso) setDepartamentos(data.data || []);
       } catch (err) { return; }
     };
     fetchDepartamentos();
@@ -124,17 +122,14 @@ const CadastroFuncionario = () => {
   const finalizarCadastro = async () => {
     setErro('');
     setLoading(true);
-    const tipoMap = { 'funcionario': 'func', 'portaria': 'port', 'supervisor': 'sup', 'gerente': 'ger' };
+    const tipoMap = { portaria: 'port', supervisor: 'sup', adm: 'adm' };
     const payloadBackend = {
       nome: formData.nome, cpf: formData.cpf, celular: formData.telefone, email: formData.email,
-      idDepartamento: parseInt(formData.idDepartamento), tipo: tipoMap[formData.nivel_acesso] || 'func',
+      idDepartamento: parseInt(formData.idDepartamento), tipo: tipoMap[formData.nivel_acesso] || 'port',
       senha: formData.senha, imagem: null, dataDeNascimento: null
     };
     try {
-      const response = await fetch('https://get-in-ilp5.onrender.com/auth', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('getin_token')}` }, body: JSON.stringify(payloadBackend)
-      });
-      const data = await response.json();
+      const data = await api.post('/auth', payloadBackend);
       if (data.sucesso) setSucesso(true);
       else setErro(data.mensagem || 'Erro ao realizar o cadastro.');
     } catch (err) { setErro('Não foi possível conectar ao servidor.'); }
@@ -189,12 +184,12 @@ const CadastroFuncionario = () => {
             <p className="text-sm text-gray-500">Selecione o nível de permissão e o turno.</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['portaria', 'funcionario', 'supervisor', 'gerente'].map(nivel => (
+            {['portaria', 'supervisor', 'adm'].map(nivel => (
               <div key={nivel} onClick={() => selecionarNivelAcesso(nivel)} className={`cursor-pointer rounded-xl p-5 flex flex-col items-center text-center transition-all border-2 ${formData.nivel_acesso === nivel ? 'border-[#0A2540] bg-white/80' : 'border-gray-100 bg-white/40 hover:border-gray-200'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${nivel === 'portaria' ? 'bg-[#EBF3FB] text-[#4DA8EA]' : nivel === 'funcionario' ? 'bg-[#F3E8FF] text-[#9333EA]' : nivel === 'supervisor' ? 'bg-[#EAF7ED] text-[#34A853]' : 'bg-[#FCECE3] text-[#E47B44]'}`}>
-                  {nivel === 'portaria' ? <Shield className="w-5 h-5" /> : nivel === 'funcionario' ? <User className="w-5 h-5" /> : nivel === 'supervisor' ? <Eye className="w-5 h-5" /> : <Star className="w-5 h-5" />}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${nivel === 'portaria' ? 'bg-[#EBF3FB] text-[#4DA8EA]' : nivel === 'supervisor' ? 'bg-[#EAF7ED] text-[#34A853]' : 'bg-[#FCECE3] text-[#E47B44]'}`}>
+                  {nivel === 'portaria' ? <Shield className="w-5 h-5" /> : nivel === 'supervisor' ? <Eye className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
                 </div>
-                <h3 className="font-bold text-[#0A2540] text-sm mb-1 capitalize">{nivel}</h3>
+                <h3 className="font-bold text-[#0A2540] text-sm mb-1 capitalize">{nivel === 'adm' ? 'Administrador' : nivel}</h3>
               </div>
             ))}
           </div>

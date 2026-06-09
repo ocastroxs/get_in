@@ -4,13 +4,16 @@ export const THEME_INIT_SCRIPT = `
 (function() {
   try {
     var savedTheme = localStorage.getItem("${THEME_STORAGE_KEY}");
-    var theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : "${DEFAULT_THEME}";
+    var theme = savedTheme === "light" || savedTheme === "dark" || savedTheme === "system" ? savedTheme : "${DEFAULT_THEME}";
+    var resolvedTheme = theme === "system" && window.matchMedia
+      ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : theme;
 
     if (!savedTheme) {
       localStorage.setItem("${THEME_STORAGE_KEY}", theme);
     }
 
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
   } catch (error) {
     document.documentElement.classList.add("dark");
   }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import {
   Album,
   BadgeAlert,
@@ -11,11 +11,11 @@ import {
   Moon,
   PanelLeft,
   PanelLeftClose,
-  Settings,
   Sun,
 } from 'lucide-react';
 import BrandLogo from '@/components/BrandLogo';
 import SidebarUserProfile from '@/components/SidebarUserProfile';
+import { useSidebarPreference } from '@/hooks/useSidebarPreference';
 import { useAppTheme } from '@/lib/theme';
 
 const PORTARIA_ITEMS = [
@@ -27,30 +27,31 @@ const PORTARIA_ITEMS = [
 
 export default function PortariaSidebar() {
   const pathname = usePathname();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useSidebarPreference();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { isDark, toggleTheme } = useAppTheme();
 
   const isActive = (href) => pathname === href;
   const closeMobileSidebar = () => setIsMobileOpen(false);
-  const closeSidebar = () => {
-    if (window.matchMedia('(min-width: 1024px)').matches) {
-      setIsExpanded(false);
+  const openMobileSidebar = () => {
+    setIsExpanded(true);
+    setIsMobileOpen(true);
+  };
+  const toggleExpanded = () => {
+    if (isMobileOpen) {
+      setIsMobileOpen(false);
       return;
     }
 
-    setIsMobileOpen(false);
+    setIsExpanded((current) => !current);
   };
 
   return (
     <>
       <button
         type="button"
-        onClick={() => {
-          setIsExpanded(true);
-          setIsMobileOpen(true);
-        }}
-        className={`fixed left-4 top-4 z-[60] flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-white/90 text-gray-700 shadow-lg shadow-black/5 backdrop-blur transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none hover:bg-white hover:text-black active:scale-95 dark:border-white/10 dark:bg-[#061320]/90 dark:text-gray-200 dark:hover:bg-[#0b1b2b] lg:hidden ${
+        onClick={openMobileSidebar}
+        className={`fixed left-4 top-4 z-[60] flex h-11 w-11 items-center justify-center rounded-2xl border border-gray-200 bg-white/90 text-gray-700 shadow-lg shadow-black/5 backdrop-blur transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-white hover:text-black active:scale-95 dark:border-white/10 dark:bg-[#061320]/90 dark:text-gray-200 dark:hover:bg-[#0b1b2b] lg:hidden ${
           isMobileOpen ? 'pointer-events-none -translate-x-2 opacity-0' : 'translate-x-0 opacity-100'
         }`}
         aria-label="Abrir menu lateral"
@@ -61,7 +62,7 @@ export default function PortariaSidebar() {
       <button
         type="button"
         onClick={closeMobileSidebar}
-        className={`fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ${
+        className={`fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] transition-opacity duration-500 lg:hidden ${
           isMobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-label="Fechar menu lateral"
@@ -69,82 +70,76 @@ export default function PortariaSidebar() {
 
       <aside
         className={`
-          fixed left-0 top-0 z-50 flex h-screen w-[300px] max-w-[calc(100vw-32px)]
-          transform-gpu flex-col overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]
-          px-4 pt-8 pb-6 shadow-2xl shadow-black/10 transition-all
-          duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
-          will-change-transform motion-reduce:transition-none
-          dark:border-white/10 dark:bg-[#020C17]
+          fixed left-0 top-0 z-50 flex h-screen w-[300px] max-w-[calc(100vw-32px)] transform-gpu flex-col
+          overflow-y-auto overflow-x-hidden border-r border-gray-200/60 bg-[#f4f5f7]/90 px-4 pt-8 pb-6 shadow-2xl shadow-black/10 backdrop-blur-[2px]
+          transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          dark:border-white/10 dark:bg-[#020C17]/95
+          lg:shadow-none lg:bg-[#f4f5f7]/40 lg:dark:bg-[#020C17]/40
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-[calc(100%+16px)]'}
           ${isExpanded ? 'lg:w-[300px] lg:translate-x-0 lg:px-4' : 'lg:w-[80px] lg:translate-x-0 lg:px-2'}
         `}
       >
-        <SidebarHeader
-          isDark={isDark}
-          isExpanded={isExpanded}
-          onToggleTheme={toggleTheme}
-          onClose={closeSidebar}
-          onOpen={() => setIsExpanded(true)}
-        />
+        <div className="relative z-10 flex min-h-full flex-col">
+          <SidebarHeader
+            isDark={isDark}
+            isExpanded={isExpanded}
+            onToggleTheme={toggleTheme}
+            onToggleExpanded={toggleExpanded}
+          />
 
-        <p className={`mb-3 overflow-hidden px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 transition-all duration-300 ease-out dark:text-gray-300 dark:opacity-70 ${isExpanded ? 'max-h-8 opacity-100' : 'max-h-0 opacity-0'}`}>
-          Fluxo de Portaria
-        </p>
+          {isExpanded && (
+            <p className="mb-3 px-4 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-300 dark:opacity-70">
+              Fluxo de Portaria
+            </p>
+          )}
 
-        <nav className="flex flex-col gap-2">
-          {PORTARIA_ITEMS.map(({ href, icon: Icon, label }) => (
-            <NavItem
-              key={href}
-              href={href}
-              icon={<Icon size={20} strokeWidth={1.5} />}
-              label={label}
-              active={isActive(href)}
+          <nav className="flex flex-col gap-2">
+            {PORTARIA_ITEMS.map(({ href, icon: Icon, label }) => (
+              <NavItem
+                key={href}
+                isExpanded={isExpanded}
+                href={href}
+                icon={<Icon size={20} strokeWidth={1.5} />}
+                label={label}
+                active={isActive(href)}
+                onNavigate={closeMobileSidebar}
+              />
+            ))}
+          </nav>
+
+          <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
+
+          <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
+            <SidebarUserProfile
               isExpanded={isExpanded}
-              onNavigate={closeMobileSidebar}
+              fallbackName="Portaria"
+              fallbackEmail="portaria@getin.com"
             />
-          ))}
-        </nav>
-
-        <div className="my-4 h-px w-full bg-gray-200/60 dark:bg-white/5" />
-
-        <div className={`mt-auto pt-8 ${isExpanded ? 'space-y-3' : 'flex flex-col items-center gap-3'}`}>
-          <SidebarUserProfile
-            isExpanded={isExpanded}
-            fallbackName="Portaria"
-            fallbackEmail="portaria@getin.com"
-          />
-          <NavItem
-            href="/configuracoes"
-            icon={<Settings size={20} strokeWidth={1.5} />}
-            label="Configurações"
-            active={isActive('/configuracoes')}
-            isExpanded={isExpanded}
-            onNavigate={closeMobileSidebar}
-          />
+          </div>
         </div>
       </aside>
 
       <div
-        className={`hidden shrink-0 transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
+        className={`hidden shrink-0 transition-all duration-500 lg:block ${isExpanded ? 'w-[300px]' : 'w-[80px]'}`}
         aria-hidden="true"
       />
     </>
   );
 }
 
-function SidebarHeader({ isDark, isExpanded, onToggleTheme, onClose, onOpen }) {
+function SidebarHeader({ isDark, isExpanded, onToggleTheme, onToggleExpanded }) {
   return (
-    <div className={`mb-7 flex items-center transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
+    <div className={`mb-7 flex items-center ${isExpanded ? 'justify-between px-2' : 'flex-col justify-center gap-3'}`}>
       {isExpanded ? (
-      <div className="min-w-0 overflow-hidden">
-        <BrandLogo variant="dark" className="dark:hidden" />
-        <BrandLogo variant="light" className="hidden dark:flex" />
-      </div>
+        <div className="min-w-0 overflow-hidden">
+          <BrandLogo variant="dark" className="dark:hidden" />
+          <BrandLogo variant="light" className="hidden dark:flex" />
+        </div>
       ) : (
         <button
           type="button"
-          onClick={onOpen}
-          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-all duration-300 ease-out hover:bg-gray-100 hover:text-black active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
+          onClick={onToggleExpanded}
+          className="flex h-10 w-10 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-all hover:bg-gray-100 hover:text-black active:scale-95 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white"
           aria-label="Expandir menu lateral"
           title="Expandir menu lateral"
         >
@@ -156,7 +151,7 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onClose, onOpen }) {
         <button
           type="button"
           onClick={onToggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white/50 text-gray-600 transition-all duration-300 ease-out active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white/50 text-gray-600 transition-all active:scale-90 hover:bg-gray-200 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10"
           title={isDark ? 'Modo claro' : 'Modo escuro'}
           aria-label={isDark ? 'Alternar para o modo claro' : 'Alternar para o modo escuro'}
         >
@@ -166,8 +161,8 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onClose, onOpen }) {
         {isExpanded && (
           <button
             type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors duration-300 ease-out hover:text-black dark:hover:text-white"
+            onClick={onToggleExpanded}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-gray-400 transition-colors hover:text-black dark:hover:text-white"
             aria-label="Recolher menu lateral"
           >
             <PanelLeftClose size={20} strokeWidth={1.5} />
@@ -178,25 +173,25 @@ function SidebarHeader({ isDark, isExpanded, onToggleTheme, onClose, onOpen }) {
   );
 }
 
-function NavItem({ href, icon, label, active, isExpanded, onNavigate }) {
+function NavItem({ isExpanded, href, icon, label, active, onNavigate }) {
   return (
     <Link
       href={href}
       onClick={onNavigate}
+      title={!isExpanded ? label : undefined}
       className={`
-        group flex items-center justify-between transition-all duration-300 ease-out
+        group flex items-center justify-between transition-all duration-200
         ${
           active
             ? 'bg-white text-black shadow-sm dark:bg-[#4DA8EA] dark:text-white'
             : 'text-gray-500 hover:bg-black/5 hover:text-black dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white'
         }
-        ${isExpanded ? 'rounded-[20px] px-4 py-2.5' : 'mx-auto h-12 w-12 justify-center rounded-full p-3'}
+        ${isExpanded ? 'rounded-[20px] px-4 py-2.5' : 'mx-auto flex h-12 w-12 justify-center rounded-full p-3'}
       `}
-      title={!isExpanded ? label : undefined}
     >
-      <div className={`flex items-center overflow-hidden transition-[gap] duration-300 ease-out ${isExpanded ? 'gap-4' : 'gap-0'}`}>
+      <div className="flex items-center gap-4 overflow-hidden">
         <span className="relative flex flex-shrink-0 items-center justify-center">{icon}</span>
-        <span className={`whitespace-nowrap text-[14px] font-medium transition-all duration-300 ease-out ${isExpanded ? 'max-w-44 opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
+        {isExpanded && <span className="whitespace-nowrap text-[14px] font-medium">{label}</span>}
       </div>
     </Link>
   );

@@ -4,17 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bell,
   Camera,
+  Check,
   Eye,
   EyeOff,
+  Languages,
   Loader2,
   Lock,
   LogOut,
   Mail,
+  Monitor,
+  Moon,
+  PanelLeft,
+  PanelLeftClose,
   RotateCcw,
   Save,
   Shield,
   SlidersHorizontal,
   Smartphone,
+  Sun,
   User,
 } from "lucide-react";
 import Topbar from "@/components/Topbar";
@@ -23,7 +30,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { getAuthTipo, useAuth } from "@/lib/AuthContext";
+import { LANGUAGE_OPTIONS } from "@/lib/i18n-core";
 import { maskPhone } from "@/lib/utils";
+import { DEFAULT_PREFERENCES } from "@/lib/preferences-config";
+import {
+  applyPreferences,
+  getStoredPreferences,
+  normalizePreferences,
+  savePreferencesToStorage,
+} from "@/lib/preferences";
 import { api } from "@/services/api";
 import { useToast } from "@/components/ui/toast-provider";
 
@@ -44,6 +59,22 @@ const DEFAULT_NOTIFICACOES = {
   pushAlertas: true,
   toastSistema: true,
 };
+
+const TEMA_OPTIONS = [
+  { value: "dark", label: "Escuro", icon: Moon },
+  { value: "light", label: "Claro", icon: Sun },
+  { value: "system", label: "Sistema", icon: Monitor },
+];
+
+const DENSIDADE_OPTIONS = [
+  { value: "confortavel", label: "Confortável" },
+  { value: "compacta", label: "Compacta" },
+];
+
+const MENU_LATERAL_OPTIONS = [
+  { value: "expandido", label: "Expandido", icon: PanelLeft },
+  { value: "recolhido", label: "Recolhido", icon: PanelLeftClose },
+];
 
 function pickFirst(...values) {
   return values.find((value) => value !== undefined && value !== null && String(value).trim() !== "") || "";
@@ -106,13 +137,18 @@ export default function ConfiguracoesPage() {
   });
   const [notificacoes, setNotificacoes] = useState(DEFAULT_NOTIFICACOES);
   const [notificacoesOriginal, setNotificacoesOriginal] = useState(DEFAULT_NOTIFICACOES);
+  const [preferencias, setPreferencias] = useState(DEFAULT_PREFERENCES);
+  const [preferenciasOriginal, setPreferenciasOriginal] = useState(DEFAULT_PREFERENCES);
 
   useEffect(() => {
     async function carregarConfiguracoes() {
       setLoadingPerfil(true);
 
       try {
-        const profileResponse = await api.get("/user/me/profile");
+        const [profileResponse, preferencesResponse] = await Promise.all([
+          api.get("/user/me/profile"),
+          api.get("/user/me/preferences"),
+        ]);
 
         const nextPerfil = profileResponse.sucesso
           ? mapProfileResponse(profileResponse, user, funcionario)
@@ -121,6 +157,11 @@ export default function ConfiguracoesPage() {
         setPerfil(nextPerfil);
         setPerfilOriginal(nextPerfil);
 
+        if (preferencesResponse?.sucesso && preferencesResponse?.data) {
+          const nextPreferencias = savePreferencesToStorage(preferencesResponse.data);
+          setPreferencias(nextPreferencias);
+          setPreferenciasOriginal(nextPreferencias);
+        }
       } catch (error) {
         console.error("Erro ao carregar configurações:", error);
         showToast({
@@ -136,6 +177,12 @@ export default function ConfiguracoesPage() {
     const preferencias = loadNotificationPreferences();
     setNotificacoes(preferencias);
     setNotificacoesOriginal(preferencias);
+
+    const preferenciasLocais = getStoredPreferences();
+    setPreferencias(preferenciasLocais);
+    setPreferenciasOriginal(preferenciasLocais);
+    applyPreferences(preferenciasLocais);
+
     carregarConfiguracoes();
   }, [funcionario, showToast, user]);
 
@@ -236,6 +283,47 @@ export default function ConfiguracoesPage() {
     });
   }
 
+  function handlePreferenciasChange(nextValues) {
+    const nextPreferencias = normalizePreferences({ ...preferencias, ...nextValues });
+    setPreferencias(nextPreferencias);
+    applyPreferences(nextPreferencias);
+  }
+
+  function handleDescartarPreferencias() {
+    setPreferencias(preferenciasOriginal);
+    applyPreferences(preferenciasOriginal);
+  }
+
+  async function handleSalvarPreferencias() {
+    setLoading(true);
+
+    try {
+      const response = await api.put("/user/me/preferences", { preferencias });
+
+      if (!response.sucesso) {
+        throw new Error(response.mensagem || response.erro || "Erro ao salvar preferencias.");
+      }
+
+      const nextPreferencias = savePreferencesToStorage(response.data || preferencias);
+      setPreferencias(nextPreferencias);
+      setPreferenciasOriginal(nextPreferencias);
+
+      showToast({
+        type: "success",
+        title: "Preferencias atualizadas",
+        description: "Suas escolhas de interface foram salvas.",
+      });
+    } catch (error) {
+      showToast({
+        type: "error",
+        title: "Erro ao salvar preferencias",
+        description: error.message || "Tente novamente em instantes.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleAvatarChange(event) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -298,6 +386,14 @@ export default function ConfiguracoesPage() {
   // Função interna para disparar o logout global do app
   const handleSairDoSistema = () => {
     try {
+      if (
+        preferencias.confirmarAcoesCriticas &&
+        typeof window !== "undefined" &&
+        !window.confirm("Deseja sair do sistema?")
+      ) {
+        return;
+      }
+
       logout();
     } catch (error) {
       console.error("Erro ao efetuar logout:", error);
@@ -335,7 +431,7 @@ export default function ConfiguracoesPage() {
           {loadingPerfil ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Carregando configuracoes...
+              Carregando configurações...
             </div>
           ) : (
             <>
@@ -371,7 +467,7 @@ export default function ConfiguracoesPage() {
                       />
                     </Field>
                     <Field label="Setor principal">
-                      <Input value={perfil.setor || "Nao informado"} disabled className="h-11 rounded-xl opacity-70" />
+                      <Input value={perfil.setor || "Não informado"} disabled className="h-11 rounded-xl opacity-70" />
                     </Field>
                     <Field label="Cargo">
                       <Input value={getCargoLabel(perfil.cargo)} disabled className="h-11 rounded-xl opacity-70" />
@@ -448,25 +544,72 @@ export default function ConfiguracoesPage() {
               )}
 
               {abaAtiva === "preferencias" && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <section className="rounded-2xl border border-border/70 bg-background/60 p-5">
                     <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
                       <SlidersHorizontal size={18} />
-                      Preferências
+                      Preferências de interface
                     </h2>
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                      Esta área está reservada para preferências pessoais de visualização, idioma e atalhos do sistema.
+                      Ajuste aparência, navegação e comportamento da sua sessão no GetIN.
                     </p>
                   </section>
 
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {["Tema do sistema", "Densidade das tabelas", "Atalhos de navegação"].map((label) => (
-                      <div key={label} className="rounded-2xl border border-border bg-muted/30 p-4">
-                        <p className="text-sm font-bold text-foreground">{label}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Em breve</p>
-                      </div>
-                    ))}
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="space-y-5">
+                      <PreferenceSection title="Aparência" icon={<Monitor size={18} />}>
+                        <SegmentedControl
+                          label="Idioma"
+                          value={preferencias.idioma}
+                          options={LANGUAGE_OPTIONS.map((option) => ({ ...option, icon: Languages }))}
+                          onChange={(idioma) => handlePreferenciasChange({ idioma })}
+                        />
+                        <SegmentedControl
+                          label="Tema"
+                          value={preferencias.tema}
+                          options={TEMA_OPTIONS}
+                          onChange={(tema) => handlePreferenciasChange({ tema })}
+                        />
+                        <SegmentedControl
+                          label="Densidade"
+                          value={preferencias.densidade}
+                          options={DENSIDADE_OPTIONS}
+                          onChange={(densidade) => handlePreferenciasChange({ densidade })}
+                        />
+                      </PreferenceSection>
+
+                      <PreferenceSection title="Navegação" icon={<PanelLeft size={18} />}>
+                        <SegmentedControl
+                          label="Menu lateral ao entrar"
+                          value={preferencias.menuLateral}
+                          options={MENU_LATERAL_OPTIONS}
+                          onChange={(menuLateral) => handlePreferenciasChange({ menuLateral })}
+                        />
+                      </PreferenceSection>
+
+                      <PreferenceSection title="Comportamento" icon={<Shield size={18} />}>
+                        <PreferenceCheckbox
+                          label="Reduzir animações"
+                          checked={preferencias.reduzirMovimento}
+                          onChange={(reduzirMovimento) => handlePreferenciasChange({ reduzirMovimento })}
+                        />
+                        <PreferenceCheckbox
+                          label="Confirmar ações críticas"
+                          checked={preferencias.confirmarAcoesCriticas}
+                          onChange={(confirmarAcoesCriticas) => handlePreferenciasChange({ confirmarAcoesCriticas })}
+                        />
+                      </PreferenceSection>
+                    </div>
+
+                    <PreferencesPreview preferencias={preferencias} />
                   </div>
+
+                  <ActionRow
+                    onReset={handleDescartarPreferencias}
+                    onSave={handleSalvarPreferencias}
+                    loading={loading}
+                    saveLabel="Salvar preferências"
+                  />
                 </div>
               )}
             </>
@@ -549,6 +692,102 @@ function NotificationGroup({ title, icon, children }) {
       </h2>
       <div className="grid gap-3 md:grid-cols-2">{children}</div>
     </section>
+  );
+}
+
+function PreferenceSection({ title, icon, children }) {
+  return (
+    <section className="space-y-4 border-b border-border/70 pb-5 last:border-b-0">
+      <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+        {icon}
+        {title}
+      </h3>
+      <div className="space-y-4">{children}</div>
+    </section>
+  );
+}
+
+function SegmentedControl({ label, value, options, onChange }) {
+  return (
+    <div className="space-y-2">
+      <span className="block text-sm font-semibold text-foreground">{label}</span>
+      <div
+        className="grid gap-1 rounded-xl border border-border/70 bg-muted/40 p-1"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(128px, 1fr))" }}
+      >
+        {options.map(({ value: optionValue, label: optionLabel, icon: Icon }) => {
+          const active = value === optionValue;
+
+          return (
+            <button
+              key={optionValue}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange(optionValue)}
+              className={`flex min-h-10 min-w-0 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition ${
+                active
+                  ? "bg-card text-primary shadow-sm ring-1 ring-border dark:bg-white/10"
+                  : "text-muted-foreground hover:bg-card/70 hover:text-foreground dark:hover:bg-white/[0.06]"
+              }`}
+            >
+              {Icon && <Icon size={16} />}
+              <span className="min-w-0 truncate">{optionLabel}</span>
+              {active && <Check size={14} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PreferenceCheckbox({ label, checked, onChange }) {
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 bg-card/80 p-3 text-sm font-medium text-foreground transition hover:bg-muted/40 dark:bg-white/[0.04] dark:hover:bg-white/[0.07]">
+      <Checkbox checked={checked} onCheckedChange={onChange} className="h-5 w-5" />
+      <span className="flex-1">{label}</span>
+    </label>
+  );
+}
+
+function PreferencesPreview({ preferencias }) {
+  const compacta = preferencias.densidade === "compacta";
+  const rowClassName = compacta ? "px-3 py-2" : "px-4 py-3";
+  const badgeLabel = preferencias.menuLateral === "recolhido" ? "Menu recolhido" : "Menu expandido";
+
+  return (
+    <aside className="rounded-2xl border border-border/70 bg-background/60 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-foreground">Prévia</p>
+          <p className="text-xs text-muted-foreground">{badgeLabel}</p>
+        </div>
+        <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+          {compacta ? "Compacta" : "Confortável"}
+        </span>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        <div className={`${compacta ? "p-3" : "p-4"} border-b border-border`}>
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-primary/15" />
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-32 rounded-full bg-foreground/20" />
+              <div className="mt-2 h-2 w-20 rounded-full bg-muted-foreground/25" />
+            </div>
+          </div>
+        </div>
+
+        <div className="divide-y divide-border">
+          {["Visitante aprovado", "Check-in liberado", "Cracha em uso"].map((item) => (
+            <div key={item} className={`flex items-center justify-between gap-3 ${rowClassName}`}>
+              <span className="truncate text-xs font-semibold text-foreground">{item}</span>
+              <span className="h-2 w-10 rounded-full bg-secondary/50" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
   );
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useMemo, useState } from "react";
 import {
   Bar,
@@ -14,12 +15,13 @@ import {
 } from "recharts";
 import { BarChart3 } from "lucide-react";
 import { ENTRADAS_POR_HORA } from "@/lib/mockData";
+import PeriodToggle from "@/components/ui/PeriodToggle";
 
 const DIAS_SEMANA = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
 const DATA_BR_RE = /^\d{2}\/\d{2}$/;
 
 function formatarDiaMes(data) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getActiveLanguage(), {
     day: "2-digit",
     month: "2-digit",
     timeZone: "America/Sao_Paulo",
@@ -47,8 +49,55 @@ function normalizarSemanaBrasileira(items) {
   });
 }
 
+function EntradasTooltip({ active, payload, dataKey, nameKey, total, peakItem, view }) {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const item = payload[0]?.payload;
+  if (!item) {
+    return null;
+  }
+
+  const value = Number(item[dataKey]) || 0;
+  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+  const label =
+    view === "semana" && item.diaSemana
+      ? `${item[nameKey]} ${item.diaSemana}`
+      : item[nameKey];
+  const isPeak = peakItem && item[nameKey] === peakItem[nameKey] && value === (Number(peakItem[dataKey]) || 0);
+
+  return (
+    <div className="min-w-[188px] rounded-xl border border-border bg-card/95 px-3 py-2.5 text-card-foreground shadow-lg shadow-slate-900/10 backdrop-blur-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{label}</p>
+          <p className="mt-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Período
+          </p>
+        </div>
+        {isPeak ? (
+          <span className="shrink-0 rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-secondary">
+            Pico do período
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/70 pt-2.5">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{value}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Do total</p>
+          <p className="mt-0.5 font-mono text-base font-semibold text-foreground">{percent}%</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EntradasChart({
-  title = "Entradas por Periodo",
+  title = "Entradas por Período",
   subtitle = "Fluxo registrado ao longo do dia",
   data = ENTRADAS_POR_HORA,
   weekData = data,
@@ -78,11 +127,12 @@ export default function EntradasChart({
   const height = mobileLayout ? 220 : 280;
 
   const chartMeta = useMemo(() => {
-    const values = chartData.map((item) => item[dataKey]);
+    const values = chartData.map((item) => Number(item[dataKey]) || 0);
     const peakValue = Math.max(...values, 0);
-    const peakItem = chartData.find((item) => item[dataKey] === peakValue);
+    const peakIndex = values.findIndex((value) => value === peakValue);
+    const peakItem = chartData[peakIndex];
     const total = values.reduce((sum, value) => sum + value, 0);
-    const previous = chartData[Math.max(values.indexOf(peakValue) - 1, 0)]?.[dataKey] ?? peakValue;
+    const previous = values[Math.max(peakIndex - 1, 0)] ?? peakValue;
     const deltaPct = previous > 0 ? Math.round(((peakValue - previous) / previous) * 100) : 0;
 
     return {
@@ -109,29 +159,14 @@ export default function EntradasChart({
         </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {showPeriodToggle ? <PeriodToggle value={view} onChange={setView} /> : null}
+
           <div className="min-w-[112px] rounded-xl border border-primary/10 bg-primary/[0.035] px-3 py-2 shadow-sm shadow-slate-200/30 sm:w-auto">
             <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary/70">Pico</p>
             <p className="mt-0.5 flex items-baseline gap-1.5 font-mono text-lg font-semibold text-foreground">
               {chartMeta.peakItem?.[dataKey] ?? 0}
               <span className="font-sans text-[11px] font-semibold text-muted-foreground">{peakLabel}</span>
             </p>
-          </div>
-
-          <div className="grid w-full grid-cols-3 rounded-xl border border-border bg-muted/50 p-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground shadow-sm shadow-slate-200/30 sm:flex sm:w-fit">
-            {["hoje", "semana", "mes"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setView(item)}
-                className={[
-                  "w-full rounded-lg px-2.5 py-1.5 text-center transition-all duration-300 sm:w-auto sm:text-left",
-                  view === item
-                    ? "bg-card text-foreground shadow-sm shadow-slate-200/50"
-                    : "hover:bg-white/80 hover:text-foreground",
-                ].join(" ")}
-              >
-                {item === "mes" ? "mês" : item}
-              </button>
-            ))}
           </div>
         </div>
       </div>
@@ -144,7 +179,7 @@ export default function EntradasChart({
           <div className="space-y-1 px-4">
             <h3 className="text-sm font-semibold text-foreground">Sem dados de fluxo</h3>
             <p className="text-xs text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
-              {emptyMessage || `Nao foram registradas entradas de visitantes para o periodo selecionado (${view === "hoje" ? "hoje" : view === "semana" ? "esta semana" : "este mes"}).`}
+              {emptyMessage || `Não foram registradas entradas de visitantes para o período selecionado (${view === "hoje" ? "dia" : view === "semana" ? "semana" : "mês"}).`}
             </p>
           </div>
         </div>
@@ -181,15 +216,29 @@ export default function EntradasChart({
                   width={30}
                 />
                 <Tooltip
-                  cursor={{ fill: "rgba(15,58,125,0.035)" }}
-                  contentStyle={{
-                    borderRadius: "16px",
-                    border: "1px solid var(--border)",
-                    background: "rgba(255,255,255,0.96)",
-                    boxShadow: "0 12px 28px rgba(15, 58, 125, 0.10)",
-                  }}
+                  cursor={{ fill: "rgba(15,58,125,0.055)", radius: 10 }}
+                  content={
+                    <EntradasTooltip
+                      dataKey={dataKey}
+                      nameKey={nameKey}
+                      total={chartMeta.total}
+                      peakItem={chartMeta.peakItem}
+                      view={view}
+                    />
+                  }
+                  wrapperStyle={{ outline: "none", zIndex: 20 }}
                 />
-                <Bar dataKey={dataKey} radius={[10, 10, 0, 0]} maxBarSize={view === "hoje" || view === "mes" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}>
+                <Bar
+                  dataKey={dataKey}
+                  radius={[10, 10, 0, 0]}
+                  maxBarSize={view === "hoje" || view === "mes" ? (mobileLayout ? 18 : 24) : mobileLayout ? 32 : 42}
+                  activeBar={{
+                    fillOpacity: 0.96,
+                    stroke: "var(--foreground)",
+                    strokeOpacity: 0.18,
+                    strokeWidth: 2,
+                  }}
+                >
                   {chartData.map((entry, index) => {
                     const isPeak = entry[dataKey] === chartMeta.peakItem?.[dataKey];
                     return (
@@ -215,24 +264,24 @@ export default function EntradasChart({
 
           <div className="mt-5 grid gap-3 border-t border-border pt-4 md:grid-cols-2">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automatico</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Insight automático</p>
               <p className="mt-1 text-sm text-foreground">
-                Pico as <span className="font-semibold">{peakLabel}</span> com{" "}
+                Pico às <span className="font-semibold">{peakLabel}</span> com{" "}
                 <span className="font-semibold">{chartMeta.peakItem?.[dataKey] ?? 0} visitantes</span>.
               </p>
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {showPeriodToggle ? "Comparativo" : "Historico"}
+                {showPeriodToggle ? "Comparativo" : "Histórico"}
               </p>
               {showPeriodToggle ? (
                 <p className="mt-1 text-sm text-foreground">
-                  Variacao de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relacao ao intervalo anterior,
-                  com <span className="font-semibold">{chartMeta.total} registros</span> no periodo.
+                  Variação de <span className="font-semibold">{chartMeta.deltaPct}%</span> em relação ao intervalo anterior,
+                  com <span className="font-semibold">{chartMeta.total} registros</span> no período.
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-foreground">
-                  Total de <span className="font-semibold">{chartMeta.total} registros</span> no historico carregado.
+                  Total de <span className="font-semibold">{chartMeta.total} registros</span> no histórico carregado.
                 </p>
               )}
             </div>

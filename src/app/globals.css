@@ -131,6 +131,22 @@
   --tracking-normal: 0em;
 }
 
+html[data-density="compacta"] {
+  --spacing: 0.225rem;
+}
+
+html[data-density="confortavel"] {
+  --spacing: 0.25rem;
+}
+
+html[data-reduce-motion="true"] *,
+html.reduce-motion * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
+
 .dark {
   --background: oklch(0 0 0);
   --foreground: oklch(0.9328 0.0025 228.7857);
@@ -412,4 +428,26 @@ html.lenis body {
   animation: shake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   transform-origin: center;
   will-change: transform;
+}
+
+@layer base {
+  button:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label[for],
+  [role="button"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [data-clickable="true"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }

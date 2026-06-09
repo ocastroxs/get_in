@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldSet, FieldGroup, FieldLegend, Field, FieldLabel, FieldContent } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
+import ModalPortal from "@/components/ui/ModalPortal";
 
 const CONFIG_PADRAO = {
   busca: {
@@ -47,6 +48,14 @@ const CONFIG_PADRAO = {
  */
 export default function ModalFiltroPortaria({
   isOpen,
+  ...props
+}) {
+  if (!isOpen) return null;
+
+  return <ModalFiltroPortariaContent {...props} />;
+}
+
+function ModalFiltroPortariaContent({
   onClose,
   filtros = {},
   onFiltrosChange,
@@ -90,16 +99,10 @@ export default function ModalFiltroPortaria({
     onLimpar?.(filtrosVazios);
   }, [filtrosLocais, onLimpar]);
 
-  // Sincronizar com props quando abre
-  const handleAbrirModal = useCallback(() => {
-    setFiltrosLocais(filtros);
-  }, [filtros]);
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md animate-in fade-in zoom-in rounded-xl border border-border bg-card shadow-lg duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col animate-in fade-in zoom-in rounded-xl border border-border bg-card shadow-lg duration-300">
         {/* Cabeçalho */}
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
@@ -121,7 +124,7 @@ export default function ModalFiltroPortaria({
         </div>
 
         {/* Corpo do Modal */}
-        <div className="space-y-4 p-4 max-h-[60vh] overflow-y-auto">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4" data-lenis-prevent>
           <FieldSet>
             {/* Campo de Busca */}
             {configMerged.busca && (
@@ -241,5 +244,6 @@ export default function ModalFiltroPortaria({
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }

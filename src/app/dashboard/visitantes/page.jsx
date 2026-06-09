@@ -1,204 +1,174 @@
 "use client";
 
+import { getActiveLanguage } from "@/lib/i18n-core";
 import { useMemo, useState } from "react";
 import {
-  Users, ArrowRightLeft, LogOut, AlertTriangle,
-  Search, X, Plus, CreditCard, Check, Loader2,
-  MoreHorizontal
+  Users, ArrowRightLeft, Clock3,
+  Search, X, Check, Loader2, Filter,
+  Download, Eye
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import Topbar from "@/components/Topbar";
-import AlertaBanner from "@/components/AlertaBanner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
+import ModalPortal from "@/components/ui/ModalPortal";
+import PaginationControls from "@/components/ui/PaginationControls";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { usePagination } from "@/hooks/usePagination";
+import { exportTableToPdf } from "@/lib/exportPdf";
 import { api } from "@/services/api";
 
 const STATUS_LABEL = {
   ativo: "Ativo",
-  semsaida: "Sem saida",
+  expirado: "Expirado",
   finalizado: "Finalizado",
   pendente: "Pendente",
 };
 
 const STATUS_STYLE = {
   ativo: "bg-primary/10 text-primary",
-  semsaida: "bg-destructive/10 text-destructive",
+  expirado: "bg-destructive/10 text-destructive",
   finalizado: "bg-muted text-foreground",
   pendente: "bg-muted text-muted-foreground",
 };
 
 const STATUS_DOT = {
   ativo: "bg-primary",
-  semsaida: "bg-destructive",
+  expirado: "bg-destructive",
   finalizado: "bg-foreground",
   pendente: "bg-muted-foreground",
 };
 
-const SETORES = ["Adm", "Lab", "Prod", "Alm", "Recepcao", "Diretoria"];
+const LIMITE_ALERTA_HORAS = 8;
 
-function toCSV(rows) {
-  const cols = ["Nome", "Empresa", "CPF", "Setor", "Entrada", "Saida", "Status"];
-  const lines = rows.map((r) =>
-    [r.nome, r.empresa, r.cpf, r.setor, r.entrada, r.saida ?? "-", STATUS_LABEL[r.status] ?? r.status].join(";")
-  );
-  return [cols.join(";"), ...lines].join("\n");
-}
+function normalizarArrayResponse(response, keys = []) {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.dados)) return response.dados;
 
-function downloadCSV(data) {
-  const blob = new Blob([toCSV(data)], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "visitantes.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function ModalNovoVisitante({ onClose, onSave }) {
-  const [form, setForm] = useState({
-    nome: "",
-    empresa: "",
-    cpf: "",
-    setor: "Adm",
-    motivo: "",
-  });
-  const [loading, setLoading] = useState(false);
-
-  const maskCPF = (value) =>
-    value
-      .replace(/\D/g, "")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d)/, "$1.$2")
-      .replace(/(\d{3})(\d{1,2})/, "$1-$2")
-      .replace(/(-\d{2})\d+?$/, "$1");
-
-  async function handleSubmit() {
-    if (!form.nome || !form.empresa || !form.cpf) {
-      alert("Preencha os campos obrigatórios.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const payload = {
-        idUsuario: 1,
-        idDepartamento: 1,
-        motivo: form.motivo || "Visita",
-        validade: new Date().toISOString(),
-      };
-
-      const response = await api.post("/requisicao-visitante", payload);
-
-      if (response.sucesso) {
-        onSave();
-        onClose();
-      } else {
-        alert(response.mensagem || "Erro ao registrar visitante.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Erro de conexão com o servidor.");
-    } finally {
-      setLoading(false);
-    }
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) return response[key];
+    if (Array.isArray(response?.data?.[key])) return response.data[key];
+    if (Array.isArray(response?.dados?.[key])) return response.dados[key];
   }
 
+  return [];
+}
+
+function parseData(value) {
+  if (!value) return null;
+  const data = new Date(String(value).replace(" ", "T"));
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function formatarDataHora(value) {
+  const data = parseData(value);
+  if (!data) return value || "-";
+  return data.toLocaleString(getActiveLanguage(), {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getEntrada(item) {
+  return item?.dataEntrada || item?.entrada || item?.dataDeEntrada || item?.dataDaRequisicao;
+}
+
+function getSaida(item) {
+  return item?.dataSaida || item?.saida || item?.dataDeSaida;
+}
+
+function normalizarStatus(item, origem) {
+  if (origem === "pendencias") return "pendente";
+
+  const status = String(item?.status || item?.solicitacao || "").toLowerCase();
+  const saida = getSaida(item);
+  const entrada = parseData(getEntrada(item));
+
+  if (saida || status.includes("saida") || status.includes("finalizado") || status.includes("conclu")) {
+    return "finalizado";
+  }
+
+  if (status.includes("pendente")) {
+    return "pendente";
+  }
+
+  if (status.includes("expir") || status.includes("alerta") || status.includes("semsaida")) {
+    return "expirado";
+  }
+
+  if (entrada) {
+    const horas = (Date.now() - entrada.getTime()) / (1000 * 60 * 60);
+    if (horas >= LIMITE_ALERTA_HORAS) return "expirado";
+  }
+
+  return "ativo";
+}
+
+function normalizarVisitante(item, origem, index) {
+  const usuario = item?.usuario || {};
+
+  return {
+    id: `${origem}-${item?.id || item?.idUsuario || item?.idLog || index}`,
+    idOriginal: item?.id,
+    nome: item?.nome || item?.visitante || usuario?.nome || "Visitante",
+    empresa: item?.empresa || usuario?.empresas?.nome || "-",
+    cpf: item?.cpf || usuario?.cpf || "-",
+    setor: Array.isArray(item?.setores) ? item.setores.join(", ") : item?.setor || item?.setores?.nome || "-",
+    entrada: formatarDataHora(getEntrada(item)),
+    saida: getSaida(item) ? formatarDataHora(getSaida(item)) : "-",
+    status: normalizarStatus(item, origem),
+  };
+}
+
+function ModalDetalhesVisitante({ visitante, onClose }) {
+  if (!visitante) return null;
+
+  const detalhes = [
+    { label: "Nome", value: visitante.nome },
+    { label: "CPF", value: visitante.cpf },
+    { label: "Empresa", value: visitante.empresa },
+    { label: "Setor", value: visitante.setor },
+    { label: "Entrada", value: visitante.entrada },
+    { label: "Saída", value: visitante.saida || "-" },
+    { label: "Status", value: STATUS_LABEL[visitante.status] || visitante.status },
+  ];
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+    <ModalPortal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <Plus size={16} className="text-primary" />
-            </div>
-            <h2 className="font-semibold text-foreground">Novo Visitante</h2>
+          <div>
+            <h2 className="text-sm font-bold text-foreground">Detalhes do Visitante</h2>
+            <p className="text-xs text-muted-foreground">Registro completo da visita</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground transition-colors hover:text-foreground">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Fechar detalhes"
+          >
             <X size={18} />
           </button>
         </div>
-
-        <div className="space-y-4 px-6 py-5">
-          <p className="text-xs text-muted-foreground">
-            Registre um novo visitante no sistema. Todos os campos marcados com * são obrigatórios.
-          </p>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Nome completo *</label>
-            <input
-              type="text"
-              value={form.nome}
-              onChange={(e) => setForm({ ...form, nome: e.target.value })}
-              placeholder="Ex: Marina Souza"
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Empresa *</label>
-            <input
-              type="text"
-              value={form.empresa}
-              onChange={(e) => setForm({ ...form, empresa: e.target.value })}
-              placeholder="Ex: Nutrilab"
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">CPF *</label>
-            <input
-              type="text"
-              value={form.cpf}
-              onChange={(e) => setForm({ ...form, cpf: maskCPF(e.target.value) })}
-              placeholder="000.000.000-00"
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Setor</label>
-            <select
-              value={form.setor}
-              onChange={(e) => setForm({ ...form, setor: e.target.value })}
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              {SETORES.map((setor) => (
-                <option key={setor} value={setor}>
-                  {setor}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">Motivo da Visita</label>
-            <input
-              type="text"
-              value={form.motivo}
-              onChange={(e) => setForm({ ...form, motivo: e.target.value })}
-              placeholder="Ex: Visita Tecnica"
-              className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground transition placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/30 px-6 py-4">
-          <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={handleSubmit} disabled={loading}>
-            {loading ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-            Registrar Visitante
-          </Button>
+        <div className="max-h-[70vh] space-y-3 overflow-y-auto px-6 py-5" data-lenis-prevent>
+          {detalhes.map((item) => (
+            <div key={item.label} className="flex items-start justify-between gap-4 border-b border-border/40 pb-2 last:border-0 last:pb-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{item.label}</span>
+              <span className="text-right text-sm font-medium text-foreground">{item.value || "-"}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 }
 
-function LinhaVisitante({ visitante }) {
+function LinhaVisitante({ visitante, onDetalhes }) {
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
       <td className="px-4 py-3">
@@ -222,8 +192,13 @@ function LinhaVisitante({ visitante }) {
         </span>
       </td>
       <td className="px-4 py-3">
-        <button className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary">
-          <MoreHorizontal size={14} />
+        <button
+          type="button"
+          onClick={() => onDetalhes(visitante)}
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary"
+          aria-label={`Ver detalhes de ${visitante.nome}`}
+        >
+          <Eye size={14} />
         </button>
       </td>
     </tr>
@@ -233,20 +208,34 @@ function LinhaVisitante({ visitante }) {
 export default function VisitantesPage() {
   const [visitantes, setVisitantes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modalAberto, setModalAberto] = useState(false);
+  const [visitanteDetalhes, setVisitanteDetalhes] = useState(null);
   const [statusFiltro, setStatusFiltro] = useState("Todos");
   const [tempStatusFiltro, setTempStatusFiltro] = useState("Todos");
   const [modalFiltroAberto, setModalFiltroAberto] = useState(false);
   const [busca, setBusca] = useState("");
-  const [mostrarBanner, setMostrarBanner] = useState(true);
 
   const carregarVisitantes = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     try {
-      const response = await api.get("/requisicao-visitante");
-      if (response.sucesso) {
-        setVisitantes(response.data || []);
-      }
+      const [localResponse, pendenciasResponse, historicoResponse] = await Promise.all([
+        api.get("/portaria/vlocal"),
+        api.get("/portaria/pendencias"),
+        api.get("/portaria/historico"),
+      ]);
+
+      const visitantesLocal = normalizarArrayResponse(localResponse, ["visitantes", "dados"])
+        .map((item, index) => normalizarVisitante(item, "vlocal", index));
+      const pendencias = normalizarArrayResponse(pendenciasResponse, ["pendencias", "dados"])
+        .map((item, index) => normalizarVisitante(item, "pendencias", index));
+      const historico = normalizarArrayResponse(historicoResponse, ["historico", "dados"])
+        .map((item, index) => normalizarVisitante(item, "historico", index));
+
+      const visitantesPorId = new Map();
+      [...visitantesLocal, ...pendencias, ...historico].forEach((visitante) => {
+        visitantesPorId.set(visitante.id, visitante);
+      });
+
+      setVisitantes([...visitantesPorId.values()]);
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
     } finally {
@@ -255,11 +244,6 @@ export default function VisitantesPage() {
   };
 
   useAutoRefresh(carregarVisitantes);
-
-  const alertas = useMemo(
-    () => visitantes.filter((visitante) => visitante.status === "semsaida"),
-    [visitantes]
-  );
 
   const filtrados = useMemo(() => {
     return visitantes.filter((visitante) => {
@@ -275,11 +259,20 @@ export default function VisitantesPage() {
     });
   }, [visitantes, statusFiltro, busca]);
 
+  const {
+    page,
+    setPage,
+    pageSize,
+    totalItems,
+    totalPages,
+    paginatedItems: visitantesPagina,
+  } = usePagination(filtrados);
+
   const stats = useMemo(() => ({
     total:       visitantes.length,
     ativos:      visitantes.filter((v) => v.status === "ativo").length,
     finalizados: visitantes.filter((v) => v.status === "finalizado").length,
-    alertas:     visitantes.filter((v) => v.status === "semsaida").length,
+    expirados:   visitantes.filter((v) => v.status === "expirado").length,
   }), [visitantes]);
 
   const aplicarFiltros = () => {
@@ -292,28 +285,57 @@ export default function VisitantesPage() {
     setBusca("");
   };
 
+  async function exportarPDF() {
+    if (filtrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    try {
+      await exportTableToPdf({
+        title: "Visitantes",
+        subtitle: "Gestão de acesso e monitoramento de visitantes",
+        fileName: `visitantes_${new Date().toISOString().split("T")[0]}.pdf`,
+        filters: [
+          busca ? `Busca: ${busca}` : null,
+          statusFiltro !== "Todos" ? `Status: ${STATUS_LABEL[statusFiltro] || statusFiltro}` : null,
+        ].filter(Boolean),
+        columns: [
+          { header: "Visitante", weight: 1.3 },
+          { header: "CPF", weight: 1 },
+          { header: "Empresa", weight: 1.1 },
+          { header: "Setor", weight: 1.2 },
+          { header: "Entrada", weight: 1 },
+          { header: "Saída", weight: 1 },
+          { header: "Status", weight: 0.9 },
+        ],
+        rows: filtrados.map((visitante) => [
+          visitante.nome,
+          visitante.cpf,
+          visitante.empresa,
+          visitante.setor,
+          visitante.entrada,
+          visitante.saida,
+          STATUS_LABEL[visitante.status] || visitante.status,
+        ]),
+      });
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      alert("Não foi possível exportar o PDF.");
+    }
+  }
+
   return (
     <>
-      {modalAberto && (
-        <ModalNovoVisitante
-          onClose={() => setModalAberto(false)}
-          onSave={carregarVisitantes}
-        />
-      )}
+      <ModalDetalhesVisitante visitante={visitanteDetalhes} onClose={() => setVisitanteDetalhes(null)} />
 
       <div className="flex flex-col gap-6">
         <Topbar
           title="Visitantes"
-          subtitle="Gestao de acesso e monitoramento de visitantes"
-          secondaryButtonText="Download"
-          onSecondaryButtonClick={() => downloadCSV(filtrados)}
+          subtitle="Gestão de acesso e monitoramento de visitantes"
           buttonText="Novo Visitante"
-          onButtonClick={() => setModalAberto(true)}
+          buttonHref="/dashboard/visitantes/novo"
         />
-
-        {mostrarBanner && alertas.length > 0 ? (
-          <AlertaBanner alertas={alertas} onDismiss={() => setMostrarBanner(false)} />
-        ) : null}
 
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard
@@ -340,53 +362,75 @@ export default function VisitantesPage() {
             accentVar="var(--foreground)"
           />
           <StatCard
-            label="Alertas"
-            value={stats.alertas}
+            label="Expirados"
+            value={stats.expirados}
             valueClassName="text-destructive"
-            icon={<AlertTriangle size={17} className="text-destructive" />}
-            sub="requerem atenção"
+            icon={<Clock3 size={17} className="text-destructive" />}
+            sub="saída pendente"
             accentVar="var(--destructive)"
           />
         </div>
 
-        <div className="overflow-hidden rounded-[24px] border border-border bg-card shadow-md">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold text-foreground">Registro de Visitantes</h2>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
+        {/* Barra de Filtros Padronizada */}
+        <div className="bg-card border border-border rounded-[24px] p-5 shadow-md">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-1 items-center gap-3 w-full">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input
                   type="text"
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar visitante..."
-                  className="h-9 w-52 rounded-xl border border-border/70 bg-background/80 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  placeholder="Buscar por nome, empresa ou CPF..."
+                  className="pl-10 h-11 rounded-xl border-border/60 bg-background/80 text-sm transition-all duration-300 focus-visible:border-primary/40 focus-visible:ring-primary/20"
                 />
                 {busca && (
-                  <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted-foreground transition-colors hover:text-foreground">
-                    <X size={11} />
+                  <button
+                    type="button"
+                    onClick={() => setBusca("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Limpar busca"
+                  >
+                    <X size={14} />
                   </button>
                 )}
               </div>
+
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className="h-9 gap-2 rounded-xl border-border/70 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
+                className="h-11 px-4 gap-2 rounded-xl border-border/60 bg-background/80 transition-all duration-300 hover:border-primary/20 hover:bg-white hover:shadow-sm"
                 onClick={() => setModalFiltroAberto(true)}
               >
-                Filtros
+                <Filter size={16} />
+                <span className="hidden sm:inline">Filtros</span>
                 {statusFiltro !== "Todos" ? (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                  <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
                     1
                   </span>
                 ) : null}
               </Button>
             </div>
+
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+              <Button
+                type="button"
+                onClick={exportarPDF}
+                variant="outline"
+                disabled={loading || filtrados.length === 0}
+                className="h-11 gap-2 rounded-xl border-border/60 bg-background/80 px-4 text-sm font-medium"
+              >
+                <Download size={16} />
+                <span className="hidden sm:inline">Exportar PDF</span>
+              </Button>
+              <div className="px-3 py-2 rounded-xl border border-border/50 bg-muted/40 text-[11px] font-semibold text-muted-foreground shadow-sm shadow-slate-200/20">
+                {filtrados.length} resultado(s)
+              </div>
+            </div>
           </div>
 
           {(statusFiltro !== "Todos" || busca) && (
-            <div className="flex flex-wrap items-center gap-2 px-4 py-4">
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/40">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1">Filtros ativos:</span>
               {busca && (
                 <span className="inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-medium text-primary">
@@ -444,11 +488,26 @@ export default function VisitantesPage() {
                     </td>
                   </tr>
                 ) : (
-                  filtrados.map((visitante) => <LinhaVisitante key={visitante.id} visitante={visitante} />)
+                  visitantesPagina.map((visitante) => (
+                    <LinhaVisitante
+                      key={visitante.id}
+                      visitante={visitante}
+                      onDetalhes={setVisitanteDetalhes}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            currentCount={visitantesPagina.length}
+            onPageChange={setPage}
+            itemLabel="visitante(s)"
+          />
         </div>
       </div>
 
@@ -465,28 +524,24 @@ export default function VisitantesPage() {
               Status da Visita
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {["Todos", "ativo", "semsaida", "finalizado", "pendente"].map((status) => (
+              {["Todos", "ativo", "expirado", "finalizado", "pendente"].map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => setTempStatusFiltro(status)}
-                  className={`flex items-center justify-center px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                  className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
                     tempStatusFiltro === status
                       ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
                       : "bg-background text-muted-foreground border-border/60 hover:border-primary/30 hover:bg-muted/40"
                   }`}
                 >
                   {STATUS_LABEL[status] || status}
+                  {tempStatusFiltro === status && <Check size={14} />}
                 </button>
               ))}
             </div>
           </div>
           
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] text-primary/80 leading-relaxed">
-              <strong>Nota:</strong> Filtros avançados permitem encontrar registros específicos com mais facilidade. Combine com a busca por texto para melhores resultados.
-            </p>
-          </div>
         </div>
       </ModalFiltro>
     </>

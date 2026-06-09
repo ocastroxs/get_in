@@ -3,7 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme-config";
 
-const normalizeTheme = (theme) => (theme === "light" ? "light" : DEFAULT_THEME);
+const THEME_OPTIONS = ["light", "dark", "system"];
+
+const normalizeTheme = (theme) => (THEME_OPTIONS.includes(theme) ? theme : DEFAULT_THEME);
+
+const getSystemTheme = () => {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return DEFAULT_THEME === "light" ? "light" : "dark";
+  }
+
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
+const resolveTheme = (theme) => {
+  const normalizedTheme = normalizeTheme(theme);
+  return normalizedTheme === "system" ? getSystemTheme() : normalizedTheme;
+};
 
 export function getStoredTheme() {
   if (typeof window === "undefined") {
@@ -11,7 +26,7 @@ export function getStoredTheme() {
   }
 
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  const theme = savedTheme === "light" || savedTheme === "dark" ? savedTheme : DEFAULT_THEME;
+  const theme = normalizeTheme(savedTheme);
 
   if (!savedTheme) {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -22,67 +37,105 @@ export function getStoredTheme() {
 
 export function applyTheme(theme = getStoredTheme()) {
   if (typeof document === "undefined") {
-    return DEFAULT_THEME;
+    return {
+      theme: DEFAULT_THEME,
+      resolvedTheme: DEFAULT_THEME === "light" ? "light" : "dark",
+      isDark: DEFAULT_THEME !== "light",
+    };
   }
 
   const normalizedTheme = normalizeTheme(theme);
-  const isDark = normalizedTheme === "dark";
+  const resolvedTheme = resolveTheme(normalizedTheme);
+  const isDark = resolvedTheme === "dark";
+  const result = { theme: normalizedTheme, resolvedTheme, isDark };
 
   document.documentElement.classList.toggle("dark", isDark);
 
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("themeChanged", { detail: isDark }));
+    window.dispatchEvent(new CustomEvent("themeChanged", { detail: result }));
   }
 
-  return normalizedTheme;
+  return result;
 }
 
 function getCurrentTheme() {
-  if (typeof document === "undefined") {
-    return DEFAULT_THEME;
-  }
-
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  return getStoredTheme();
 }
 
 export function useAppTheme() {
   const [theme, setThemeState] = useState(getCurrentTheme);
+  const [resolvedTheme, setResolvedTheme] = useState(() => resolveTheme(getCurrentTheme()));
 
   const setTheme = useCallback((nextTheme) => {
     const normalizedTheme = normalizeTheme(nextTheme);
+    const result = applyTheme(normalizedTheme);
 
     localStorage.setItem(THEME_STORAGE_KEY, normalizedTheme);
-    setThemeState(applyTheme(normalizedTheme));
+    setThemeState(result.theme);
+    setResolvedTheme(result.resolvedTheme);
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [setTheme, theme]);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [resolvedTheme, setTheme]);
 
   useEffect(() => {
     const handleThemeChanged = (event) => {
-      setThemeState(event.detail ? "dark" : "light");
+      const detail = event.detail;
+      const nextTheme =
+        typeof detail === "object" && detail?.theme
+          ? normalizeTheme(detail.theme)
+          : normalizeTheme(localStorage.getItem(THEME_STORAGE_KEY));
+      const nextResolvedTheme =
+        typeof detail === "object" && detail?.resolvedTheme
+          ? detail.resolvedTheme
+          : detail
+            ? "dark"
+            : resolveTheme(nextTheme);
+
+      setThemeState(nextTheme);
+      setResolvedTheme(nextResolvedTheme);
     };
 
     const handleStorage = (event) => {
       if (event.key === THEME_STORAGE_KEY) {
-        setThemeState(applyTheme(event.newValue || DEFAULT_THEME));
+        const result = applyTheme(event.newValue || DEFAULT_THEME);
+        setThemeState(result.theme);
+        setResolvedTheme(result.resolvedTheme);
       }
     };
 
+    const handleSystemThemeChange = () => {
+      if (getStoredTheme() === "system") {
+        const result = applyTheme("system");
+        setThemeState(result.theme);
+        setResolvedTheme(result.resolvedTheme);
+      }
+    };
+
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+
     window.addEventListener("themeChanged", handleThemeChanged);
     window.addEventListener("storage", handleStorage);
-    queueMicrotask(() => applyTheme(getStoredTheme()));
+    mediaQuery?.addEventListener?.("change", handleSystemThemeChange);
+
+    queueMicrotask(() => {
+      const result = applyTheme(getStoredTheme());
+      setThemeState(result.theme);
+      setResolvedTheme(result.resolvedTheme);
+    });
 
     return () => {
       window.removeEventListener("themeChanged", handleThemeChanged);
       window.removeEventListener("storage", handleStorage);
+      mediaQuery?.removeEventListener?.("change", handleSystemThemeChange);
     };
   }, []);
 
   return {
     theme,
-    isDark: theme === "dark",
+    resolvedTheme,
+    isDark: resolvedTheme === "dark",
     setTheme,
     toggleTheme,
   };
