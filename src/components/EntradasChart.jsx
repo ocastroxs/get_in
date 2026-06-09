@@ -32,6 +32,7 @@ function normalizarSemanaBrasileira(items) {
 
   return items.map((item, index) => {
     if (DATA_BR_RE.test(String(item.hora ?? ""))) {
+
       return item;
     }
 
