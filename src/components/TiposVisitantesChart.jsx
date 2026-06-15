@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector } from "recharts";
-import { TIPOS_VISITANTE } from "@/lib/mockData";
 import PeriodToggle from "@/components/ui/PeriodToggle";
 
 function renderActiveSector(props) {
@@ -69,7 +68,7 @@ function PieTooltip({ active, payload, dataKey, nameKey, colorKey, total, peakIt
 export default function TiposVisitantesChart({
   title = "Motivos",
   subtitle = "Por período - dia",
-  data = TIPOS_VISITANTE,
+  data = [],
   weekData = data,
   monthData = data,
   emptyMessage = "Nenhum motivo registrado hoje.",

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Search, Filter, X, Check } from "lucide-react";
-import { HISTORICO_VISITAS } from "@/lib/mockData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ModalFiltro from "@/components/ui/ModalFiltro";
@@ -11,7 +10,7 @@ import { usePagination } from "@/hooks/usePagination";
 
 export default function HistoricoVisitas({ 
   title = "Histórico de Visitas", 
-  data = HISTORICO_VISITAS,
+  data = [],
   searchPlaceholder = "Buscar visitante..."
 }) {
   const [modalAberto, setModalAberto] = useState(false);

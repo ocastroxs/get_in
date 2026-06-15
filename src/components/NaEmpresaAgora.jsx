@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { ENTRADAS_POR_HORA } from "@/lib/mockData";
 
-export default function EntradasChart() {
+export default function EntradasChart({ data = [] }) {
   const [view, setView] = useState("hoje");
 
   return (
@@ -35,7 +34,7 @@ export default function EntradasChart() {
       <div className="w-full" style={{ minWidth: '300px', height: '160px' }}>
         <ResponsiveContainer width={400} height={160}>
           <BarChart
-            data={ENTRADAS_POR_HORA}
+            data={data}
             barSize={28}
             margin={{ top: 0, right: 0, bottom: 0, left: -24 }}
           >
@@ -61,7 +60,7 @@ export default function EntradasChart() {
             cursor={{ fill: "var(--muted)" }}
           />
           <Bar dataKey="value" name="Entradas" radius={[4, 4, 0, 0]} animationDuration={1200} animationEasing="ease-out">
-            {ENTRADAS_POR_HORA.map((entry) => (
+            {data.map((entry) => (
               <Cell
                 key={entry.hora}
                 fill={entry.hora === "11h" ? "var(--primary)" : "var(--accent)"}
