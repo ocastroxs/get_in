@@ -22,7 +22,7 @@ const PERMISSOES_PADRAO = [
     ],
   },
   {
-    categoria: "APROVACOES DE ACESSO",
+    categoria: "APROVAÇÕES DE ACESSO",
     funcionalidades: [
       { titulo: "Solicitar aprovação", desc: "Enviar pedido de entrada ao supervisor", portaria: "allow", supervisor: "deny", admin: "allow" },
       { titulo: "Aprovar / negar acesso", desc: "Decisão de entrada em setor restrito", portaria: "deny", supervisor: "allow", admin: "allow" },
@@ -38,7 +38,7 @@ const PERMISSOES_PADRAO = [
     ],
   },
   {
-    categoria: "RELATORIOS E AUDITORIA",
+    categoria: "RELATÓRIOS E AUDITORIA",
     funcionalidades: [
       { titulo: "Histórico de circulação", desc: "Trilha de movimentação por setor", portaria: "read", supervisor: "allow", admin: "allow" },
       { titulo: "Exportar relatório", desc: "Baixar dados em PDF ou CSV", portaria: "deny", supervisor: "read", admin: "allow" },
@@ -46,7 +46,7 @@ const PERMISSOES_PADRAO = [
     ],
   },
   {
-    categoria: "CONFIGURACOES",
+    categoria: "CONFIGURAÇÕES",
     funcionalidades: [
       { titulo: "Gerenciar funcionários", desc: "Cadastrar, editar e remover usuários", portaria: "deny", supervisor: "deny", admin: "allow" },
       { titulo: "Gerenciar setores", desc: "Criar e editar setores da empresa", portaria: "deny", supervisor: "deny", admin: "allow" },
@@ -65,7 +65,7 @@ const CATEGORY_LABELS = {
   VISITANTES: "Visitantes",
   "APROVACOES DE ACESSO": "Aprovações de acesso",
   "CRACHAS E RFID": "Crachás e RFID",
-  "RELATORIOS E AUDITORIA": "Relatórios e auditoria",
+  "RELATÓRIOS E AUDITORIA": "Relatórios e auditoria",
   CONFIGURACOES: "Configurações",
 };
 
@@ -77,10 +77,10 @@ function normalizeKey(value) {
     .trim()
     .toUpperCase();
 
-  if (text.includes("APROVA")) return "APROVACOES DE ACESSO";
+  if (text.includes("APROVA")) return "APROVAÇÕES DE ACESSO";
   if (text.includes("CRACH")) return "CRACHAS E RFID";
-  if (text.includes("RELAT")) return "RELATORIOS E AUDITORIA";
-  if (text.includes("CONFIG")) return "CONFIGURACOES";
+  if (text.includes("RELAT")) return "RELATÓRIOS E AUDITORIA";
+  if (text.includes("CONFIG")) return "CONFIGURAÇÕES";
   if (text.includes("VISIT")) return "VISITANTES";
 
   return text;
