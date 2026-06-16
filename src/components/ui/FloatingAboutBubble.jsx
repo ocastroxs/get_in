@@ -13,10 +13,6 @@ const LinkedinIcon = ({ size = 16 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
 );
 
-const GlobeIcon = ({ size = 16 }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-);
-
 const TEAM = [
   {
     nome: "Fernando Sanches",
@@ -68,9 +64,9 @@ export function FloatingAboutBubble() {
   // Controles
   const bubbleRef = useRef(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false); // Gerencia a animação CSS ao soltar
+  const [isDragging, setIsDragging] = useState(false);
   
-  const isDraggingRef = useRef(false); // Gerencia a diferença entre clique e arraste
+  const isDraggingRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
 
   const handlePointerDown = (e) => {
@@ -80,7 +76,7 @@ export function FloatingAboutBubble() {
       y: e.clientY - position.y,
     };
     isDraggingRef.current = false;
-    setIsDragging(true); // Desativa animação para seguir o mouse sem lag
+    setIsDragging(true);
   };
 
   const handlePointerMove = (e) => {
@@ -102,27 +98,23 @@ export function FloatingAboutBubble() {
     if (!isDraggingRef.current) {
       setIsOpen(true);
     } else {
-      // --- LÓGICA DO EFEITO IMÃ (SNAP TO EDGE) ---
       if (bubbleRef.current) {
         const rect = bubbleRef.current.getBoundingClientRect();
         const screenWidth = window.innerWidth;
         const screenHeight = window.innerHeight;
         
-        // Ponto central da bolinha
         const bubbleCenterX = rect.left + rect.width / 2;
         
         let deltaX = 0;
         let deltaY = 0;
-        const padding = 4; // Margem reduzida para ficar "quase colado" (antes era 24)
+        const padding = 4;
 
-        // Atrái para a borda lateral mais próxima (Esquerda ou Direita)
         if (bubbleCenterX < screenWidth / 2) {
-          deltaX = padding - rect.left; // Gruda na esquerda
+          deltaX = padding - rect.left;
         } else {
-          deltaX = (screenWidth - padding) - rect.right; // Gruda na direita
+          deltaX = (screenWidth - padding) - rect.right;
         }
 
-        // Impede de sair da tela por cima ou por baixo
         if (rect.top < padding) {
           deltaY = padding - rect.top;
         } else if (rect.bottom > screenHeight - padding) {
@@ -136,7 +128,7 @@ export function FloatingAboutBubble() {
       }
     }
     
-    setIsDragging(false); // Reativa a animação CSS para fazer o deslize final ser suave
+    setIsDragging(false);
     
     setTimeout(() => {
       isDraggingRef.current = false;
@@ -152,7 +144,7 @@ export function FloatingAboutBubble() {
     }
     return () => {
       document.body.style.overflow = "unset";
-    };
+    }
   }, [isOpen]);
 
   return (
@@ -160,7 +152,7 @@ export function FloatingAboutBubble() {
       <div
         ref={bubbleRef}
         className={cn(
-          "fixed bottom-2 right-2 z-100 flex items-center justify-center", // Reduzido de bottom-6 right-6
+          "fixed bottom-2 right-2 z-100 flex items-center justify-center",
           isDragging 
             ? "cursor-grabbing" 
             : "cursor-grab transition-transform duration-300 ease-out" 
@@ -178,21 +170,11 @@ export function FloatingAboutBubble() {
 
           <button
             type="button"
-            className="relative flex h-10 items-center gap-1.5 rounded-full border border-border/70 bg-card/90 py-1 pl-2 pr-1.5 text-foreground shadow-lg shadow-slate-900/10 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card hover:shadow-xl active:scale-95 dark:border-white/10 dark:bg-[#020C17]/85 dark:shadow-black/30"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-card/90 text-foreground shadow-lg shadow-slate-900/10 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/35 hover:bg-card hover:shadow-xl active:scale-95 dark:border-white/10 dark:bg-[#020C17]/85 dark:shadow-black/30"
             aria-label="Sobre o projeto"
           >
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm shadow-primary/20">
               <Users size={14} />
-            </span>
-            <span className="flex -space-x-1.5 pl-0.5">
-              {TEAM.slice(0, 2).map((member) => (
-                <span
-                  key={member.github}
-                  className="h-6 w-6 rounded-full border-2 border-card bg-muted bg-cover bg-center shadow-sm dark:border-[#020C17]"
-                  style={{ backgroundImage: `url(${member.avatar})` }}
-                  aria-hidden="true"
-                />
-              ))}
             </span>
           </button>
         </div>
@@ -248,7 +230,6 @@ export function FloatingAboutBubble() {
                     <a href={member.linkedin} target="_blank" rel="noreferrer" className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-[#0077b5] hover:text-white">
                       <LinkedinIcon size={16} />
                     </a>
-                    
                   </div>
                 </div>
               ))}
