@@ -81,7 +81,7 @@ export default function TiposVisitantesChart({
   mobileLayout = false,
   showPeriodToggle = true,
 }) {
-  const [view, setView] = useState("hoje");
+  const [view, setView] = useState("mes");
 
   const chartData = useMemo(() => {
     if (!showPeriodToggle) return data;

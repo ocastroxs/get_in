@@ -51,7 +51,6 @@ export const TEXT_TRANSLATIONS = {
   "registro(s)": { "en-US": "record(s)", "es-ES": "registro(s)" },
   "Tempo Real": { "en-US": "Real Time", "es-ES": "Tiempo real" },
   "Configurações": { "en-US": "Settings", "es-ES": "Configuración" },
-  "Configuracoes": { "en-US": "Settings", "es-ES": "Configuración" },
   "Gerencie perfil, segurança e notificações do sistema": {
     "en-US": "Manage profile, security and system notifications",
     "es-ES": "Gestiona perfil, seguridad y notificaciones del sistema",
@@ -138,7 +137,6 @@ export const TEXT_TRANSLATIONS = {
   "Toasts de aÃ§Ãµes importantes": { "en-US": "Toasts for important actions", "es-ES": "Toasts de acciones importantes" },
   "Salvar notificações": { "en-US": "Save notifications", "es-ES": "Guardar notificaciones" },
   "Salvar notificaÃ§Ãµes": { "en-US": "Save notifications", "es-ES": "Guardar notificaciones" },
-  "Carregando configuracoes...": { "en-US": "Loading settings...", "es-ES": "Cargando configuración..." },
   "Carregando configurações...": { "en-US": "Loading settings...", "es-ES": "Cargando configuración..." },
 
   "Dashboard": { "en-US": "Dashboard", "es-ES": "Panel" },

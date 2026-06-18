@@ -108,7 +108,7 @@ export default function EntradasChart({
   showPeriodToggle = true,
   emptyMessage,
 }) {
-  const [view, setView] = useState("hoje");
+  const [view, setView] = useState("mes");
   const chartData = useMemo(() => {
     if (!showPeriodToggle) return data;
     if (view === "mes") return monthData;

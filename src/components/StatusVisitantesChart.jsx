@@ -75,7 +75,7 @@ export default function StatusVisitantesChart({
   subtitle = "Situação atual com leitura imediata de risco e permanência.",
   showPeriodToggle = true
 }) {
-  const [view, setView] = useState("hoje");
+  const [view, setView] = useState("mes");
 
   // Select data based on view
   const chartData = useMemo(() => {

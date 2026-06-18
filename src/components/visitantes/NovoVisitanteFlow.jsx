@@ -616,7 +616,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                   ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30"
                   : step > s.id
                     ? "bg-emerald-500 text-white"
-                    : "bg-white text-muted-foreground border border-border"
+                    : "bg-background text-muted-foreground border border-border"
               }`}>
                 {step > s.id ? <Check size={12} /> : s.id}
               </div>
@@ -1031,10 +1031,10 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
       {step === 2 && (
         <div className="p-8 max-w-5xl mx-auto space-y-6">
           {/* Card Central de Status */}
-          <div className="bg-white border border-border rounded-[32px] p-10 text-center shadow-sm relative overflow-hidden">
+          <div className="bg-card text-card-foreground border border-border rounded-[32px] p-10 text-center shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-amber-400" />
             
-            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-100">
+            <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
               <Shield size={32} className="text-amber-500" />
             </div>
             
@@ -1046,7 +1046,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
             </p>
 
             <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-2 rounded-full text-xs font-bold border border-amber-100">
+              <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 dark:text-amber-300 px-4 py-2 rounded-full text-xs font-bold border border-amber-500/20">
                 <Clock size={14} />
                 Aguardando há {formatTime(tempoEspera)}
               </div>
@@ -1059,10 +1059,10 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
           </div>
 
           {/* Dados do Visitante - Ocupando largura total após remoção da timeline */}
-          <div className="bg-white border border-border rounded-[32px] p-8 shadow-sm">
+          <div className="bg-card text-card-foreground border border-border rounded-[32px] p-8 shadow-sm">
             <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 rounded-xl">
-                <User size={20} className="text-blue-600" />
+              <div className="p-2 bg-blue-500/10 rounded-xl">
+                <User size={20} className="text-blue-600 dark:text-blue-300" />
               </div>
               <div>
                 <h3 className="font-bold text-base text-foreground">Dados do Visitante</h3>
@@ -1102,7 +1102,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
               </div>
               {form.observacao.trim() && (
                 <div className="flex justify-between items-start pt-1 md:col-span-2">
-                  <span className="text-xs text-muted-foreground font-medium">Observacao</span>
+                  <span className="text-xs text-muted-foreground font-medium">Observação</span>
                   <span className="max-w-xl text-right text-xs font-bold text-foreground">{form.observacao.trim()}</span>
                 </div>
               )}
@@ -1110,7 +1110,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
           </div>
 
           {/* Seção do Supervisor */}
-          <div className="bg-white border border-border rounded-[32px] p-6 shadow-sm">
+          <div className="bg-card text-card-foreground border border-border rounded-[32px] p-6 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
@@ -1121,7 +1121,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
                   <p className="text-[10px] text-muted-foreground">Gerente de Produção</p>
                 </div>
               </div>
-              <div className="bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-[9px] font-bold border border-amber-100">
+              <div className="bg-amber-500/10 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full text-[9px] font-bold border border-amber-500/20">
                 Notificado - Aguardando resposta
               </div>
             </div>
@@ -1142,7 +1142,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
           </div>
 
           {/* Footer de Ações */}
-          <div className="flex items-center justify-between bg-white border border-border rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between bg-card text-card-foreground border border-border rounded-2xl p-4 shadow-sm">
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
               <RefreshCw size={12} className="animate-spin text-primary" />
               Atualizado automaticamente a cada 10 segundos

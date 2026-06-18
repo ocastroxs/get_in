@@ -34,6 +34,13 @@ export const metadata = {
   title: {
     template: "GetIN - %s",
     default: "GetIN"
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
   }
 };
 

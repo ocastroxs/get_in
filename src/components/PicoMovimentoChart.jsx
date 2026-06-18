@@ -22,6 +22,11 @@ function formatMobileLabel(label) {
   return MOBILE_LABELS[text] || (text.length > 8 ? `${text.slice(0, 7)}.` : text);
 }
 
+function formatDesktopLabel(label) {
+  const text = String(label ?? "");
+  return text.length > 14 ? `${text.slice(0, 13)}.` : text;
+}
+
 function pluralizeRequisicao(value) {
   return value === 1 ? "requisição" : "requisições";
 }
@@ -104,8 +109,8 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={mobileLayout ? { top: 8, right: 8, bottom: 30, left: -10 } : { top: 8, right: 8, bottom: 6, left: -12 }}
-              barCategoryGap={mobileLayout ? "28%" : "18%"}
+              margin={mobileLayout ? { top: 8, right: 8, bottom: 30, left: -10 } : { top: 8, right: 8, bottom: 40, left: -12 }}
+              barCategoryGap={mobileLayout ? "28%" : "22%"}
             >
               <CartesianGrid vertical={false} stroke="rgba(15,58,125,0.08)" />
               <XAxis
@@ -116,11 +121,11 @@ export default function PicoMovimentoChart({ mobileLayout = false, data }) {
                   fill: "var(--muted-foreground)",
                   fontWeight: 600,
                 }}
-                tickFormatter={mobileLayout ? formatMobileLabel : undefined}
-                tickMargin={mobileLayout ? 12 : 8}
-                angle={mobileLayout ? -32 : 0}
-                textAnchor={mobileLayout ? "end" : "middle"}
-                height={mobileLayout ? 54 : 30}
+                tickFormatter={mobileLayout ? formatMobileLabel : formatDesktopLabel}
+                tickMargin={mobileLayout ? 12 : 14}
+                angle={mobileLayout ? -32 : -28}
+                textAnchor="end"
+                height={mobileLayout ? 54 : 64}
                 axisLine={false}
                 tickLine={false}
               />
