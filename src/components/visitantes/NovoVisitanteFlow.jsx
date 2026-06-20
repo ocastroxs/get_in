@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/toast-provider";
 import {
   getEmpresaNome,
   getEmpresaNomeFromRegistro,
+  getDescricaoValue,
   getSetorNome,
   isValidEmail,
   onlyDigits,
@@ -33,6 +34,27 @@ function buildEmpresasOptions(registros) {
   });
 
   return Array.from(empresasUnicas.values()).sort((a, b) => a.nome.localeCompare(b.nome));
+}
+
+function normalizarArrayResponse(response, keys = []) {
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.dados)) return response.dados;
+
+  for (const key of keys) {
+    if (Array.isArray(response?.[key])) return response[key];
+    if (Array.isArray(response?.data?.[key])) return response.data[key];
+    if (Array.isArray(response?.dados?.[key])) return response.dados[key];
+  }
+
+  return [];
+}
+
+function getCpfRegistro(registro) {
+  return onlyDigits(
+    registro?.cpf ||
+      registro?.usuario?.cpf ||
+      getDescricaoValue(registro?.descricao, "CPF")
+  );
 }
 
 function getTagSelectionLabel(value, tags = []) {
@@ -409,21 +431,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
   };
 
   const getOrCreateVisitanteUsuario = async () => {
-    const cpfLimpo = onlyDigits(form.cpf);
     const usuarioPayload = getUsuarioPayload();
-
-    const usuariosResponse = await api.get("/user");
-
-    if (usuariosResponse.sucesso && Array.isArray(usuariosResponse.data)) {
-      const usuarioExistente = usuariosResponse.data.find((usuario) => onlyDigits(usuario.cpf) === cpfLimpo);
-
-      if (usuarioExistente) {
-        const updateResponse = await api.put(`/user/${usuarioExistente.id}`, usuarioPayload);
-        return updateResponse.sucesso
-          ? updateResponse.data || { ...usuarioExistente, ...usuarioPayload, celular: form.telefone }
-          : usuarioExistente;
-      }
-    }
 
     const createResponse = await api.post("/user", usuarioPayload);
 
@@ -432,6 +440,28 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     }
 
     throw new Error(createResponse.mensagem || "Erro ao cadastrar dados do visitante.");
+  };
+
+  const validarCpfDisponivel = async () => {
+    const cpfLimpo = onlyDigits(form.cpf);
+
+    const [usuariosResponse, requisicoesResponse] = await Promise.all([
+      api.get("/user"),
+      api.get("/requisicao-visitante"),
+    ]);
+
+    if (!usuariosResponse.sucesso || !requisicoesResponse.sucesso) {
+      throw new Error("Não foi possível verificar se o CPF já existe. Tente novamente.");
+    }
+
+    const usuarios = normalizarArrayResponse(usuariosResponse, ["usuarios", "dados"]);
+    const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
+    const usuarioExistente = usuarios.find((usuario) => getCpfRegistro(usuario) === cpfLimpo);
+    const requisicaoExistente = requisicoes.find((requisicao) => getCpfRegistro(requisicao) === cpfLimpo);
+
+    if (usuarioExistente || requisicaoExistente) {
+      throw new Error("Este CPF já está cadastrado no sistema.");
+    }
   };
 
   const showCadastroError = (description) => {
@@ -476,6 +506,7 @@ export default function NovoVisitanteFlow({ backHref = "/portaria", breadcrumbRo
     
     setLoading(true);
     try {
+      await validarCpfDisponivel();
       const visitanteUsuario = await getOrCreateVisitanteUsuario();
       let codigoTagFinal = form.rfidTag;
 

@@ -110,6 +110,25 @@ function contarUnicos(items, getKey) {
   return new Set(items.map((item, index) => getKey(item, index)).filter(Boolean)).size;
 }
 
+function dedupeAtivosAgora(listas) {
+  const ativosPorPessoa = new Map();
+
+  listas.forEach((lista, listaIndex) => {
+    lista.filter(isDentro).forEach((item, itemIndex) => {
+      const chave = getIdentidadeVisitante(item, `ativo-${listaIndex}`, itemIndex);
+      const atual = ativosPorPessoa.get(chave);
+      const entradaAtual = getEntradaVisitante(atual)?.getTime() || 0;
+      const entradaNova = getEntradaVisitante(item)?.getTime() || 0;
+
+      if (!atual || entradaNova >= entradaAtual) {
+        ativosPorPessoa.set(chave, item);
+      }
+    });
+  });
+
+  return [...ativosPorPessoa.values()];
+}
+
 function getEntradaVisitante(item) {
   return parseDataCampos(item, ["dataEntrada", "entrada", "dataDeEntrada", "horario_entrada"]);
 }
@@ -339,10 +358,10 @@ function processarStatusPeriodo(requisicoes, logs = [], periodo) {
   ];
 }
 
-function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
+function calcularStatsDashboard(requisicoes, logs) {
   const entradas = logs.filter((item) => getEntradaVisitante(item));
   const saidas = logs.filter((item) => getSaidaVisitante(item));
-  const ativosAgora = visitantesLocal.filter(isDentro);
+  const ativosAgora = dedupeAtivosAgora([logs]);
   const alertas = ativosAgora.filter((item) => isAlertaPermanencia(item)).length;
 
   return {
@@ -381,15 +400,13 @@ export default function DashboardPage() {
     if (!silent) setIsDataLoading(true);
 
     try {
-      const [requisicoesResponse, portariaResponse, logsResponse] = await Promise.all([
+      const [requisicoesResponse, logsResponse] = await Promise.all([
         api.get("/requisicao-visitante"),
-        api.get("/portaria/vlocal"),
         api.get("/logs"),
       ]);
 
-      if (requisicoesResponse.sucesso || portariaResponse.sucesso || logsResponse.sucesso) {
+      if (requisicoesResponse.sucesso || logsResponse.sucesso) {
         const requisicoes = normalizarArrayResponse(requisicoesResponse, ["requisicoes", "dados"]);
-        const visitantesLocal = normalizarArrayResponse(portariaResponse, ["visitantes", "dados"]);
         const logs = normalizarArrayResponse(logsResponse, ["logs", "data"]);
 
         setMotivosHoje(agruparMotivosPeriodo(requisicoes, "hoje"));
@@ -402,7 +419,7 @@ export default function DashboardPage() {
         setStatusHoje(processarStatusPeriodo(requisicoes, logs, "hoje"));
         setStatusSemana(processarStatusPeriodo(requisicoes, logs, "semana"));
         setStatusMes(processarStatusPeriodo(requisicoes, logs, "mes"));
-        setStatsDashboard(calcularStatsDashboard(requisicoes, logs, visitantesLocal));
+        setStatsDashboard(calcularStatsDashboard(requisicoes, logs));
       }
     } catch (error) {
       console.error("Erro ao carregar dados do dashboard:", error);

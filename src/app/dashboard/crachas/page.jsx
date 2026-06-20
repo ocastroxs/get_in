@@ -243,6 +243,7 @@ function CodigoTag({ codigo, vazio = "Sem TAG" }) {
 function LinhaCracha({ cracha, onStatusChange, onDelete }) {
   const crachaPerdido = cracha.status === "perdido";
   const crachaDisponivel = cracha.status === "disponivel";
+  const tituloExclusao = cracha.isTagFisicaDisponivel ? "Excluir TAG" : "Excluir cracha";
 
   return (
     <tr className="border-b border-border transition-colors duration-300 hover:bg-primary/[0.035]">
@@ -279,20 +280,18 @@ function LinhaCracha({ cracha, onStatusChange, onDelete }) {
         <StatusPill status={cracha.status} />
       </td>
       <td className="px-4 py-3">
-        {cracha.isTagFisicaDisponivel ? (
-          <div className="text-right text-xs text-muted-foreground">-</div>
-        ) : (
-          <div className="flex items-center justify-end gap-1.5">
-            {!crachaDisponivel && (
-              <button
-                type="button"
-                title="Marcar como disponivel"
-                onClick={() => onStatusChange(cracha.id, "disponivel")}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary"
-              >
-                <Check size={14} />
-              </button>
-            )}
+        <div className="flex items-center justify-end gap-1.5">
+          {!cracha.isTagFisicaDisponivel && !crachaDisponivel && (
+            <button
+              type="button"
+              title="Marcar como disponivel"
+              onClick={() => onStatusChange(cracha.id, "disponivel")}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-primary/8 hover:text-primary"
+            >
+              <Check size={14} />
+            </button>
+          )}
+          {!cracha.isTagFisicaDisponivel && (
             <button
               type="button"
               title={crachaPerdido ? "Voltar para em uso" : "Marcar como perdido"}
@@ -305,16 +304,16 @@ function LinhaCracha({ cracha, onStatusChange, onDelete }) {
             >
               {crachaPerdido ? <Undo2 size={14} /> : <AlertTriangle size={14} />}
             </button>
-            <button
-              type="button"
-              title="Excluir cracha"
-              onClick={() => onDelete(cracha.id)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            title={tituloExclusao}
+            onClick={() => onDelete(cracha)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -463,18 +462,21 @@ export default function CrachasPage() {
     }
   };
 
-  const excluirCracha = async (id) => {
-    if (!confirm("Deseja excluir este crachá do inventário?")) return;
+  const excluirCracha = async (cracha) => {
+    const tipo = cracha.isTagFisicaDisponivel ? "TAG" : "crachá";
+    const endpoint = cracha.isTagFisicaDisponivel ? `/tags/${cracha.id}` : `/cracha/${cracha.id}`;
+
+    if (!confirm(`Deseja excluir este ${tipo} do inventário?`)) return;
 
     try {
-      const response = await api.delete(`/cracha/${id}`);
+      const response = await api.delete(endpoint);
       if (!response.sucesso) {
-        alert(response.mensagem || "Erro ao excluir crachá.");
+        alert(response.mensagem || `Erro ao excluir ${tipo}.`);
         return;
       }
       await carregarCrachas();
     } catch (error) {
-      console.error("Erro ao excluir crachá:", error);
+      console.error(`Erro ao excluir ${tipo}:`, error);
       alert("Erro de conexão com o servidor.");
     }
   };

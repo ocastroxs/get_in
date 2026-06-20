@@ -168,14 +168,36 @@ function calcularVariacao(atual, anterior) {
 /**
  * Get identidade do visitante
  */
-function getIdentidadeVisitante(item, fallbackPrefix = "item") {
+function getIdentidadeVisitante(item, fallbackPrefix = "item", index = 0) {
   return String(
     item?.idUsuario ||
       item?.usuario?.id ||
       item?.id ||
       item?.cpf ||
-      `${fallbackPrefix}-${Math.random()}`
+      `${fallbackPrefix}-${index}`
   );
+}
+
+/**
+ * Junta registros ativos e remove duplicados por pessoa.
+ */
+function dedupeAtivosAgora(listas) {
+  const ativosPorPessoa = new Map();
+
+  listas.forEach((lista, listaIndex) => {
+    lista.filter(isDentro).forEach((item, itemIndex) => {
+      const chave = getIdentidadeVisitante(item, `ativo-${listaIndex}`, itemIndex);
+      const atual = ativosPorPessoa.get(chave);
+      const entradaAtual = getEntradaVisitante(atual)?.getTime() || 0;
+      const entradaNova = getEntradaVisitante(item)?.getTime() || 0;
+
+      if (!atual || entradaNova >= entradaAtual) {
+        ativosPorPessoa.set(chave, item);
+      }
+    });
+  });
+
+  return [...ativosPorPessoa.values()];
 }
 
 /**
@@ -260,7 +282,7 @@ function entradasPorMes(visitantesLocal) {
 /**
  * Calcula stats do dashboard
  */
-function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
+function calcularStatsDashboard(requisicoes, logs) {
   const hoje = new Date();
   const entradasHoje = logs.filter((item) =>
     estaNoPeriodo(getEntradaVisitante(item), "hoje", hoje)
@@ -277,7 +299,7 @@ function calcularStatsDashboard(requisicoes, logs, visitantesLocal) {
   const visitantesOntemReq = requisicoes.filter(
     (item) => diferencaEmDias(hoje, parseDataRequisicao(item)) === 1
   );
-  const ativosAgora = visitantesLocal.filter(isDentro);
+  const ativosAgora = dedupeAtivosAgora([logs]);
   const alertas = ativosAgora.filter((item) =>
     isAlertaPermanencia(item, hoje)
   ).length;
@@ -335,26 +357,22 @@ export const dashboardService = {
    */
   async carregarDados() {
     try {
-      const [requisicoesResponse, portariaResponse, logsResponse] =
+      const [requisicoesResponse, logsResponse] =
         await Promise.all([
           api.get("/requisicao-visitante"),
-          api.get("/portaria/vlocal"),
           api.get("/logs"),
         ]);
 
       const requisicoes = normalizarArrayResponse(requisicoesResponse, [
         "requisicoes",
       ]);
-      const visitantesLocal = normalizarArrayResponse(portariaResponse, [
-        "visitantes",
-      ]);
       const logs = normalizarArrayResponse(logsResponse, ["logs"]);
 
       // Calcula stats
-      const stats = calcularStatsDashboard(requisicoes, logs, visitantesLocal);
+      const stats = calcularStatsDashboard(requisicoes, logs);
 
       // Calcula alertas
-      const alertas = visitantesLocal.filter((v) => isAlertaPermanencia(v));
+      const alertas = logs.filter((v) => isAlertaPermanencia(v));
 
       // Gera dados de entradas
       const entradasHoje = entradasPorHoraHoje(logs);
@@ -369,7 +387,7 @@ export const dashboardService = {
         entradasSemana,
         entradasMes,
         requisicoes,
-        visitantesLocal,
+        visitantesLocal: [],
         logs,
       };
     } catch (error) {
